@@ -9,7 +9,6 @@ import {
 import {
     AudioWaveform,
     EyeOffIcon,
-    FileTextIcon,
     FileIcon,
     ImageIcon,
     X,
@@ -17,14 +16,14 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { useVeritie } from "@veritie/sdk";
-import { envPublic } from "@/lib/config/env.public";
+import { VoiceCaptureLauncherPanel } from "@/components/capture/VoiceCaptureLauncherPanel";
 import { usePersistedCaptureLauncherTucked } from "@/lib/hooks/usePersistedCaptureLauncherTucked";
+import { useEscapeClose, useInitialFocus } from "@/lib/hooks/useEscapeClose";
+import { LAYER_Z_INDEX, layerClass } from "@/lib/ui/layering";
 import { cn } from "@/lib/utils";
-import { VoiceCapturePanel } from "@/components/capture/VoiceCapturePanel";
 
-const LAUNCHER_BACKDROP_Z = "z-[110]";
-const LAUNCHER_CHROME_Z = "z-[120]";
+const LAUNCHER_BACKDROP_Z = layerClass(LAYER_Z_INDEX.launcherBackdrop);
+const LAUNCHER_CHROME_Z = layerClass(LAYER_Z_INDEX.launcherChrome);
 const TRIGGER_SIZE_PX = 56;
 const TUCKED_PEEK_PX = 16;
 const TUCKED_OFFSET_PX = TRIGGER_SIZE_PX - TUCKED_PEEK_PX;
@@ -46,6 +45,8 @@ export function GlobalCaptureLauncher() {
     const shouldReduceMotion = useReducedMotion();
     const { isTucked, setIsTucked, isHydrated } =
         usePersistedCaptureLauncherTucked();
+    const optionsDialogRef = useRef<HTMLDivElement>(null);
+    const voiceDialogRef = useRef<HTMLDivElement>(null);
     const swipePointerRef = useRef<{
         pointerId: number;
         startX: number;
@@ -53,14 +54,6 @@ export function GlobalCaptureLauncher() {
     } | null>(null);
     const suppressTriggerClickRef = useRef(false);
     const openedAtRef = useRef(0);
-
-    const veritie = useVeritie({
-        config: {
-            baseUrl: envPublic.veritieApiUrl ?? "http://localhost:3001",
-            pipelineAlias:
-                envPublic.veritiePipelineAlias ?? "veritie-personal",
-        },
-    });
 
     const resetTransientState = useCallback(() => {
         setMode("options");
@@ -178,6 +171,11 @@ export function GlobalCaptureLauncher() {
     const showOptionsMenu = open && mode === "options";
     const showVoicePanel = open && mode === "voice";
 
+    useEscapeClose(open && mode === "options", close);
+    useEscapeClose(open && mode === "voice", returnToOptions);
+    useInitialFocus(showOptionsMenu, optionsDialogRef);
+    useInitialFocus(showVoicePanel, voiceDialogRef);
+
     return (
         <>
             <AnimatePresence initial={false}>
@@ -220,6 +218,7 @@ export function GlobalCaptureLauncher() {
                     {showOptionsMenu && (
                         <motion.div
                             key="capture-options-stack"
+                            ref={optionsDialogRef}
                             role="dialog"
                             aria-modal="true"
                             aria-labelledby="capture-options-title"
@@ -309,6 +308,7 @@ export function GlobalCaptureLauncher() {
                 {showVoicePanel && (
                     <motion.div
                         key="capture-voice-panel"
+                        ref={voiceDialogRef}
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="capture-voice-title"
@@ -340,9 +340,7 @@ export function GlobalCaptureLauncher() {
                                 Record a voice note. Extraction runs via Veritie.
                             </p>
                         </div>
-                        <VoiceCapturePanel
-                            veritie={veritie}
-                            embedded
+                        <VoiceCaptureLauncherPanel
                             onBack={returnToOptions}
                             onComplete={close}
                         />

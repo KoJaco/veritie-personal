@@ -1,3 +1,4 @@
+import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { AppShell } from "@/components/static/AppShell";
 
@@ -31,6 +32,15 @@ jest.mock("@/components/static/AppHeader", () => ({
 jest.mock("@/components/context/ContextRail", () => ({
     ContextRail: () => <div data-testid="context-rail" />,
 }));
+
+jest.mock("next/dynamic", () => {
+    return (importFn: () => Promise<{ GlobalCaptureLauncher: React.ComponentType }>) => {
+        const { GlobalCaptureLauncher } = jest.requireActual<{
+            GlobalCaptureLauncher: React.ComponentType;
+        }>("@/components/capture/GlobalCaptureLauncher");
+        return GlobalCaptureLauncher;
+    };
+});
 
 jest.mock("@/components/capture/GlobalCaptureLauncher", () => ({
     GlobalCaptureLauncher: () => (

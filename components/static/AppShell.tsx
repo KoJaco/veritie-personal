@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { type ReactNode, useEffect } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "@/components/static/AppHeader";
@@ -18,8 +19,15 @@ import {
     useAppShellPageHeader,
 } from "./AppShellPageHeaderProvider";
 import { useIsScrolledFromTop } from "@/lib/hooks/useIsScrolledFromTop";
-import { GlobalCaptureLauncher } from "@/components/capture/GlobalCaptureLauncher";
 import { envPublic } from "@/lib/config/env.public";
+
+const GlobalCaptureLauncher = dynamic(
+    () =>
+        import("@/components/capture/GlobalCaptureLauncher").then(
+            (mod) => mod.GlobalCaptureLauncher,
+        ),
+    { ssr: false },
+);
 
 interface AppShellProps {
     children: ReactNode;
