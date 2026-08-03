@@ -1,6 +1,6 @@
 /**
  * Drizzle schema — captures and voice log pipeline.
- * Target: PostgreSQL on Supabase. Not used at runtime until persistence phase.
+ * Target: PostgreSQL on Supabase.
  */
 import {
     pgTable,
@@ -12,10 +12,13 @@ import {
     index,
 } from "drizzle-orm/pg-core";
 
+import { accountIdColumn } from "./tenancy";
+
 export const captures = pgTable(
     "captures",
     {
         id: text("id").primaryKey(),
+        accountId: accountIdColumn(),
         type: text("type").notNull(),
         status: text("status").notNull(),
         title: text("title"),
@@ -24,11 +27,15 @@ export const captures = pgTable(
         createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
         updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
     },
-    (table) => [index("captures_created_at_idx").on(table.createdAt)],
+    (table) => [
+        index("captures_account_id_idx").on(table.accountId),
+        index("captures_created_at_idx").on(table.createdAt),
+    ],
 );
 
 export const captureSources = pgTable("capture_sources", {
     id: text("id").primaryKey(),
+    accountId: accountIdColumn(),
     captureId: text("capture_id")
         .notNull()
         .references(() => captures.id),
@@ -42,6 +49,7 @@ export const captureSources = pgTable("capture_sources", {
 
 export const voiceLogs = pgTable("voice_logs", {
     id: text("id").primaryKey(),
+    accountId: accountIdColumn(),
     captureId: text("capture_id")
         .notNull()
         .references(() => captures.id),
@@ -57,6 +65,7 @@ export const transcriptSegments = pgTable(
     "transcript_segments",
     {
         id: text("id").primaryKey(),
+        accountId: accountIdColumn(),
         voiceLogId: text("voice_log_id")
             .notNull()
             .references(() => voiceLogs.id),
@@ -72,6 +81,7 @@ export const transcriptSegments = pgTable(
 
 export const extractionRuns = pgTable("extraction_runs", {
     id: text("id").primaryKey(),
+    accountId: accountIdColumn(),
     captureId: text("capture_id")
         .notNull()
         .references(() => captures.id),
@@ -87,6 +97,7 @@ export const extractedValues = pgTable(
     "extracted_values",
     {
         id: text("id").primaryKey(),
+        accountId: accountIdColumn(),
         extractionRunId: text("extraction_run_id")
             .notNull()
             .references(() => extractionRuns.id),
@@ -105,11 +116,13 @@ export const extractedValues = pgTable(
     (table) => [
         index("extracted_values_capture_idx").on(table.captureId),
         index("extracted_values_review_state_idx").on(table.reviewState),
+        index("extracted_values_account_id_idx").on(table.accountId),
     ],
 );
 
 export const sourceAnchors = pgTable("source_anchors", {
     id: text("id").primaryKey(),
+    accountId: accountIdColumn(),
     extractedValueId: text("extracted_value_id")
         .notNull()
         .references(() => extractedValues.id),
@@ -126,6 +139,7 @@ export const timelineEvents = pgTable(
     "timeline_events",
     {
         id: text("id").primaryKey(),
+        accountId: accountIdColumn(),
         type: text("type").notNull(),
         title: text("title").notNull(),
         summary: text("summary"),
@@ -144,5 +158,6 @@ export const timelineEvents = pgTable(
         index("timeline_events_occurred_at_idx").on(table.occurredAt),
         index("timeline_events_aspect_idx").on(table.aspect),
         index("timeline_events_type_idx").on(table.type),
+        index("timeline_events_account_id_idx").on(table.accountId),
     ],
 );
