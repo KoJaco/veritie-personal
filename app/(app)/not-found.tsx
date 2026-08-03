@@ -19,7 +19,7 @@ export default function WorkNotFound() {
             message="The work page you're looking for doesn't exist or has been moved."
             action={{
                 label: "Go to work",
-                onClick: () => router.push("/work"),
+                onClick: () => router.push("/timeline"),
                 icon: LayoutDashboard,
             }}
         />
