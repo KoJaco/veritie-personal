@@ -16,7 +16,7 @@ import {
 import type { ScopeLens } from "@/lib/lens";
 import { scopeIdsMatchLens } from "@/lib/lens/scope-matching";
 import type { OnboardingAiMode, StubBootstrapSummary } from "./types";
-import { getIndustryLabel } from "./state";
+import { getAspectLabels } from "./state";
 
 type FreshDashboardMetric = {
     id: string;
@@ -81,9 +81,8 @@ const SETUP_OWNER = {
 };
 
 const DEFAULT_SUMMARY: StubBootstrapSummary = {
-    companySize: "11_50",
-    industry: "saas",
-    dataSensitivity: "moderate",
+    enabledAspects: ["personal", "admin", "finance"],
+    capturePreference: "voice_first",
     aiMode: "guided",
 };
 
@@ -95,13 +94,13 @@ function getActiveSummary(
 
 function buildTaskSeeds(summaryInput: StubBootstrapSummary | null): FreshTaskSeed[] {
     const summary = getActiveSummary(summaryInput);
-    const industryLabel = getIndustryLabel(summary.industry);
+    const aspectLabels = getAspectLabels(summary.enabledAspects).join(", ");
     const securityTone =
-        summary.dataSensitivity === "high"
-            ? "high-sensitivity handling expectations"
-            : summary.dataSensitivity === "moderate"
-              ? "core operational safeguards"
-              : "baseline documentation and ownership";
+        summary.capturePreference === "voice_first"
+            ? "voice-first capture workflow"
+            : summary.capturePreference === "balanced"
+              ? "mixed capture inputs"
+              : "manual capture and review";
 
     const seeds: FreshTaskSeed[] = [
         {
@@ -129,7 +128,7 @@ function buildTaskSeeds(summaryInput: StubBootstrapSummary | null): FreshTaskSee
         {
             id: "fresh-task-create-policies",
             title: "Create your baseline document set",
-            description: `Start a lightweight document pack for ${industryLabel.toLowerCase()} operations and ${securityTone}.`,
+            description: `Start a lightweight record pack for ${aspectLabels.toLowerCase()} and ${securityTone}.`,
             checkTitle: "Documented check baseline",
             status: summary.aiMode === "guided" ? "in_progress" : "open",
             dueAt: "2026-04-12T00:00:00.000Z",
@@ -217,12 +216,12 @@ function buildTaskSeeds(summaryInput: StubBootstrapSummary | null): FreshTaskSee
         },
     ];
 
-    if (summary.dataSensitivity === "high") {
+    if (summary.aiMode === "strict") {
         seeds.unshift({
             id: "fresh-task-data-guardrails",
-            title: "Define high-sensitivity data handling guardrails",
+            title: "Define capture review guardrails",
             description:
-                "Lock down handling expectations early so later document and attachment work reflects the right risk posture.",
+                "Lock down review expectations early so extracted values reflect the right confidence posture.",
             checkTitle: "Sensitive data handling baseline",
             status: "open",
             dueAt: "2026-04-09T00:00:00.000Z",
@@ -440,7 +439,7 @@ export function buildFreshDashboardModel(
     const firstActions = tasks.slice(0, 4).map((task) => ({
         id: task.id,
         title: task.title,
-        href: `/work/tasks/${task.id}`,
+        href: `/tasks/${task.id}`,
         description: `Linked setup area: ${task.check.title}.`,
         tone: task.status === "blocked" ? ("warning" as const) : ("neutral" as const),
     }));
@@ -449,7 +448,7 @@ export function buildFreshDashboardModel(
         {
             id: "setup-blocker-owners",
             title: "No owners assigned to the initial setup areas",
-            href: "/work/tasks/fresh-task-assign-owners",
+            href: "/tasks/fresh-task-assign-owners",
             description:
                 "Ownership needs to be explicit before resources, documents, and attachment work can move cleanly.",
             tone: "warning",
@@ -457,7 +456,7 @@ export function buildFreshDashboardModel(
         {
             id: "setup-blocker-assets",
             title: "No resources have been defined yet",
-            href: "/work/tasks/fresh-task-define-assets",
+            href: "/tasks/fresh-task-define-assets",
             description:
                 "Resource inventory is still empty, so check mapping and attachment planning would be speculative.",
             tone: "warning",
@@ -465,7 +464,7 @@ export function buildFreshDashboardModel(
         {
             id: "setup-blocker-documents",
             title: "No baseline documents exist yet",
-            href: "/work/tasks/fresh-task-create-policies",
+            href: "/tasks/fresh-task-create-policies",
             description:
                 "Start the baseline document set before deeper operational work appears complete on paper only.",
             tone: "warning",
@@ -473,7 +472,7 @@ export function buildFreshDashboardModel(
         {
             id: "setup-blocker-integrations",
             title: "No integrations have been prepared yet",
-            href: "/work/tasks/fresh-task-plan-integrations",
+            href: "/tasks/fresh-task-plan-integrations",
             description:
                 "The workspace can still guide setup, but your first integration workstream has not been staged yet.",
             tone: "warning",
@@ -491,7 +490,7 @@ export function buildFreshDashboardModel(
             openTaskCount: tasks.filter(
                 (task) => task.id === "fresh-task-plan-integrations",
             ).length,
-            taskHref: "/work/tasks",
+            taskHref: "/tasks",
         },
         {
             id: "documents",
@@ -505,7 +504,7 @@ export function buildFreshDashboardModel(
                     task.id === "fresh-task-create-policies" ||
                     task.id === "fresh-task-start-attachment-plan",
             ).length,
-            taskHref: "/work/tasks",
+            taskHref: "/tasks",
         },
         {
             id: "resources",
@@ -517,23 +516,23 @@ export function buildFreshDashboardModel(
             openTaskCount: tasks.filter(
                 (task) => task.id === "fresh-task-define-assets",
             ).length,
-            taskHref: "/work/tasks",
+            taskHref: "/tasks",
         },
         {
             id: "ownership",
             title: "Ownership",
             summary: "Ownership and guardrails are still being established.",
             statusNote:
-                summary.dataSensitivity === "high"
-                    ? "High-sensitivity onboarding inputs are pushing identity and data guardrails to the front."
+                summary.aiMode === "strict"
+                    ? "Strict AI mode is pushing review guardrails to the front."
                     : "Assign accountable owners first so setup work has a clear operating path.",
-            progress: summary.dataSensitivity === "high" ? 20 : 15,
+            progress: summary.aiMode === "strict" ? 20 : 15,
             openTaskCount: tasks.filter(
                 (task) =>
                     task.id === "fresh-task-assign-owners" ||
                     task.id === "fresh-task-data-guardrails",
             ).length,
-            taskHref: "/work/tasks",
+            taskHref: "/tasks",
         },
     ];
 

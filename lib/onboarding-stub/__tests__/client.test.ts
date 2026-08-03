@@ -23,22 +23,25 @@ describe("onboarding stub client helpers", () => {
             step: 2,
             profile: {
                 ...DEFAULT_CLIENT_STATE.profile,
-                industry: "fintech",
+                enabledAspects: ["work", "finance", "personal"],
             },
         });
 
         expect(
             window.localStorage.getItem(STUB_ONBOARDING_DRAFT_STORAGE_KEY),
         ).toContain('"step":2');
-        expect(loadClientDraftState().profile.industry).toBe("fintech");
+        expect(loadClientDraftState().profile.enabledAspects).toEqual([
+            "work",
+            "finance",
+            "personal",
+        ]);
     });
 
     it("writes only the compact server-safe cookie fields for completion", () => {
         persistOnboardingCompletion({
-            companySize: "11_50",
-            industry: "saas",
-            dataSensitivity: "moderate",
-            aiMode: "guided",
+            enabledAspects: ["personal", "admin"],
+            capturePreference: "balanced",
+            aiMode: "strict",
         });
 
         expect(document.cookie).toContain(

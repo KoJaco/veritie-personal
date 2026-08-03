@@ -10,29 +10,20 @@ export const STUB_ONBOARDING_COMPLETED_COOKIE = "stub_onboarding_completed";
 export const STUB_BOOTSTRAP_COOKIE = "stub_bootstrap";
 export const STUB_ONBOARDING_DRAFT_STORAGE_KEY = "stub_onboarding_draft";
 
-const companySizeSchema = z.enum([
-    "1_10",
-    "11_50",
-    "51_200",
-    "201_1000",
-    "1000_plus",
+const aspectKeySchema = z.enum([
+    "finance",
+    "fitness",
+    "work",
+    "personal",
+    "admin",
 ]);
-const industrySchema = z.enum([
-    "saas",
-    "fintech",
-    "healthcare",
-    "ecommerce",
-    "professional_services",
-    "public_sector",
-]);
-const sensitivitySchema = z.enum(["low", "moderate", "high"]);
+const capturePreferenceSchema = z.enum(["voice_first", "balanced", "manual"]);
 const aiModeSchema = z.enum(["guided", "strict", "lean"]);
 
 const bootstrapSummarySchema = z
     .object({
-        companySize: companySizeSchema,
-        industry: industrySchema,
-        dataSensitivity: sensitivitySchema,
+        enabledAspects: z.array(aspectKeySchema).min(1),
+        capturePreference: capturePreferenceSchema,
         aiMode: aiModeSchema,
     })
     .strict();
@@ -48,9 +39,8 @@ const onboardingClientStateSchema = z
     .strict();
 
 export const DEFAULT_ONBOARDING_PROFILE: StubOnboardingProfile = {
-    companySize: "11_50",
-    industry: "saas",
-    dataSensitivity: "moderate",
+    enabledAspects: ["personal", "admin", "finance"],
+    capturePreference: "voice_first",
     aiMode: "guided",
 };
 
@@ -68,9 +58,8 @@ export function buildBootstrapSummary(
     profile: StubOnboardingProfile,
 ): StubBootstrapSummary {
     return {
-        companySize: profile.companySize,
-        industry: profile.industry,
-        dataSensitivity: profile.dataSensitivity,
+        enabledAspects: [...profile.enabledAspects],
+        capturePreference: profile.capturePreference,
         aiMode: profile.aiMode,
     };
 }
@@ -138,40 +127,29 @@ export function profileIsComplete(
     return onboardingProfileSchema.safeParse(profile).success;
 }
 
-export const ONBOARDING_COMPANY_SIZE_OPTIONS = [
-    { value: "1_10", label: "1-10 people" },
-    { value: "11_50", label: "11-50 people" },
-    { value: "51_200", label: "51-200 people" },
-    { value: "201_1000", label: "201-1000 people" },
-    { value: "1000_plus", label: "1000+ people" },
+export const ONBOARDING_ASPECT_OPTIONS = [
+    { value: "finance", label: "Finance" },
+    { value: "fitness", label: "Fitness" },
+    { value: "work", label: "Work" },
+    { value: "personal", label: "Personal" },
+    { value: "admin", label: "Admin" },
 ] as const;
 
-export const ONBOARDING_INDUSTRY_OPTIONS = [
-    { value: "saas", label: "SaaS" },
-    { value: "fintech", label: "Fintech" },
-    { value: "healthcare", label: "Healthcare" },
-    { value: "ecommerce", label: "E-commerce" },
-    { value: "professional_services", label: "Professional services" },
-    { value: "public_sector", label: "Public sector" },
-] as const;
-
-export const ONBOARDING_SENSITIVITY_OPTIONS = [
+export const ONBOARDING_CAPTURE_PREFERENCE_OPTIONS = [
     {
-        value: "low",
-        label: "Low",
-        description: "Mostly public or low-impact internal information.",
+        value: "voice_first",
+        label: "Voice first",
+        description: "Prioritise voice logs as your main capture input.",
     },
     {
-        value: "moderate",
-        label: "Moderate",
-        description:
-            "Core business information with meaningful internal handling requirements.",
+        value: "balanced",
+        label: "Balanced",
+        description: "Mix voice, files, and text captures equally.",
     },
     {
-        value: "high",
-        label: "High",
-        description:
-            "Sensitive customer, workforce, or regulated data that raises check expectations quickly.",
+        value: "manual",
+        label: "Manual",
+        description: "Start with typed notes and uploads; add voice later.",
     },
 ] as const;
 
@@ -193,9 +171,24 @@ export const ONBOARDING_AI_MODE_OPTIONS = [
     },
 ] as const;
 
-export function getIndustryLabel(value: StubBootstrapSummary["industry"]): string {
-    return (
-        ONBOARDING_INDUSTRY_OPTIONS.find((option) => option.value === value)
-            ?.label ?? value
+export function getAspectLabels(
+    aspects: StubBootstrapSummary["enabledAspects"],
+): string[] {
+    return aspects.map(
+        (aspect) =>
+            ONBOARDING_ASPECT_OPTIONS.find((option) => option.value === aspect)
+                ?.label ?? aspect,
     );
 }
+
+/** @deprecated Use getAspectLabels */
+export function getIndustryLabel(): string {
+    return "Personal";
+}
+
+/** @deprecated */
+export const ONBOARDING_COMPANY_SIZE_OPTIONS = [] as const;
+/** @deprecated */
+export const ONBOARDING_INDUSTRY_OPTIONS = [] as const;
+/** @deprecated */
+export const ONBOARDING_SENSITIVITY_OPTIONS = [] as const;

@@ -1,6 +1,7 @@
 import {
     buildBootstrapSummary,
     buildServerBootstrap,
+    DEFAULT_ONBOARDING_PROFILE,
     parseBootstrapSummary,
     serializeBootstrapSummary,
 } from "@/lib/onboarding-stub";
@@ -8,9 +9,8 @@ import {
 describe("onboarding stub state", () => {
     it("round-trips the compact bootstrap summary through cookie-safe serialization", () => {
         const summary = buildBootstrapSummary({
-            companySize: "11_50",
-            industry: "saas",
-            dataSensitivity: "moderate",
+            enabledAspects: ["work", "finance"],
+            capturePreference: "voice_first",
             aiMode: "guided",
         });
 
@@ -23,11 +23,18 @@ describe("onboarding stub state", () => {
         expect(
             buildServerBootstrap({
                 onboardingCompleted: "1",
-                summary: encodeURIComponent('{"industry":"INVALID"}'),
+                summary: encodeURIComponent('{"enabledAspects":["INVALID"]}'),
             }),
         ).toEqual({
             onboardingCompleted: true,
             summary: null,
         });
+    });
+
+    it("uses default profile shape for onboarding bootstrap", () => {
+        expect(DEFAULT_ONBOARDING_PROFILE.enabledAspects.length).toBeGreaterThan(
+            0,
+        );
+        expect(DEFAULT_ONBOARDING_PROFILE.capturePreference).toBe("voice_first");
     });
 });

@@ -1,23 +1,13 @@
-export type OnboardingCompanySize =
-    | "1_10"
-    | "11_50"
-    | "51_200"
-    | "201_1000"
-    | "1000_plus";
-export type OnboardingIndustry =
-    | "saas"
-    | "fintech"
-    | "healthcare"
-    | "ecommerce"
-    | "professional_services"
-    | "public_sector";
-export type OnboardingDataSensitivity = "low" | "moderate" | "high";
+import type { AspectKey } from "@/lib/domain/aspect";
+
+export type PersonalFocusAspect = AspectKey;
+
+export type OnboardingCapturePreference = "voice_first" | "balanced" | "manual";
 export type OnboardingAiMode = "guided" | "strict" | "lean";
 
 export interface StubOnboardingProfile {
-    companySize: OnboardingCompanySize;
-    industry: OnboardingIndustry;
-    dataSensitivity: OnboardingDataSensitivity;
+    enabledAspects: PersonalFocusAspect[];
+    capturePreference: OnboardingCapturePreference;
     aiMode: OnboardingAiMode;
 }
 
@@ -33,3 +23,10 @@ export interface StubOnboardingClientState {
     profile: StubOnboardingProfile;
     completedProfile?: StubOnboardingProfile;
 }
+
+/** @deprecated Legacy company onboarding fields — do not use */
+export type OnboardingCompanySize = string;
+/** @deprecated */
+export type OnboardingIndustry = string;
+/** @deprecated */
+export type OnboardingDataSensitivity = string;
