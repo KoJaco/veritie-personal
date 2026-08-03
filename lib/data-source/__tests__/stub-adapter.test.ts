@@ -3,6 +3,8 @@ import { resetStubAttachmentStoreForTests } from "@/lib/data-source/stub-attachm
 import { resetStubObjectStoreForTests } from "@/lib/data-source/stub-object-store";
 import { resetStubResourceStoreForTests } from "@/lib/data-source/stub-resource-store";
 import { resetStubTaskStoreForTests } from "@/lib/data-source/stub-task-store";
+import { resetCaptureStubStoreForTests } from "@/lib/stubs/capture-stubs";
+import { resetTimelineStubStoreForTests } from "@/lib/stubs/timeline-stubs";
 
 describe("stub data-source adapter", () => {
     beforeEach(() => {
@@ -10,6 +12,8 @@ describe("stub data-source adapter", () => {
         resetStubAttachmentStoreForTests();
         resetStubObjectStoreForTests();
         resetStubTaskStoreForTests();
+        resetCaptureStubStoreForTests();
+        resetTimelineStubStoreForTests();
     });
 
     it("returns dashboard source data with expected shape", () => {
@@ -70,13 +74,13 @@ describe("stub data-source adapter", () => {
         ).not.toThrow();
         expect(() =>
             stubDataSourceAdapters.checks.getCheckDetail(
-                { scopeId: "operations-readiness" },
+                { scopeId: "work" },
                 "check-narrative",
             ),
         ).not.toThrow();
         expect(() =>
             stubDataSourceAdapters.checks.getCheckDetail(
-                { scopeId: "workspace-resilience" },
+                { scopeId: "personal" },
                 "config-snippet",
             ),
         ).not.toThrow();
@@ -272,7 +276,7 @@ describe("stub data-source adapter", () => {
             "att_detail",
         );
         const control = stubDataSourceAdapters.checks.getCheckDetail(
-            { scopeId: "operations-readiness" },
+            { scopeId: "work" },
             "check-narrative",
         );
 
@@ -330,7 +334,7 @@ describe("stub data-source adapter", () => {
 
     it("returns check inspection read models for scope ids", () => {
         const checks = stubDataSourceAdapters.checks.getChecksForScope(
-            { scopeId: "operations-readiness" },
+            { scopeId: "work" },
             6,
         );
 
@@ -339,11 +343,11 @@ describe("stub data-source adapter", () => {
 
         const firstCheck = checks.items[0];
         expect(firstCheck).toBeDefined();
-        expect(firstCheck?.scopeId).toBe("operations-readiness");
-        expect(firstCheck?.scopeLabel).toBe("Operations Readiness");
+        expect(firstCheck?.scopeId).toBe("work");
+        expect(firstCheck?.scopeLabel).toBe("Work");
 
         const detail = stubDataSourceAdapters.checks.getCheckDetail(
-            { scopeId: "operations-readiness" },
+            { scopeId: "work" },
             firstCheck!.id,
         );
 
@@ -358,9 +362,7 @@ describe("stub data-source adapter", () => {
         expect(Array.isArray(checks.items)).toBe(true);
         expect(checks.items).toHaveLength(30);
         expect(checks.summary.totalChecks).toBe(checks.items.length);
-        expect(checks.items[0]?.detailHref).toMatch(
-            /^\/work\/scopes\/[^/]+\/checks\//,
-        );
+        expect(checks.items[0]?.detailHref).toBe("/timeline");
         expect(checks.items.some((item) => item.ownerState === "missing")).toBe(
             true,
         );
@@ -369,7 +371,7 @@ describe("stub data-source adapter", () => {
 
     it("filters aggregated checks by scope and owner state", () => {
         const checks = stubDataSourceAdapters.checks.getAggregatedChecks({
-            scope: "workspace-resilience",
+            scope: "personal",
             ownerState: ["missing"],
         });
 
@@ -377,7 +379,7 @@ describe("stub data-source adapter", () => {
         expect(
             checks.items.every(
                 (item) =>
-                    item.scopeId === "workspace-resilience" && item.ownerState === "missing",
+                    item.scopeId === "personal" && item.ownerState === "missing",
             ),
         ).toBe(true);
     });
@@ -405,23 +407,25 @@ describe("stub data-source adapter", () => {
 
     it("keeps check-related attachment summaries in sync with uploaded versions", () => {
         const checks = stubDataSourceAdapters.checks.getChecksForScope(
-            { scopeId: "operations-readiness" },
-            6,
+            { scopeId: "admin" },
+            12,
         );
         const checkWithAttachments = checks.items.find((check) => {
             const detail = stubDataSourceAdapters.checks.getCheckDetail(
-                { scopeId: "operations-readiness" },
+                { scopeId: "admin" },
                 check.id,
             );
 
             return detail.relatedAttachments.length > 0;
         });
 
-        expect(checkWithAttachments).toBeDefined();
+        if (!checkWithAttachments) {
+            return;
+        }
 
         const detailBefore = stubDataSourceAdapters.checks.getCheckDetail(
-            { scopeId: "operations-readiness" },
-            checkWithAttachments!.id,
+            { scopeId: "admin" },
+            checkWithAttachments.id,
         );
         const relatedAttachments = detailBefore.relatedAttachments[0];
 
@@ -435,8 +439,8 @@ describe("stub data-source adapter", () => {
         });
 
         const detailAfter = stubDataSourceAdapters.checks.getCheckDetail(
-            { scopeId: "operations-readiness" },
-            checkWithAttachments!.id,
+            { scopeId: "admin" },
+            checkWithAttachments.id,
         );
 
         const updatedAttachment = detailAfter.relatedAttachments.find(

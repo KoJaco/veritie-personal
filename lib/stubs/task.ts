@@ -42,10 +42,11 @@ const BLOCKER_DESCRIPTIONS: Record<BlockerStub["type"], string[]> = {
 };
 
 const SCOPE_POOL: ScopeKey[] = [
-  "operations-readiness",
-  "delivery-observability",
-  "workspace-resilience",
-  "knowledge-hygiene",
+  "finance",
+  "fitness",
+  "work",
+  "personal",
+  "admin",
 ];
 
 function getScopeIds(): ScopeKey[] {

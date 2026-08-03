@@ -44,7 +44,7 @@ function ScopeSelector({
     return (
         <section className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Scope
+                Aspect
             </p>
             <div className="grid gap-3">
                 <Button
@@ -54,9 +54,9 @@ function ScopeSelector({
                     onClick={() => setDraft(normalizeLens({ scope: "all" }))}
                 >
                     <div>
-                        <div className="font-semibold">All scopes</div>
+                        <div className="font-semibold">All aspects</div>
                         <p className="mt-1 text-xs opacity-70">
-                            Cross-surface view of work, documents, resources, and checks.
+                            Cross-surface view of timeline, tasks, records, and resources.
                         </p>
                     </div>
                 </Button>

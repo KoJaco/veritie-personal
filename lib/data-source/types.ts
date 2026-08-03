@@ -124,6 +124,16 @@ export interface SettingsReadAdapter {
     getSettings(): SettingsStub;
 }
 
+export interface TimelineReadAdapter {
+    getTimelineIndex(query?: import("./timeline-read-model").TimelineIndexQuery): import("./timeline-read-model").TimelineIndexReadModel;
+    getTimelineEventDetail(id: string): import("./timeline-read-model").TimelineEventDetailReadModel | null;
+}
+
+export interface CapturesReadAdapter {
+    getCapturesIndex(query?: import("./captures-read-model").CapturesIndexQuery): import("./captures-read-model").CapturesIndexReadModel;
+    getCaptureDetail(id: string): import("./captures-read-model").CaptureDetailReadModel | null;
+}
+
 export interface DataSourceAdapters {
     dashboard: DashboardReadAdapter;
     tasks: TasksReadAdapter;
@@ -133,6 +143,8 @@ export interface DataSourceAdapters {
     checks: ChecksReadAdapter;
     connections: ConnectionsReadAdapter;
     settings: SettingsReadAdapter;
+    timeline: TimelineReadAdapter;
+    captures: CapturesReadAdapter;
 }
 
 export type ResourceIndexItem = ResourceStub;

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { SURFACE_CLASS, SURFACE_CLASS_NESTED } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
 import type { StubBootstrapSummary } from "@/lib/onboarding-stub";
-import { getIndustryLabel } from "@/lib/onboarding-stub";
 
 export function FreshModePlaceholder({
     title,
@@ -21,13 +20,15 @@ export function FreshModePlaceholder({
     secondaryAction?: { href: string; label: string };
     callouts: string[];
 }) {
+    const aspectCount = summary?.enabledAspects?.length ?? 0;
+
     return (
         <div className="space-y-12 py-6">
             <section className={cn(SURFACE_CLASS, "space-y-6 p-4")}>
                 <div className="space-y-2">
                     <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-muted-foreground">
                         <Info className="h-3.5 w-3.5" />
-                        Setup workspace
+                        Personal setup
                     </p>
                     <h2 className="text-xl font-semibold">{title}</h2>
                     <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
@@ -37,24 +38,25 @@ export function FreshModePlaceholder({
 
                 <div className="grid gap-3 md:grid-cols-3">
                     <div className={cn(SURFACE_CLASS_NESTED, "space-y-1 p-4")}>
-                        <p className="text-sm text-muted-foreground">Industry</p>
-                        <p className="text-2xl font-semibold">
-                            {summary ? getIndustryLabel(summary.industry) : "—"}
+                        <p className="text-sm text-muted-foreground">
+                            Enabled aspects
                         </p>
+                        <p className="text-2xl font-semibold">{aspectCount}</p>
                     </div>
                     <div className={cn(SURFACE_CLASS_NESTED, "space-y-1 p-4")}>
                         <p className="text-sm text-muted-foreground">
-                            Data sensitivity
+                            Capture preference
                         </p>
                         <p className="text-2xl font-semibold capitalize">
-                            {summary?.dataSensitivity ?? "—"}
+                            {summary?.capturePreference?.replace(/_/g, " ") ??
+                                "—"}
                         </p>
                     </div>
                     <div className={cn(SURFACE_CLASS_NESTED, "space-y-1 p-4")}>
-                        <p className="text-sm text-muted-foreground">
-                            Baseline entities created
+                        <p className="text-sm text-muted-foreground">AI mode</p>
+                        <p className="text-2xl font-semibold capitalize">
+                            {summary?.aiMode ?? "—"}
                         </p>
-                        <p className="text-2xl font-semibold">0</p>
                     </div>
                 </div>
 

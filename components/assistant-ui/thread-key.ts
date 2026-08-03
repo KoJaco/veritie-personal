@@ -9,38 +9,26 @@ export function getThreadKey(
 
     const scopeMatchesRoute = (() => {
         switch (routeId) {
+            case "timeline":
+                return scope.type === "timeline";
+            case "captures_index":
+                return scope.type === "captures_index";
+            case "capture_detail":
+                return scope.type === "capture_detail";
             case "task_detail":
                 return scope.type === "task_detail";
-            case "documents_detail":
-                return scope.type === "documents_detail";
-            case "documents_index":
-                return scope.type === "documents_index";
+            case "task_index":
+                return scope.type === "task_index";
+            case "records_detail":
+                return scope.type === "records_detail";
+            case "records_index":
+                return scope.type === "records_index";
             case "resources_detail":
                 return scope.type === "resources_detail";
             case "resources_index":
                 return scope.type === "resources_index";
-            case "connections_index":
-                return scope.type === "connections_index";
-            case "connections_detail":
-                return scope.type === "connections_detail";
             case "settings":
                 return scope.type === "settings";
-            case "scope_checks_index":
-                return scope.type === "scope_checks_index";
-            case "scope_check_detail":
-                return scope.type === "scope_check_detail";
-            case "scopes_index":
-                return scope.type === "scopes_index";
-            case "scopes_operations_readiness":
-                return scope.type === "scopes_operations_readiness";
-            case "scopes_delivery_observability":
-                return scope.type === "scopes_delivery_observability";
-            case "scopes_workspace_resilience":
-                return scope.type === "scopes_workspace_resilience";
-            case "scopes_knowledge_hygiene":
-                return scope.type === "scopes_knowledge_hygiene";
-            case "work":
-                return scope.type === "work";
             default:
                 return false;
         }
@@ -51,38 +39,26 @@ export function getThreadKey(
     }
 
     switch (scope.type) {
+        case "timeline":
+            return "timeline";
+        case "captures_index":
+            return "captures:index";
+        case "capture_detail":
+            return `capture:${scope.id}`;
         case "task_detail":
             return `task:${scope.id}`;
-        case "documents_index":
-            return "document:index";
-        case "documents_detail":
-            return `document:${scope.id}`;
+        case "task_index":
+            return "task:index";
+        case "records_index":
+            return "records:index";
+        case "records_detail":
+            return `record:${scope.id}`;
         case "resources_index":
             return "resource:index";
         case "resources_detail":
             return `resource:${scope.id}`;
-        case "connections_index":
-            return "connections:index";
-        case "connections_detail":
-            return `connection:${scope.id}`;
         case "settings":
             return "settings";
-        case "scopes_index":
-            return "scopes:index";
-        case "scopes_operations_readiness":
-            return "scope:operations-readiness";
-        case "scopes_delivery_observability":
-            return "scope:delivery-observability";
-        case "scopes_workspace_resilience":
-            return "scope:workspace-resilience";
-        case "scopes_knowledge_hygiene":
-            return "scope:knowledge-hygiene";
-        case "scope_checks_index":
-            return "checks:index";
-        case "scope_check_detail":
-            return `check:${scope.id}`;
-        case "work":
-            return "work";
         default:
             return routeId;
     }

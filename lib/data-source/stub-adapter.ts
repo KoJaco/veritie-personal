@@ -54,6 +54,14 @@ import {
     uploadStubAttachmentVersion,
 } from "./stub-attachment-store";
 import { getStubTaskDetail, getStubTasksIndex } from "./stub-task-store";
+import {
+    getCapturesIndex,
+    getCaptureDetail,
+} from "./captures-read-model";
+import {
+    getTimelineIndex,
+    getTimelineEventDetail,
+} from "./timeline-read-model";
 import type { DataSourceAdapters } from "./types";
 import type { ObjectsIndexQuery, ObjectsIndexReadModel } from "./objects-read-model";
 import type { ObjectStub } from "@/lib/stubs";
@@ -208,6 +216,14 @@ export const stubDataSourceAdapters: DataSourceAdapters = {
     settings: {
         getSettings: () => getSettingsStub(),
     },
+    timeline: {
+        getTimelineIndex: (query) => getTimelineIndex(query),
+        getTimelineEventDetail: (id) => getTimelineEventDetail(id),
+    },
+    captures: {
+        getCapturesIndex: (query) => getCapturesIndex(query),
+        getCaptureDetail: (id) => getCaptureDetail(id),
+    },
 };
 
 function getCheckObjects(scope: CheckScope, count: number) {
@@ -280,10 +296,11 @@ function getAggregatedChecksReadModel(
         summary: summarizeChecks(filteredItems),
         availableScopes: [
             "all",
-            "operations-readiness",
-            "delivery-observability",
-            "workspace-resilience",
-            "knowledge-hygiene",
+            "finance",
+            "fitness",
+            "work",
+            "personal",
+            "admin",
         ],
         availableReadiness: ["blocked", "unmapped", "at_risk", "complete"],
         availableOwnerStates: ["assigned", "missing"],

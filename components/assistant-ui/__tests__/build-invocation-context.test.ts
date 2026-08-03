@@ -4,19 +4,19 @@ import { buildInvocationContext } from "@/components/assistant-ui/build-invocati
 describe("buildInvocationContext", () => {
     it("builds minimal context with deterministic schema and route envelope", () => {
         const result = buildInvocationContext({
-            routeId: "work",
+            routeId: "timeline",
             routeContext: null,
             focusContext: null,
-            threadKey: "work",
+            threadKey: "timeline",
         });
 
         expect(result).toMatchObject({
             schemaVersion: "assistant_invocation_context_v0",
-            route: { routeId: "work" },
+            route: { routeId: "timeline" },
             focus: null,
             snapshot: {},
             meta: {
-                threadKey: "work",
+                threadKey: "timeline",
                 source: "frontend_stub",
             },
         });
@@ -31,7 +31,7 @@ describe("buildInvocationContext", () => {
                 primaryObject: { type: "task", id: "task-123" },
                 data: {
                     asOf: "2026-03-04T00:00:00.000Z",
-                    lens: { scope: "delivery-observability" },
+                    lens: { scope: "work" },
                 },
             },
             focusContext: {
@@ -50,7 +50,7 @@ describe("buildInvocationContext", () => {
         expect(result.snapshot).toEqual({
             asOf: "2026-03-04T00:00:00.000Z",
             lens: {
-                scope: "delivery-observability",
+                scope: "work",
             },
             primaryObject: { type: "task", id: "task-123" },
         });

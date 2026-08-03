@@ -24,6 +24,7 @@ const config: Config = {
         "/.vercel/",
         "/dist/",
         "/build/",
+        "<rootDir>/sdk/",
     ],
     collectCoverageFrom: [
         "app/**/*.{ts,tsx}",

@@ -5,7 +5,7 @@ import type {
     TaskStub,
 } from "@/lib/stubs";
 import type { ScopeKey } from "@/lib/lens";
-import { getScopeLabel } from "@/lib/lens/scope-definitions";
+import { getAspectLabel } from "@/lib/aspect/definitions";
 
 export interface CheckScope {
     scopeId: ScopeKey;
@@ -98,7 +98,7 @@ export interface AggregatedChecksReadModel {
 }
 
 export function checkScopeLabel(scope: CheckScope): string {
-    return getScopeLabel(scope.scopeId);
+    return getAspectLabel(scope.scopeId);
 }
 
 export function checkScopeFilterKey(
@@ -107,20 +107,8 @@ export function checkScopeFilterKey(
     return scope.scopeId;
 }
 
-export function checkDetailHref(scope: CheckScope, id: string): string {
-    if (scope.scopeId === "delivery-observability") {
-        return `/work/scopes/delivery-observability/checks/${id}`;
-    }
-
-    if (scope.scopeId === "operations-readiness") {
-        return `/work/scopes/operations-readiness/checks/${id}`;
-    }
-
-    if (scope.scopeId === "workspace-resilience") {
-        return `/work/scopes/workspace-resilience/checks/${id}`;
-    }
-
-    return `/work/scopes/knowledge-hygiene/checks/${id}`;
+export function checkDetailHref(_scope: CheckScope, _id: string): string {
+    return "/timeline";
 }
 
 export function mapCheckStubToSummary(

@@ -8,7 +8,7 @@ import {
 describe("validateRailContextPayload", () => {
     it("accepts a minimal valid payload", () => {
         const result = validateRailContextPayload({
-            scope: { type: "work" },
+            scope: { type: "timeline" },
         });
 
         expect(result.ok).toBe(true);
@@ -18,9 +18,9 @@ describe("validateRailContextPayload", () => {
         expect(result.sizeBytes).toBeGreaterThan(0);
     });
 
-    it("accepts lens scope 'all' for work scope", () => {
+    it("accepts lens scope 'all' for timeline scope", () => {
         const result = validateRailContextPayload({
-            scope: { type: "work" },
+            scope: { type: "timeline" },
             data: {
                 lens: {
                     scope: "all",
@@ -33,7 +33,7 @@ describe("validateRailContextPayload", () => {
 
     it("rejects unknown top-level keys", () => {
         const result = validateRailContextPayload({
-            scope: { type: "work" },
+            scope: { type: "timeline" },
             debugDump: true,
         });
 
@@ -63,7 +63,7 @@ describe("validateRailContextPayload", () => {
 
     it("rejects raw document fields in nested route context payloads", () => {
         const result = validateRailContextPayload({
-            scope: { type: "work" },
+            scope: { type: "timeline" },
             data: {
                 snapshot: {
                     blockedChecks: 2,
@@ -82,7 +82,7 @@ describe("validateRailContextPayload", () => {
 
     it("rejects non JSON-safe values", () => {
         const result = validateRailContextPayload({
-            scope: { type: "work" },
+            scope: { type: "timeline" },
             data: {
                 scopesInView: [undefined],
             },
@@ -99,7 +99,7 @@ describe("validateRailContextPayload", () => {
         circularTaskIds.push(circularTaskIds);
 
         const result = validateRailContextPayload({
-            scope: { type: "work" },
+            scope: { type: "timeline" },
             data: {
                 topBlockingTaskIds: circularTaskIds as string[],
             },
@@ -130,7 +130,7 @@ describe("buildRailPayload budget behavior", () => {
         const overSoft = "x".repeat(PAYLOAD_SOFT_LIMIT_BYTES + 2000);
 
         const payload = buildRailPayload({
-            scope: { type: "work" },
+            scope: { type: "timeline" },
             aggregates: {
                 scopesInView: [overSoft],
             },
@@ -149,7 +149,7 @@ describe("buildRailPayload budget behavior", () => {
         const overHard = "x".repeat(PAYLOAD_HARD_LIMIT_BYTES + 1000);
 
         const payload = buildRailPayload({
-            scope: { type: "work" },
+            scope: { type: "timeline" },
             aggregates: {
                 scopesInView: [overHard],
             },

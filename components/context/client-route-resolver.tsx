@@ -20,22 +20,35 @@ export function useRailContract(): RailContract {
     });
 
     return useMemo(() => {
-        // RouteId derived from segments only to avoid payload hydration mismatch.
-
-        let routeId: RouteId = "work";
+        let routeId: RouteId = "timeline";
 
         if (segments.length === 0) {
-            routeId = "work";
+            routeId = "timeline";
         } else {
             switch (segments[0]) {
+                case "timeline":
+                    routeId = "timeline";
+                    break;
+                case "captures":
+                    routeId =
+                        segments.length >= 2
+                            ? "capture_detail"
+                            : "captures_index";
+                    break;
+                case "goals":
+                    routeId = "goals_index";
+                    break;
+                case "money":
+                    routeId = "money_index";
+                    break;
                 case "tasks":
                     routeId = segments.length >= 2 ? "task_detail" : "task_index";
                     break;
-                case "documents":
+                case "records":
                     routeId =
                         segments.length >= 2
-                            ? "documents_detail"
-                            : "documents_index";
+                            ? "records_detail"
+                            : "records_index";
                     break;
                 case "resources":
                     routeId =
@@ -43,32 +56,8 @@ export function useRailContract(): RailContract {
                             ? "resources_detail"
                             : "resources_index";
                     break;
-                case "connections":
-                    routeId =
-                        segments.length >= 2
-                            ? "connections_detail"
-                            : "connections_index";
-                    break;
                 case "settings":
                     routeId = "settings";
-                    break;
-                case "scopes":
-                    if (segments.includes("checks")) {
-                        routeId =
-                            segments[segments.length - 1] === "checks"
-                                ? "scope_checks_index"
-                                : "scope_check_detail";
-                    } else if (segments[1] === "delivery-observability") {
-                        routeId = "scopes_delivery_observability";
-                    } else if (segments[1] === "operations-readiness") {
-                        routeId = "scopes_operations_readiness";
-                    } else if (segments[1] === "workspace-resilience") {
-                        routeId = "scopes_workspace_resilience";
-                    } else if (segments[1] === "knowledge-hygiene") {
-                        routeId = "scopes_knowledge_hygiene";
-                    } else {
-                        routeId = "scopes_index";
-                    }
                     break;
                 default:
                     routeId = "unknown";
@@ -76,7 +65,6 @@ export function useRailContract(): RailContract {
             }
         }
 
-        // Unkown is a deliberate contract, don't need fallback policy.
         const routeConfig = getRouteConfig(routeId);
 
         const contract: RailContract = {
@@ -88,7 +76,6 @@ export function useRailContract(): RailContract {
             tabs: routeConfig.tabs,
             context: contextPayload || undefined,
         };
-
 
         logger.debug("[rail] contract_output", {
             routeId,

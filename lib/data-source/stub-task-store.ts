@@ -15,8 +15,8 @@ import {
     getNormalizedTaskSeed,
     getStoryUser,
 } from "./stub-normalized-stories";
-import { scopeIdsToLabels } from "@/lib/lens/scope-definitions";
-import type { ScopeKey } from "@/lib/lens";
+import { aspectIdsToLabels } from "@/lib/aspect/definitions";
+import type { AspectKey } from "@/lib/domain/aspect";
 import {
     applyTasksIndexQuery,
     isTaskOverdue,
@@ -375,11 +375,11 @@ function mapNormalizedActivityItem(
     };
 }
 
-function buildScopeLabels(scopeIds: ScopeKey[] | undefined) {
-    const labels = scopeIdsToLabels(scopeIds ?? []);
+function buildScopeLabels(aspectIds: AspectKey[] | undefined) {
+    const labels = aspectIdsToLabels(aspectIds ?? []);
 
     if (labels.length === 0) {
-        return ["Operations Readiness"];
+        return ["Personal"];
     }
 
     return labels;

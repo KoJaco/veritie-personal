@@ -22,7 +22,7 @@ function SidebarHeaderInner({ className }: SidebarHeaderProps) {
     return (
         <div className={cn("flex items-center h-16 lg:h-20 w-full", className)}>
             <Link
-                href={withLens("/work", lens)}
+                href={withLens("/timeline", lens)}
                 className="flex items-center gap-2 font-semibold text-lg hover:opacity-80 transition-opacity"
             >
                 <div className="h-8 w-8 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold">

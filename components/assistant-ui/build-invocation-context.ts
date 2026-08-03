@@ -43,9 +43,9 @@ function getScopeId(scope: RailScope | undefined): string | undefined {
     if (!scope) return undefined;
     switch (scope.type) {
         case "task_detail":
-        case "documents_detail":
+        case "records_detail":
         case "resources_detail":
-        case "scope_check_detail":
+        case "capture_detail":
             return scope.id;
         default:
             return undefined;

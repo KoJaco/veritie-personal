@@ -3,22 +3,17 @@ import type { ScopeLens } from "@/lib/lens";
 export type RailTabKey = "assistant" | "context";
 
 export type RouteId =
-    | "work"
-    | "scopes_index"
-    | "scopes_operations_readiness"
-    | "scopes_delivery_observability"
-    | "scopes_workspace_resilience"
-    | "scopes_knowledge_hygiene"
-    | "scope_checks_index"
-    | "scope_check_detail"
-    | "documents_index"
-    | "documents_detail"
-    | "resources_index"
-    | "resources_detail"
+    | "timeline"
+    | "captures_index"
+    | "capture_detail"
+    | "goals_index"
+    | "money_index"
     | "task_index"
     | "task_detail"
-    | "connections_index"
-    | "connections_detail"
+    | "records_index"
+    | "records_detail"
+    | "resources_index"
+    | "resources_detail"
     | "settings"
     | "unknown";
 
@@ -28,45 +23,23 @@ export type RailTab = {
 };
 
 export type PrimaryObject =
-    | {
-          type: "task";
-          id: string;
-      }
-    | {
-          type: "attachment";
-          id: string;
-      }
-    | {
-          type: "check";
-          id: string;
-      }
-    | {
-          type: "artifact";
-          id: string;
-      }
-    | {
-          type: "resource";
-          id: string;
-      };
+    | { type: "task"; id: string }
+    | { type: "attachment"; id: string }
+    | { type: "capture"; id: string }
+    | { type: "artifact"; id: string }
+    | { type: "resource"; id: string }
+    | { type: "timeline_event"; id: string };
 
-// Use this to set scope in each page appropriately
 export type RailScope =
-    | { type: "work" }
-    | { type: "scopes_index" }
-    | { type: "scopes_operations_readiness" }
-    | { type: "scopes_delivery_observability" }
-    | { type: "scopes_workspace_resilience" }
-    | { type: "scopes_knowledge_hygiene" }
-    | { type: "scope_checks_index" }
-    | { type: "scope_check_detail"; id: string }
+    | { type: "timeline" }
+    | { type: "captures_index" }
+    | { type: "capture_detail"; id: string }
     | { type: "task_index" }
     | { type: "task_detail"; id: string }
-    | { type: "documents_index" }
-    | { type: "documents_detail"; id: string }
+    | { type: "records_index" }
+    | { type: "records_detail"; id: string }
     | { type: "resources_index" }
     | { type: "resources_detail"; id: string }
-    | { type: "connections_index" }
-    | { type: "connections_detail"; id: string }
     | { type: "settings" };
 
 export type RailContextPayload = {
@@ -121,7 +94,7 @@ export type RouteConfig = {
 };
 
 export type FocusEntityPointer = {
-    kind: "task" | "attachment" | "object" | "scope" | "check";
+    kind: "task" | "attachment" | "object" | "capture" | "timeline_event";
     id: string;
 };
 

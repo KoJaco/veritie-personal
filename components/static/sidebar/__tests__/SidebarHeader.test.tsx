@@ -48,15 +48,12 @@ describe("SidebarHeader", () => {
 
     it("renders hydrated link and preserves lens params", () => {
         mockUseSearchParams.mockReturnValue(
-            new URLSearchParams("scope=operations-readiness"),
+            new URLSearchParams("aspect=work"),
         );
 
         render(<SidebarHeader />);
 
         const link = screen.getByRole("link", { name: /shell/i });
-        expect(link).toHaveAttribute(
-            "href",
-            "/work?scope=operations-readiness",
-        );
+        expect(link).toHaveAttribute("href", "/timeline?aspect=work");
     });
 });

@@ -41,14 +41,14 @@ describe("SidebarItem Suspense boundary", () => {
     });
 
     it("renders fallback when route hooks are suspended", () => {
-        mockUsePathname.mockReturnValue("/work/tasks");
+        mockUsePathname.mockReturnValue("/tasks");
         mockUseSearchParams.mockImplementation(() => {
             throw new Promise(() => {});
         });
 
         const { container } = render(
             <SidebarItem
-                href="/work/tasks"
+                href="/tasks"
                 icon={DummyIcon}
                 label="Tasks"
                 className="suspense-fallback-sentinel"
@@ -66,14 +66,14 @@ describe("SidebarItem Suspense boundary", () => {
     });
 
     it("renders the link once route hooks resolve", () => {
-        mockUsePathname.mockReturnValue("/work/tasks");
+        mockUsePathname.mockReturnValue("/tasks");
         mockUseSearchParams.mockReturnValue(
-            new URLSearchParams("scope=operations-readiness"),
+            new URLSearchParams("aspect=work"),
         );
 
         render(
             <SidebarItem
-                href="/work/tasks"
+                href="/tasks"
                 icon={DummyIcon}
                 label="Tasks"
             />,
@@ -81,9 +81,6 @@ describe("SidebarItem Suspense boundary", () => {
 
         const link = screen.getByRole("link", { name: "Tasks" });
         expect(link).toBeInTheDocument();
-        expect(link).toHaveAttribute(
-            "href",
-            "/work/tasks?scope=operations-readiness",
-        );
+        expect(link).toHaveAttribute("href", "/tasks?aspect=work");
     });
 });

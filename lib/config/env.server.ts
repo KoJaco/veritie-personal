@@ -5,12 +5,15 @@
  * These may contain sensitive secrets and should never be exposed to the browser.
  */
 
-function getEnvVarOptional(
-    key: string,
-    defaultValue?: string
-): string | undefined {
-    const value = process.env[key];
-    return value ?? defaultValue;
+import { getBooleanEnvVar, getEnvVarOptional } from "./utils";
+
+function resolveAllowStubCaptureMutations(): boolean {
+    const explicit = process.env.ALLOW_STUB_CAPTURE_MUTATIONS;
+    if (explicit !== undefined) {
+        return explicit === "true" || explicit === "1";
+    }
+    const nodeEnv = process.env.NODE_ENV;
+    return nodeEnv === "development" || nodeEnv === "test";
 }
 
 export const envServer = {
@@ -26,4 +29,15 @@ export const envServer = {
     // TODO: which auth provider are we using?
     authServiceRoleKey: getEnvVarOptional("AUTH_SERVICE_ROLE_KEY"),
     authWebhookSecret: getEnvVarOptional("AUTH_WEBHOOK_SECRET"),
+
+    // Veritie server credentials (captures persist)
+    veritieApiUrl: getEnvVarOptional("VERITIE_API_URL"),
+    veritiePipelineAlias: getEnvVarOptional("VERITIE_PIPELINE_ALIAS"),
+    veritieApiKey: getEnvVarOptional("VERITIE_API_KEY"),
+
+    // Interim bearer gate for programmatic stub APIs until session auth lands
+    capturesPersistSecret: getEnvVarOptional("CAPTURES_PERSIST_SECRET"),
+
+    // Stub read-model mutations (dev/test default on, production default off)
+    allowStubCaptureMutations: resolveAllowStubCaptureMutations(),
 } as const;

@@ -1,0 +1,70 @@
+import type { TimelineEvent } from "@/lib/domain/timeline";
+
+export type TimelineEventStub = TimelineEvent;
+
+export const TIMELINE_EVENT_SEEDS: TimelineEventStub[] = [
+    {
+        id: "timeline_task_medibank",
+        type: "task_detected",
+        title: "Call Medibank about the claim",
+        aspect: "admin",
+        occurredAt: "2026-08-01T08:22:30.000Z",
+        captureId: "capture_seed_morning_log",
+        extractedValueId: "extracted_task_medibank",
+        extractedObjectType: "task",
+        reviewState: "pending",
+        confidence: 0.86,
+        createdAt: "2026-08-01T08:22:30.000Z",
+    },
+    {
+        id: "timeline_expense_chemist",
+        type: "expense_detected",
+        title: "Chemist Warehouse vitamins — $42",
+        aspect: "finance",
+        occurredAt: "2026-08-01T08:22:30.000Z",
+        captureId: "capture_seed_morning_log",
+        extractedValueId: "extracted_expense_chemist",
+        extractedObjectType: "money_entry",
+        reviewState: "pending",
+        confidence: 0.91,
+        createdAt: "2026-08-01T08:22:30.000Z",
+    },
+    {
+        id: "timeline_reminder_rego",
+        type: "reminder_detected",
+        title: "Renew car registration",
+        aspect: "admin",
+        occurredAt: "2026-08-01T08:22:30.000Z",
+        captureId: "capture_seed_morning_log",
+        extractedValueId: "extracted_reminder_rego",
+        extractedObjectType: "reminder",
+        reviewState: "pending",
+        confidence: 0.84,
+        createdAt: "2026-08-01T08:22:30.000Z",
+    },
+    {
+        id: "timeline_goal_progress_run",
+        type: "goal_progress_detected",
+        title: "Run 5km",
+        aspect: "fitness",
+        occurredAt: "2026-08-02T07:38:20.000Z",
+        captureId: "capture_seed_fitness_log",
+        extractedValueId: "extracted_goal_progress_run",
+        extractedObjectType: "goal_progress",
+        reviewState: "pending",
+        confidence: 0.93,
+        createdAt: "2026-08-02T07:38:20.000Z",
+    },
+];
+
+const INITIAL_TIMELINE_EVENT_SEEDS = JSON.parse(
+    JSON.stringify(TIMELINE_EVENT_SEEDS),
+) as TimelineEventStub[];
+
+export function resetTimelineStubStoreForTests(): void {
+    TIMELINE_EVENT_SEEDS.splice(
+        0,
+        TIMELINE_EVENT_SEEDS.length,
+        ...JSON.parse(JSON.stringify(INITIAL_TIMELINE_EVENT_SEEDS)),
+    );
+}

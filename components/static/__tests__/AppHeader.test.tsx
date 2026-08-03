@@ -45,7 +45,7 @@ describe("AppHeader", () => {
         mockUsePathname.mockReset();
         mockUseSearchParams.mockReset();
         mockUseAppSidebar.mockReset();
-        mockUsePathname.mockReturnValue("/work/tasks");
+        mockUsePathname.mockReturnValue("/tasks");
         mockUseAppSidebar.mockReturnValue({
             isOpen: false,
             setIsOpen: jest.fn(),
@@ -65,28 +65,18 @@ describe("AppHeader", () => {
     });
 
     it("renders hydrated breadcrumbs and preserves lens params in links", () => {
+        mockUsePathname.mockReturnValue("/tasks/fresh-task-1");
         mockUseSearchParams.mockReturnValue(
-            new URLSearchParams("scope=operations-readiness"),
+            new URLSearchParams("aspect=work"),
         );
 
         render(<AppHeader />);
 
-        const dashboardLink = screen.getByRole("link", { name: "Work" });
-        expect(dashboardLink).toHaveAttribute(
-            "href",
-            "/work?scope=operations-readiness",
-        );
+        const homeLink = screen.getByRole("link", { name: /home/i });
+        expect(homeLink).toHaveAttribute("href", "/tasks?aspect=work");
         expect(
             screen.getByRole("button", { name: /scope lens/i }),
         ).toBeInTheDocument();
-    });
-
-    it("maps scopes route into breadcrumbs", () => {
-        mockUsePathname.mockReturnValue("/work/scopes");
-        mockUseSearchParams.mockReturnValue(new URLSearchParams());
-
-        render(<AppHeader />);
-
-        expect(screen.getByText("Scopes")).toBeInTheDocument();
+        expect(screen.getByText("fresh-task-1")).toBeInTheDocument();
     });
 });

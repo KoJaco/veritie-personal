@@ -55,12 +55,12 @@ jest.mock("@/components/context/focus-context-store", () => ({
 jest.mock("@/components/assistant-ui/build-invocation-context", () => ({
     buildInvocationContext: () => ({
         schemaVersion: "assistant_invocation_context_v0",
-        route: { routeId: "work" },
+        route: { routeId: "timeline" },
         focus: null,
         snapshot: {},
         meta: {
             builtAt: "2026-03-04T00:00:00.000Z",
-            threadKey: "work",
+            threadKey: "timeline",
             source: "frontend_stub",
         },
     }),
@@ -106,9 +106,9 @@ describe("AssistantProvider run-state lifecycle", () => {
 
         render(
             <AssistantProvider
-                threadKey="work"
-                routeId="work"
-                context={{ scope: { type: "work" } }}
+                threadKey="timeline"
+                routeId="timeline"
+                context={{ scope: { type: "timeline" } }}
             >
                 <div>child</div>
             </AssistantProvider>,
@@ -116,7 +116,7 @@ describe("AssistantProvider run-state lifecycle", () => {
 
         await waitFor(() =>
             expect(
-                useAssistantRunStateStore.getState().getThreadState("work")
+                useAssistantRunStateStore.getState().getThreadState("timeline")
                     ?.phase,
             ).toBe("ready"),
         );
@@ -133,7 +133,7 @@ describe("AssistantProvider run-state lifecycle", () => {
 
         await waitFor(() =>
             expect(
-                useAssistantRunStateStore.getState().getThreadState("work")
+                useAssistantRunStateStore.getState().getThreadState("timeline")
                     ?.phase,
             ).toBe("running"),
         );
@@ -150,7 +150,7 @@ describe("AssistantProvider run-state lifecycle", () => {
 
         await waitFor(() =>
             expect(
-                useAssistantRunStateStore.getState().getThreadState("work")
+                useAssistantRunStateStore.getState().getThreadState("timeline")
                     ?.phase,
             ).toBe("ready"),
         );
@@ -168,9 +168,9 @@ describe("AssistantProvider run-state lifecycle", () => {
 
         render(
             <AssistantProvider
-                threadKey="work"
-                routeId="work"
-                context={{ scope: { type: "work" } }}
+                threadKey="timeline"
+                routeId="timeline"
+                context={{ scope: { type: "timeline" } }}
             >
                 <div>child</div>
             </AssistantProvider>,
@@ -178,7 +178,7 @@ describe("AssistantProvider run-state lifecycle", () => {
 
         await waitFor(() =>
             expect(
-                useAssistantRunStateStore.getState().getThreadState("work")
+                useAssistantRunStateStore.getState().getThreadState("timeline")
                     ?.phase,
             ).toBe("ready"),
         );
@@ -195,7 +195,7 @@ describe("AssistantProvider run-state lifecycle", () => {
 
         await waitFor(() =>
             expect(
-                useAssistantRunStateStore.getState().getThreadState("work")
+                useAssistantRunStateStore.getState().getThreadState("timeline")
                     ?.phase,
             ).toBe("error"),
         );

@@ -4,44 +4,43 @@ import {
 } from "@/components/context/route-config-registry";
 
 describe("route-config-registry", () => {
-    it("returns configured scope and resource route contracts", () => {
-        expect(getRouteConfig("scopes_index")).toMatchObject({
+    it("returns configured personal app route contracts", () => {
+        expect(getRouteConfig("timeline")).toMatchObject({
             enabled: true,
-            showTrigger: true,
+            showTrigger: false,
             defaultTab: "assistant",
         });
-        expect(getRouteConfig("scopes_operations_readiness")).toMatchObject({
+        expect(getRouteConfig("captures_index")).toMatchObject({
             enabled: true,
-            showTrigger: true,
-            defaultTab: "assistant",
+            showTrigger: false,
         });
-        expect(getRouteConfig("scopes_delivery_observability")).toMatchObject({
+        expect(getRouteConfig("capture_detail")).toMatchObject({
             enabled: true,
-            showTrigger: true,
+            showTrigger: false,
         });
-        expect(getRouteConfig("scopes_workspace_resilience")).toMatchObject({
+        expect(getRouteConfig("task_index")).toMatchObject({
             enabled: true,
-            showTrigger: true,
+            showTrigger: false,
         });
-        expect(getRouteConfig("scopes_knowledge_hygiene")).toMatchObject({
+        expect(getRouteConfig("task_detail")).toMatchObject({
             enabled: true,
-            showTrigger: true,
+            showTrigger: false,
         });
-        expect(getRouteConfig("scope_checks_index")).toMatchObject({
+        expect(getRouteConfig("records_index")).toMatchObject({
             enabled: true,
-            showTrigger: true,
+            showTrigger: false,
         });
-        expect(getRouteConfig("scope_check_detail")).toMatchObject({
+        expect(getRouteConfig("records_detail")).toMatchObject({
             enabled: true,
-            showTrigger: true,
+            showTrigger: false,
         });
         expect(getRouteConfig("resources_index")).toMatchObject({
             enabled: true,
-            showTrigger: true,
+            showTrigger: false,
         });
         expect(getRouteConfig("resources_detail")).toMatchObject({
             enabled: true,
-            showTrigger: true,
+            showTrigger: false,
         });
     });
 

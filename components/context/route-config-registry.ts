@@ -1,80 +1,54 @@
 import type { RouteId, RouteConfig } from "./types";
 
 export const ROUTE_CONFIGS: Record<RouteId, RouteConfig> = {
-    scopes_index: {
-        routeId: "scopes_index",
+    timeline: {
+        routeId: "timeline",
         enabled: true,
-        showTrigger: true,
+        showTrigger: false,
         defaultTab: "assistant",
         tabs: [
             { key: "assistant", label: "Assistant" },
             { key: "context", label: "Context" },
         ],
     },
-    scopes_operations_readiness: {
-        routeId: "scopes_operations_readiness",
+    captures_index: {
+        routeId: "captures_index",
         enabled: true,
-        showTrigger: true,
+        showTrigger: false,
         defaultTab: "assistant",
         tabs: [
             { key: "assistant", label: "Assistant" },
             { key: "context", label: "Context" },
         ],
     },
-    scopes_delivery_observability: {
-        routeId: "scopes_delivery_observability",
+    capture_detail: {
+        routeId: "capture_detail",
         enabled: true,
-        showTrigger: true,
+        showTrigger: false,
         defaultTab: "assistant",
         tabs: [
             { key: "assistant", label: "Assistant" },
             { key: "context", label: "Context" },
         ],
     },
-    scopes_workspace_resilience: {
-        routeId: "scopes_workspace_resilience",
-        enabled: true,
-        showTrigger: true,
+    goals_index: {
+        routeId: "goals_index",
+        enabled: false,
+        showTrigger: false,
         defaultTab: "assistant",
-        tabs: [
-            { key: "assistant", label: "Assistant" },
-            { key: "context", label: "Context" },
-        ],
+        tabs: [],
     },
-    scopes_knowledge_hygiene: {
-        routeId: "scopes_knowledge_hygiene",
-        enabled: true,
-        showTrigger: true,
+    money_index: {
+        routeId: "money_index",
+        enabled: false,
+        showTrigger: false,
         defaultTab: "assistant",
-        tabs: [
-            { key: "assistant", label: "Assistant" },
-            { key: "context", label: "Context" },
-        ],
-    },
-    scope_checks_index: {
-        routeId: "scope_checks_index",
-        enabled: true,
-        showTrigger: true,
-        defaultTab: "assistant",
-        tabs: [
-            { key: "assistant", label: "Assistant" },
-            { key: "context", label: "Context" },
-        ],
-    },
-    scope_check_detail: {
-        routeId: "scope_check_detail",
-        enabled: true,
-        showTrigger: true,
-        defaultTab: "assistant",
-        tabs: [
-            { key: "assistant", label: "Assistant" },
-            { key: "context", label: "Context" },
-        ],
+        tabs: [],
     },
     task_index: {
         routeId: "task_index",
         enabled: true,
-        showTrigger: true,
+        showTrigger: false,
         defaultTab: "assistant",
         tabs: [
             { key: "assistant", label: "Assistant" },
@@ -84,27 +58,27 @@ export const ROUTE_CONFIGS: Record<RouteId, RouteConfig> = {
     task_detail: {
         routeId: "task_detail",
         enabled: true,
-        showTrigger: true,
+        showTrigger: false,
         defaultTab: "assistant",
         tabs: [
             { key: "assistant", label: "Assistant" },
             { key: "context", label: "Context" },
         ],
     },
-    documents_index: {
-        routeId: "documents_index",
+    records_index: {
+        routeId: "records_index",
         enabled: true,
-        showTrigger: true,
+        showTrigger: false,
         defaultTab: "assistant",
         tabs: [
             { key: "assistant", label: "Assistant" },
             { key: "context", label: "Context" },
         ],
     },
-    documents_detail: {
-        routeId: "documents_detail",
+    records_detail: {
+        routeId: "records_detail",
         enabled: true,
-        showTrigger: true,
+        showTrigger: false,
         defaultTab: "assistant",
         tabs: [
             { key: "assistant", label: "Assistant" },
@@ -114,7 +88,7 @@ export const ROUTE_CONFIGS: Record<RouteId, RouteConfig> = {
     resources_index: {
         routeId: "resources_index",
         enabled: true,
-        showTrigger: true,
+        showTrigger: false,
         defaultTab: "assistant",
         tabs: [
             { key: "assistant", label: "Assistant" },
@@ -124,37 +98,7 @@ export const ROUTE_CONFIGS: Record<RouteId, RouteConfig> = {
     resources_detail: {
         routeId: "resources_detail",
         enabled: true,
-        showTrigger: true,
-        defaultTab: "assistant",
-        tabs: [
-            { key: "assistant", label: "Assistant" },
-            { key: "context", label: "Context" },
-        ],
-    },
-    work: {
-        routeId: "work",
-        enabled: true,
-        showTrigger: true,
-        defaultTab: "assistant",
-        tabs: [
-            { key: "assistant", label: "Assistant" },
-            { key: "context", label: "Context" },
-        ],
-    },
-    connections_index: {
-        routeId: "connections_index",
-        enabled: true,
-        showTrigger: true,
-        defaultTab: "assistant",
-        tabs: [
-            { key: "assistant", label: "Assistant" },
-            { key: "context", label: "Context" },
-        ],
-    },
-    connections_detail: {
-        routeId: "connections_detail",
-        enabled: true,
-        showTrigger: true,
+        showTrigger: false,
         defaultTab: "assistant",
         tabs: [
             { key: "assistant", label: "Assistant" },
