@@ -16,6 +16,7 @@ import {
     type TranscriptSegmentStub,
     type VoiceLogStub,
 } from "@/lib/stubs/capture-stubs";
+import { TIMELINE_EVENT_SEEDS, type TimelineEventStub } from "@/lib/stubs/timeline-stubs";
 
 export type CaptureIndexItem = {
     id: string;
@@ -148,4 +149,41 @@ export function appendCaptureFromJob(input: {
     TRANSCRIPT_SEGMENT_SEEDS.push(...input.segments);
     EXTRACTED_VALUE_SEEDS.push(...input.extractedValues);
     return input.capture;
+}
+
+export function mergeCaptureEnrichment(input: {
+    captureId: string;
+    status?: CaptureStub["status"];
+    extractedValues: ExtractedValueStub[];
+    timelineEvents: TimelineEventStub[];
+}): void {
+    if (!envServer.allowStubCaptureMutations) {
+        throw new Error("Stub capture mutations are disabled");
+    }
+
+    const capture = CAPTURE_SEEDS.find((item) => item.id === input.captureId);
+    if (!capture) {
+        throw new Error("Capture not found for enrichment");
+    }
+
+    if (input.status) {
+        capture.status = input.status;
+        capture.updatedAt = new Date().toISOString();
+    }
+
+    const existingValueIds = new Set(EXTRACTED_VALUE_SEEDS.map((value) => value.id));
+    for (const value of input.extractedValues) {
+        if (!existingValueIds.has(value.id)) {
+            EXTRACTED_VALUE_SEEDS.push(value);
+            existingValueIds.add(value.id);
+        }
+    }
+
+    const existingEventIds = new Set(TIMELINE_EVENT_SEEDS.map((event) => event.id));
+    for (const event of input.timelineEvents) {
+        if (!existingEventIds.has(event.id)) {
+            TIMELINE_EVENT_SEEDS.push(event);
+            existingEventIds.add(event.id);
+        }
+    }
 }

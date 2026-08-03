@@ -8,6 +8,21 @@ import type {
     VoiceLogStub,
 } from "@/lib/stubs/capture-stubs";
 
+const KNOWN_ASPECTS = new Set<AspectKey>([
+    "finance",
+    "fitness",
+    "work",
+    "personal",
+    "admin",
+]);
+
+function normalizeAspect(value: string | undefined): AspectKey {
+    if (value && KNOWN_ASPECTS.has(value as AspectKey)) {
+        return value as AspectKey;
+    }
+    return "personal";
+}
+
 export function mapVeritieJobToCaptureBundle(
     job: ValidatedVeritieJob,
     captureId: string,
@@ -74,7 +89,7 @@ export function mapVeritieJobToCaptureBundle(
         const candidates = payload[list.key] ?? [];
         for (const [index, candidate] of candidates.entries()) {
             const extractedId = `extracted_${captureId}_${list.key}_${index}`;
-            const aspect: AspectKey = candidate.aspect ?? "personal";
+            const aspect = normalizeAspect(candidate.aspect);
             const title = String(candidate.title ?? list.key);
             const confidence = Math.min(1, Math.max(0, candidate.confidence ?? 0.5));
             extractedValues.push({
