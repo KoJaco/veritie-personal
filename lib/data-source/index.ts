@@ -6,4 +6,6 @@ export * from "./objects-read-model";
 export * from "./resources-read-model";
 export * from "./connections-read-model";
 export * from "./tasks-read-model";
+export * from "./timeline-read-model";
+export * from "./captures-read-model";
 export * from "./stub-attachment-store";

@@ -103,9 +103,9 @@ export function getAttachmentStub(
         tags: randomBoolean(0.5)
             ? [
                   randomElement([
-                      "operations-readiness",
-                      "knowledge-hygiene",
-                      "workspace-resilience",
+                      "admin",
+                      "fitness",
+                      "personal",
                       "access-control",
                       "logging",
                   ]),

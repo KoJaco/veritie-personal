@@ -45,4 +45,13 @@ export const backendDataSourceAdapters: DataSourceAdapters = {
     settings: {
         getSettings: () => notImplemented("settings.getSettings"),
     },
+    timeline: {
+        getTimelineIndex: () => notImplemented("timeline.getTimelineIndex"),
+        getTimelineEventDetail: () =>
+            notImplemented("timeline.getTimelineEventDetail"),
+    },
+    captures: {
+        getCapturesIndex: () => notImplemented("captures.getCapturesIndex"),
+        getCaptureDetail: () => notImplemented("captures.getCaptureDetail"),
+    },
 };

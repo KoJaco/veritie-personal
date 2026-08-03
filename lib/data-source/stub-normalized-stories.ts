@@ -247,7 +247,7 @@ const OBJECT_SEEDS: NormalizedObjectSeed[] = [
         ownerId: "user_dana_harper",
         version: 3,
         updatedAt: "2026-03-29T09:00:00.000Z",
-        scopeIds: ["operations-readiness", "delivery-observability", "knowledge-hygiene"],
+        scopeIds: ["admin", "work", "fitness"],
         relatedTaskId: "task-ac-policy-review",
         linkedTaskIds: ["task-ac-policy-review"],
         linkedAttachmentIds: ["att_policy_packet", "att_versioned"],
@@ -267,7 +267,7 @@ const OBJECT_SEEDS: NormalizedObjectSeed[] = [
         ownerId: "user_alex_chen",
         version: 4,
         updatedAt: "2026-04-06T14:10:00.000Z",
-        scopeIds: ["operations-readiness", "delivery-observability"],
+        scopeIds: ["admin", "work"],
         relatedTaskId: "task-access-provisioning-validation",
         linkedTaskIds: ["task-access-provisioning-validation"],
         linkedAttachmentIds: ["att_detail", "att_api_1"],
@@ -287,7 +287,7 @@ const OBJECT_SEEDS: NormalizedObjectSeed[] = [
         ownerId: "user_priya_nair",
         version: 2,
         updatedAt: "2026-04-05T11:35:00.000Z",
-        scopeIds: ["knowledge-hygiene"],
+        scopeIds: ["fitness"],
         relatedTaskId: "task-iso-gap-remediation",
         linkedTaskIds: ["task-iso-gap-remediation"],
         linkedAttachmentIds: ["att_iso_gap_register"],
@@ -307,7 +307,7 @@ const OBJECT_SEEDS: NormalizedObjectSeed[] = [
         ownerId: "user_morgan_lee",
         version: 2,
         updatedAt: "2026-04-04T16:25:00.000Z",
-        scopeIds: ["workspace-resilience", "operations-readiness", "delivery-observability"],
+        scopeIds: ["personal", "admin", "work"],
         relatedTaskId: "task-remediation-program",
         linkedTaskIds: ["task-remediation-program"],
         linkedAttachmentIds: ["att_remediation_status_pack"],
@@ -327,7 +327,7 @@ const OBJECT_SEEDS: NormalizedObjectSeed[] = [
         ownerId: "user_current",
         version: 3,
         updatedAt: "2026-04-03T12:20:00.000Z",
-        scopeIds: ["operations-readiness", "delivery-observability", "workspace-resilience"],
+        scopeIds: ["admin", "work", "personal"],
         relatedTaskId: "task-attachment-coverage-reconciliation",
         linkedTaskIds: ["task-attachment-coverage-reconciliation"],
         linkedAttachmentIds: ["att_mapping_matrix"],
@@ -347,7 +347,7 @@ const OBJECT_SEEDS: NormalizedObjectSeed[] = [
         ownerId: "user_current",
         version: 2,
         updatedAt: "2026-04-06T09:15:00.000Z",
-        scopeIds: ["workspace-resilience", "knowledge-hygiene"],
+        scopeIds: ["personal", "fitness"],
         relatedTaskId: "task-config-hardening-review",
         linkedTaskIds: ["task-config-hardening-review"],
         linkedAttachmentIds: ["att_config_baseline"],
@@ -367,7 +367,7 @@ const TASK_SEEDS: NormalizedTaskSeed[] = [
         attachmentStatus: "complete",
         missingAttachmentCount: 0,
         updatedAt: "2026-03-29T09:00:00.000Z",
-        scopeIds: ["operations-readiness", "delivery-observability", "knowledge-hygiene"],
+        scopeIds: ["admin", "work", "fitness"],
         description:
             "Confirm the approved access control policy packet and the latest quarterly review export are ready for reuse in the next audit cycle.",
         checkContext:
@@ -402,7 +402,7 @@ const TASK_SEEDS: NormalizedTaskSeed[] = [
         attachmentStatus: "complete",
         missingAttachmentCount: 0,
         updatedAt: "2026-04-06T14:10:00.000Z",
-        scopeIds: ["operations-readiness", "delivery-observability"],
+        scopeIds: ["admin", "work"],
         description:
             "Validate that provisioning approvals, MFA configuration, and reviewer samples still match the documented access provisioning narrative.",
         checkContext:
@@ -438,7 +438,7 @@ const TASK_SEEDS: NormalizedTaskSeed[] = [
         attachmentStatus: "missing",
         missingAttachmentCount: 2,
         updatedAt: "2026-04-05T11:35:00.000Z",
-        scopeIds: ["knowledge-hygiene"],
+        scopeIds: ["fitness"],
         description:
             "Resolve the outstanding access and asset-management gaps once the affected system owners confirm remediation dates and proof requirements.",
         checkContext:
@@ -480,7 +480,7 @@ const TASK_SEEDS: NormalizedTaskSeed[] = [
         attachmentStatus: "required",
         missingAttachmentCount: 1,
         updatedAt: "2026-04-04T16:25:00.000Z",
-        scopeIds: ["workspace-resilience", "operations-readiness", "delivery-observability"],
+        scopeIds: ["personal", "admin", "work"],
         description:
             "Refresh the remediation plan so the next ninety days of work reflect current ownership, check gaps, and attachment commitments.",
         checkContext:
@@ -508,7 +508,7 @@ const TASK_SEEDS: NormalizedTaskSeed[] = [
         attachmentStatus: "missing",
         missingAttachmentCount: 2,
         updatedAt: "2026-04-03T12:20:00.000Z",
-        scopeIds: ["operations-readiness", "delivery-observability", "workspace-resilience"],
+        scopeIds: ["admin", "work", "personal"],
         description:
             "Review the attachment coverage workbook, remove stale mappings, and identify which checks still need a current artifact before the next review.",
         checkContext:
@@ -536,7 +536,7 @@ const TASK_SEEDS: NormalizedTaskSeed[] = [
         attachmentStatus: "complete",
         missingAttachmentCount: 0,
         updatedAt: "2026-04-06T09:15:00.000Z",
-        scopeIds: ["workspace-resilience", "knowledge-hygiene"],
+        scopeIds: ["personal", "fitness"],
         description:
             "Confirm the platform hardening export still matches the documented baseline snippet before the check is carried forward as complete.",
         checkContext:
@@ -602,7 +602,7 @@ const ATTACHMENT_SEEDS: NormalizedAttachmentSeed[] = [
         ],
         attachedTaskIds: ["task-ac-policy-review"],
         attachedObjectIds: ["policy-access-governance"],
-        derivedScopeIds: ["operations-readiness", "delivery-observability", "knowledge-hygiene"],
+        derivedScopeIds: ["admin", "work", "fitness"],
     },
     {
         id: "att_versioned",
@@ -645,7 +645,7 @@ const ATTACHMENT_SEEDS: NormalizedAttachmentSeed[] = [
         ],
         attachedTaskIds: ["task-ac-policy-review"],
         attachedObjectIds: ["policy-access-governance"],
-        derivedScopeIds: ["operations-readiness", "delivery-observability", "knowledge-hygiene"],
+        derivedScopeIds: ["admin", "work", "fitness"],
     },
     {
         id: "att_detail",
@@ -686,7 +686,7 @@ const ATTACHMENT_SEEDS: NormalizedAttachmentSeed[] = [
         ],
         attachedTaskIds: ["task-access-provisioning-validation"],
         attachedObjectIds: ["check-narrative"],
-        derivedScopeIds: ["operations-readiness", "delivery-observability"],
+        derivedScopeIds: ["admin", "work"],
     },
     {
         id: "att_api_1",
@@ -715,7 +715,7 @@ const ATTACHMENT_SEEDS: NormalizedAttachmentSeed[] = [
         ],
         attachedTaskIds: ["task-access-provisioning-validation"],
         attachedObjectIds: ["check-narrative"],
-        derivedScopeIds: ["operations-readiness", "delivery-observability"],
+        derivedScopeIds: ["admin", "work"],
     },
     {
         id: "att_iso_gap_register",
@@ -745,7 +745,7 @@ const ATTACHMENT_SEEDS: NormalizedAttachmentSeed[] = [
         ],
         attachedTaskIds: ["task-iso-gap-remediation"],
         attachedObjectIds: ["gap-analysis-standards"],
-        derivedScopeIds: ["knowledge-hygiene"],
+        derivedScopeIds: ["fitness"],
     },
     {
         id: "att_remediation_status_pack",
@@ -774,7 +774,7 @@ const ATTACHMENT_SEEDS: NormalizedAttachmentSeed[] = [
         ],
         attachedTaskIds: ["task-remediation-program"],
         attachedObjectIds: ["remediation-plan-90-days"],
-        derivedScopeIds: ["operations-readiness", "delivery-observability", "workspace-resilience"],
+        derivedScopeIds: ["admin", "work", "personal"],
     },
     {
         id: "att_mapping_matrix",
@@ -802,7 +802,7 @@ const ATTACHMENT_SEEDS: NormalizedAttachmentSeed[] = [
         ],
         attachedTaskIds: ["task-attachment-coverage-reconciliation"],
         attachedObjectIds: ["attachment-mapping-summary"],
-        derivedScopeIds: ["operations-readiness", "delivery-observability", "workspace-resilience"],
+        derivedScopeIds: ["admin", "work", "personal"],
     },
     {
         id: "att_config_baseline",
@@ -843,7 +843,7 @@ const ATTACHMENT_SEEDS: NormalizedAttachmentSeed[] = [
         ],
         attachedTaskIds: ["task-config-hardening-review"],
         attachedObjectIds: ["config-snippet"],
-        derivedScopeIds: ["workspace-resilience", "knowledge-hygiene"],
+        derivedScopeIds: ["personal", "fitness"],
     },
 ];
 
@@ -859,7 +859,7 @@ const RESOURCE_OVERRIDES: NormalizedResourceSeed[] = [
         ownerId: "user_alex_chen",
         criticality: "high",
         sensitivity: "restricted",
-        scopeIds: ["operations-readiness", "delivery-observability"],
+        scopeIds: ["admin", "work"],
         coverageFlags: {
             hasOwner: true,
             hasAttachments: true,
@@ -938,7 +938,7 @@ const DASHBOARD_WORKSTREAM_SEEDS: NormalizedDashboardWorkstreamSeed[] = [
             "Policy approval, provisioning approvals, and the identity tenant attachment set now follow one shared access-control story.",
         statusNote:
             "Provisioning validation remains open while the March sample is checked against the current workflow configuration.",
-        scopeIds: ["operations-readiness", "delivery-observability", "knowledge-hygiene"],
+        scopeIds: ["admin", "work", "fitness"],
         taskIds: [
             "task-ac-policy-review",
             "task-access-provisioning-validation",
@@ -949,7 +949,7 @@ const DASHBOARD_WORKSTREAM_SEEDS: NormalizedDashboardWorkstreamSeed[] = [
         resourceId: "resource_seed_3",
         checkTarget: {
             id: "check-narrative",
-            scope: { scopeId: "operations-readiness" },
+            scope: { scopeId: "admin" },
         },
     },
     {
@@ -959,7 +959,7 @@ const DASHBOARD_WORKSTREAM_SEEDS: NormalizedDashboardWorkstreamSeed[] = [
             "The gap register, owner dates, and follow-up tasks now point to the same remediation narrative.",
         statusNote:
             "This workstream is blocked until system owners confirm closure dates for the open findings.",
-        scopeIds: ["knowledge-hygiene"],
+        scopeIds: ["fitness"],
         taskIds: ["task-iso-gap-remediation"],
         primaryTaskId: "task-iso-gap-remediation",
         objectId: "gap-analysis-standards",
@@ -972,7 +972,7 @@ const DASHBOARD_WORKSTREAM_SEEDS: NormalizedDashboardWorkstreamSeed[] = [
             "The ninety-day plan tracks shared follow-through across delivery observability and resilience uplift work.",
         statusNote:
             "The next plan refresh still needs updated attachment commitments for the in-flight remediation items.",
-        scopeIds: ["operations-readiness", "delivery-observability", "workspace-resilience"],
+        scopeIds: ["admin", "work", "personal"],
         taskIds: ["task-remediation-program"],
         primaryTaskId: "task-remediation-program",
         objectId: "remediation-plan-90-days",
@@ -985,7 +985,7 @@ const DASHBOARD_WORKSTREAM_SEEDS: NormalizedDashboardWorkstreamSeed[] = [
             "Coverage mapping now has a single entry point from the workbook to the overdue task and its supporting object.",
         statusNote:
             "Two stale mappings still need current artifacts before reviewer sign-off can proceed.",
-        scopeIds: ["operations-readiness", "delivery-observability", "workspace-resilience"],
+        scopeIds: ["admin", "work", "personal"],
         taskIds: ["task-attachment-coverage-reconciliation"],
         primaryTaskId: "task-attachment-coverage-reconciliation",
         objectId: "attachment-mapping-summary",
@@ -998,14 +998,14 @@ const DASHBOARD_WORKSTREAM_SEEDS: NormalizedDashboardWorkstreamSeed[] = [
             "The approved hardening snippet, current export, and the completed verification task now read as one consistent baseline story.",
         statusNote:
             "This bundle is complete and ready to reuse from the resilience and knowledge hygiene views.",
-        scopeIds: ["workspace-resilience", "knowledge-hygiene"],
+        scopeIds: ["personal", "fitness"],
         taskIds: ["task-config-hardening-review"],
         primaryTaskId: "task-config-hardening-review",
         objectId: "config-snippet",
         attachmentId: "att_config_baseline",
         checkTarget: {
             id: "config-snippet",
-            scope: { scopeId: "workspace-resilience" },
+            scope: { scopeId: "personal" },
         },
     },
 ];
@@ -1023,7 +1023,7 @@ const DASHBOARD_ACTIVITY_SEEDS: NormalizedDashboardActivitySeed[] = [
         },
         summary:
             "Alex Chen reopened provisioning validation after comparing the March sample to the current workflow configuration.",
-        scopeIds: ["operations-readiness", "delivery-observability"],
+        scopeIds: ["admin", "work"],
     },
     {
         id: "activity_config_complete",
@@ -1037,7 +1037,7 @@ const DASHBOARD_ACTIVITY_SEEDS: NormalizedDashboardActivitySeed[] = [
         },
         summary:
             "You marked the hardening baseline verification complete after confirming the export still matched the approved snippet.",
-        scopeIds: ["workspace-resilience", "knowledge-hygiene"],
+        scopeIds: ["personal", "fitness"],
     },
     {
         id: "activity_remediation_pack",
@@ -1051,7 +1051,7 @@ const DASHBOARD_ACTIVITY_SEEDS: NormalizedDashboardActivitySeed[] = [
         },
         summary:
             "Morgan Lee uploaded the latest remediation status pack for the 30/60/90 workstream.",
-        scopeIds: ["operations-readiness", "delivery-observability", "workspace-resilience"],
+        scopeIds: ["admin", "work", "personal"],
     },
     {
         id: "activity_attachment_map",
@@ -1065,7 +1065,7 @@ const DASHBOARD_ACTIVITY_SEEDS: NormalizedDashboardActivitySeed[] = [
         },
         summary:
             "You flagged two stale mappings in the attachment coverage workbook that still need replacement artifacts.",
-        scopeIds: ["operations-readiness", "delivery-observability", "workspace-resilience"],
+        scopeIds: ["admin", "work", "personal"],
     },
     {
         id: "activity_policy_version",
@@ -1079,7 +1079,7 @@ const DASHBOARD_ACTIVITY_SEEDS: NormalizedDashboardActivitySeed[] = [
         },
         summary:
             "Dana Harper published the latest approved access-control policy packet with updated review references.",
-        scopeIds: ["operations-readiness", "delivery-observability", "knowledge-hygiene"],
+        scopeIds: ["admin", "work", "fitness"],
     },
     {
         id: "activity_policy_review",
@@ -1093,7 +1093,7 @@ const DASHBOARD_ACTIVITY_SEEDS: NormalizedDashboardActivitySeed[] = [
         },
         summary:
             "Dana Harper uploaded the Q1 quarterly access review export into the approved access-governance attachment set.",
-        scopeIds: ["operations-readiness", "delivery-observability", "knowledge-hygiene"],
+        scopeIds: ["admin", "work", "fitness"],
     },
     {
         id: "activity_provisioning_sample",
@@ -1107,7 +1107,7 @@ const DASHBOARD_ACTIVITY_SEEDS: NormalizedDashboardActivitySeed[] = [
         },
         summary:
             "Alex Chen added the current provisioning approval sample for reviewer traceability.",
-        scopeIds: ["operations-readiness", "delivery-observability"],
+        scopeIds: ["admin", "work"],
     },
     {
         id: "activity_iso_gap",
@@ -1121,7 +1121,7 @@ const DASHBOARD_ACTIVITY_SEEDS: NormalizedDashboardActivitySeed[] = [
         },
         summary:
             "Priya Nair updated the gap register and noted the outstanding dependency on owner-confirmed closure dates.",
-        scopeIds: ["knowledge-hygiene"],
+        scopeIds: ["fitness"],
     },
 ];
 

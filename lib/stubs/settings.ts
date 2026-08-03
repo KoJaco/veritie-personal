@@ -49,7 +49,7 @@ const SCOPE_MAPPING_CONFIG_STUB: ScopeMappingConfigStub = {
             detail: "3 checks are unmapped to an accountable owner.",
             remediation: {
                 label: "Review blocked readiness tasks",
-                href: "/work/tasks?scope=operations-readiness&focus=blocked",
+                href: "/work/tasks?scope=admin&focus=blocked",
             },
         },
         {
@@ -58,7 +58,7 @@ const SCOPE_MAPPING_CONFIG_STUB: ScopeMappingConfigStub = {
             detail: "2 checks reference workflows without linked attachment requirements.",
             remediation: {
                 label: "Inspect missing attachments",
-                href: "/work/documents?scope=operations-readiness&status=missing",
+                href: "/work/documents?scope=admin&status=missing",
             },
         },
         {
@@ -67,7 +67,7 @@ const SCOPE_MAPPING_CONFIG_STUB: ScopeMappingConfigStub = {
             detail: "1 mapped check is assigned to the wrong operating scope.",
             remediation: {
                 label: "Open operations readiness scope",
-                href: "/work/scopes/operations-readiness?scope=operations-readiness",
+                href: "/work/scopes/admin?scope=admin",
             },
         },
     ],

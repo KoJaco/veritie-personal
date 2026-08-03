@@ -29,7 +29,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Quarterly ownership reviews are incomplete for privileged access.",
         domain: "Identity and Access",
-        scopeId: "operations-readiness",
+        scopeId: "admin",
         coverageStatus: "blocked",
         linkedTasksCount: 6,
         linkedAttachmentCount: 1,
@@ -43,7 +43,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Third-party review attachment is partially collected for critical vendors.",
         domain: "Third-Party Risk",
-        scopeId: "operations-readiness",
+        scopeId: "admin",
         coverageStatus: "blocked",
         linkedTasksCount: 5,
         linkedAttachmentCount: 2,
@@ -56,7 +56,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         title: "Endpoint Monitoring Coverage",
         summary: "Endpoint telemetry coverage dropped below the target window.",
         domain: "Monitoring",
-        scopeId: "delivery-observability",
+        scopeId: "work",
         coverageStatus: "blocked",
         linkedTasksCount: 7,
         linkedAttachmentCount: 3,
@@ -70,7 +70,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Critical patch cadence is outside the agreed remediation threshold.",
         domain: "Vulnerability Management",
-        scopeId: "workspace-resilience",
+        scopeId: "personal",
         coverageStatus: "blocked",
         linkedTasksCount: 8,
         linkedAttachmentCount: 2,
@@ -84,7 +84,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Recent restore test results are missing for the current reporting period.",
         domain: "Resilience",
-        scopeId: "delivery-observability",
+        scopeId: "work",
         coverageStatus: "blocked",
         linkedTasksCount: 4,
         linkedAttachmentCount: 1,
@@ -98,7 +98,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Offboarding approvals are not consistently recorded in the attachment set.",
         domain: "Identity and Access",
-        scopeId: "operations-readiness",
+        scopeId: "admin",
         coverageStatus: "unmapped",
         linkedTasksCount: 4,
         linkedAttachmentCount: 0,
@@ -112,7 +112,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Baseline hardening standard has no mapped implementation attachment yet.",
         domain: "Platform Security",
-        scopeId: "workspace-resilience",
+        scopeId: "personal",
         coverageStatus: "unmapped",
         linkedTasksCount: 3,
         linkedAttachmentCount: 0,
@@ -125,7 +125,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         title: "Production Change Authorisation",
         summary: "Emergency change approvals are documented but not yet mapped.",
         domain: "Change Management",
-        scopeId: "delivery-observability",
+        scopeId: "work",
         coverageStatus: "unmapped",
         linkedTasksCount: 2,
         linkedAttachmentCount: 0,
@@ -139,7 +139,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Training completion records exist but current acknowledgements are incomplete.",
         domain: "People Operations",
-        scopeId: "operations-readiness",
+        scopeId: "admin",
         coverageStatus: "at_risk",
         linkedTasksCount: 3,
         linkedAttachmentCount: 2,
@@ -154,7 +154,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Retention coverage is in place but one source remains outside policy.",
         domain: "Monitoring",
-        scopeId: "delivery-observability",
+        scopeId: "work",
         coverageStatus: "at_risk",
         linkedTasksCount: 4,
         linkedAttachmentCount: 3,
@@ -167,7 +167,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         title: "Approved application controls",
         summary: "Policy enforcement is active, but exception handling needs cleanup.",
         domain: "Endpoint Security",
-        scopeId: "workspace-resilience",
+        scopeId: "personal",
         coverageStatus: "at_risk",
         linkedTasksCount: 5,
         linkedAttachmentCount: 3,
@@ -181,7 +181,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Runbooks are current, but on-call handoff attachment is aging out.",
         domain: "Incident Response",
-        scopeId: "operations-readiness",
+        scopeId: "admin",
         coverageStatus: "at_risk",
         linkedTasksCount: 2,
         linkedAttachmentCount: 2,
@@ -195,7 +195,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Rotation jobs are green, but attachment export for one environment is stale.",
         domain: "Platform Security",
-        scopeId: "delivery-observability",
+        scopeId: "work",
         coverageStatus: "at_risk",
         linkedTasksCount: 3,
         linkedAttachmentCount: 4,
@@ -209,7 +209,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Execution restrictions are deployed, but two business exceptions remain open.",
         domain: "Endpoint Security",
-        scopeId: "workspace-resilience",
+        scopeId: "personal",
         coverageStatus: "at_risk",
         linkedTasksCount: 4,
         linkedAttachmentCount: 2,
@@ -223,7 +223,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Meeting records are complete and linked to approved production releases.",
         domain: "Change Management",
-        scopeId: "operations-readiness",
+        scopeId: "admin",
         coverageStatus: "complete",
         linkedTasksCount: 1,
         linkedAttachmentCount: 5,
@@ -237,7 +237,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Annual acknowledgements are approved and retained in the attachment library.",
         domain: "Governance",
-        scopeId: "operations-readiness",
+        scopeId: "admin",
         coverageStatus: "complete",
         linkedTasksCount: 0,
         linkedAttachmentCount: 4,
@@ -250,7 +250,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         title: "Database Audit Logging",
         summary: "Audit log collection and retention checks are fully documented.",
         domain: "Monitoring",
-        scopeId: "delivery-observability",
+        scopeId: "work",
         coverageStatus: "complete",
         linkedTasksCount: 1,
         linkedAttachmentCount: 6,
@@ -263,7 +263,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         title: "MFA Enforcement Reporting",
         summary: "MFA enforcement attachment is current across workforce identities.",
         domain: "Identity and Access",
-        scopeId: "delivery-observability",
+        scopeId: "work",
         coverageStatus: "complete",
         linkedTasksCount: 0,
         linkedAttachmentCount: 5,
@@ -276,7 +276,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         title: "Browser configuration baseline",
         summary: "Secure browser configuration attachment is current and complete.",
         domain: "Endpoint Security",
-        scopeId: "workspace-resilience",
+        scopeId: "personal",
         coverageStatus: "complete",
         linkedTasksCount: 1,
         linkedAttachmentCount: 4,
@@ -289,7 +289,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         title: "Removable media handling",
         summary: "USB device check posture is documented and approved.",
         domain: "Device Check",
-        scopeId: "workspace-resilience",
+        scopeId: "personal",
         coverageStatus: "complete",
         linkedTasksCount: 0,
         linkedAttachmentCount: 3,
@@ -303,7 +303,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "SLA metrics are current, but one legacy scanner feed needs replacement.",
         domain: "Vulnerability Management",
-        scopeId: "delivery-observability",
+        scopeId: "work",
         coverageStatus: "at_risk",
         linkedTasksCount: 2,
         linkedAttachmentCount: 3,
@@ -317,7 +317,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Two server groups are still pending validation attachment after rollout.",
         domain: "Vulnerability Management",
-        scopeId: "workspace-resilience",
+        scopeId: "personal",
         coverageStatus: "blocked",
         linkedTasksCount: 5,
         linkedAttachmentCount: 1,
@@ -331,7 +331,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Critical assets are inventoried, but owner assignments are not fully mapped.",
         domain: "Asset Management",
-        scopeId: "operations-readiness",
+        scopeId: "admin",
         coverageStatus: "unmapped",
         linkedTasksCount: 2,
         linkedAttachmentCount: 0,
@@ -344,7 +344,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         title: "Service Continuity Drill",
         summary: "The latest continuity drill is scheduled but not yet documented.",
         domain: "Resilience",
-        scopeId: "delivery-observability",
+        scopeId: "work",
         coverageStatus: "blocked",
         linkedTasksCount: 6,
         linkedAttachmentCount: 0,
@@ -358,7 +358,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Mail gateway posture is solid, but exception recertification is overdue.",
         domain: "Messaging Security",
-        scopeId: "workspace-resilience",
+        scopeId: "personal",
         coverageStatus: "at_risk",
         linkedTasksCount: 3,
         linkedAttachmentCount: 2,
@@ -372,7 +372,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Several operating guides lack an assigned owner or review cadence.",
         domain: "Documentation Operations",
-        scopeId: "knowledge-hygiene",
+        scopeId: "fitness",
         coverageStatus: "blocked",
         linkedTasksCount: 4,
         linkedAttachmentCount: 1,
@@ -386,7 +386,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Shift handoff notes are inconsistent across on-call rotations.",
         domain: "Operating Knowledge",
-        scopeId: "knowledge-hygiene",
+        scopeId: "fitness",
         coverageStatus: "at_risk",
         linkedTasksCount: 3,
         linkedAttachmentCount: 2,
@@ -400,7 +400,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Baseline policy set is drafted but not fully linked to active checks.",
         domain: "Governance",
-        scopeId: "knowledge-hygiene",
+        scopeId: "fitness",
         coverageStatus: "unmapped",
         linkedTasksCount: 2,
         linkedAttachmentCount: 0,
@@ -414,7 +414,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Two incident runbooks have not been reviewed within the agreed window.",
         domain: "Incident Response",
-        scopeId: "knowledge-hygiene",
+        scopeId: "fitness",
         coverageStatus: "at_risk",
         linkedTasksCount: 5,
         linkedAttachmentCount: 3,
@@ -428,7 +428,7 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
         summary:
             "Open knowledge gaps are tracked, but supporting attachments are incomplete.",
         domain: "Documentation Operations",
-        scopeId: "knowledge-hygiene",
+        scopeId: "fitness",
         coverageStatus: "complete",
         linkedTasksCount: 1,
         linkedAttachmentCount: 4,
@@ -441,10 +441,10 @@ const SCOPE_CHECK_SEEDS: ScopeCheckSeed[] = [
 const SCOPE_CHECK_MAP = new Map(SCOPE_CHECK_SEEDS.map((seed) => [seed.id, seed]));
 
 const SCOPE_KEYS: ScopeKey[] = [
-    "operations-readiness",
-    "delivery-observability",
-    "workspace-resilience",
-    "knowledge-hygiene",
+    "admin",
+    "work",
+    "personal",
+    "fitness",
 ];
 
 function resolveOwner(name: string) {
