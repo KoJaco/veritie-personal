@@ -10,10 +10,11 @@ This directory contains active implementation planning that is intended to guide
 
 ## Current canonical plan
 
+- `2026-08-03-voice-log-personal-restructure-plan.md`
+
+## Previous initiative (complete)
+
 - `2026-06-08-domain-agnostic-migration-plan.md`
-
-## Current status
-
 - `2026-08-02-domain-agnostic-current-status.md`
 
 ## Latest slice log
