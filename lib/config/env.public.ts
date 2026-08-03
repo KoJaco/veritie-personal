@@ -44,4 +44,14 @@ export const envPublic = {
     // Server-driven UI
     sduiSchemaVersion: getNumberEnvVar("NEXT_PUBLIC_SDUI_SCHEMA_VERSION", 1),
     sduiStrictMode: getBooleanEnvVar("NEXT_PUBLIC_SDUI_STRICT_MODE", true),
+
+    // Veritie capture pipeline
+    veritieApiUrl: getEnvVarOptional("NEXT_PUBLIC_VERITIE_API_URL"),
+    veritiePipelineAlias: getEnvVarOptional(
+        "NEXT_PUBLIC_VERITIE_PIPELINE_ALIAS",
+    ),
+    captureLauncherEnabled: getBooleanEnvVar(
+        "NEXT_PUBLIC_CAPTURE_LAUNCHER_ENABLED",
+        true,
+    ),
 } as const;
