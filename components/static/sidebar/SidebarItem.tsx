@@ -30,9 +30,7 @@ function SidebarItemInner({
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const lens = getLensFromSearchParams(searchParams);
-    const nextHref = href.startsWith("/work")
-        ? withLens(href, lens)
-        : href;
+    const nextHref = withLens(href, lens);
     const isActive = pathname === href || pathname.startsWith(`${href}/`);
 
     return (

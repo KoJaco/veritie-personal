@@ -1,11 +1,9 @@
 "use client";
 
 import { type ReactNode, useEffect } from "react";
-import { Sparkles } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "@/components/static/AppHeader";
 import { AppSidebarProvider } from "./AppSidebarProvider";
-import { Button } from "@/components/ui/button";
 import {
     ContextRailProvider,
     useContextRail,
@@ -20,6 +18,8 @@ import {
     useAppShellPageHeader,
 } from "./AppShellPageHeaderProvider";
 import { useIsScrolledFromTop } from "@/lib/hooks/useIsScrolledFromTop";
+import { GlobalCaptureLauncher } from "@/components/capture/GlobalCaptureLauncher";
+import { envPublic } from "@/lib/config/env.public";
 
 interface AppShellProps {
     children: ReactNode;
@@ -47,9 +47,6 @@ function AppShellContent({ children }: AppShellProps) {
     const hasPageHeader = Boolean(header);
 
     const canRenderRail = contract.enabled;
-
-    const canRenderTrigger =
-        contract.enabled && contract.showTrigger && state === "CLOSED";
 
     useEffect(() => {
         if (!contract.enabled && state !== "CLOSED") {
@@ -105,26 +102,7 @@ function AppShellContent({ children }: AppShellProps) {
 
             {/* Overlay context rail (rendered outside main layout) */}
             {canRenderRail && isOverlay && <ContextRail isScrolled={isScrolled} />}
-            {/* Floating toggle button for context rail. Bottom right corner.
-            - TODO (accessibility): add in keyboar navigation helper in top visually hidden navigation helper. Feature to implement post MVP.
-            */}
-            {canRenderTrigger && (
-                <Button
-                    variant="default"
-                    size="icon-lg"
-                    className={cn(
-                        "fixed bottom-8 rounded-xl right-6 z-50 shadow-lg border transition-opacity duration-300",
-                        isOverlay || isPinned
-                            ? "hidden opacity-0"
-                            : "opacity-100",
-                    )}
-                    onClick={toggle}
-                    aria-label="Toggle AI assistant"
-                    title="Toggle AI assistant"
-                >
-                    <Sparkles className="h-5 w-5" />
-                </Button>
-            )}
+            {envPublic.captureLauncherEnabled && <GlobalCaptureLauncher />}
         </div>
     );
 }

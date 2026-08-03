@@ -7,9 +7,11 @@ import {
     ListTodo,
     Boxes,
     ServerCog,
-    Plug,
     Settings,
-    Shapes,
+    Clock,
+    Mic,
+    Target,
+    Wallet,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -25,40 +27,53 @@ function SidebarContent() {
             <div className="h-8" />
 
             <div className="sidebar-scrollbar flex-1 overflow-y-auto pb-4">
-                <SidebarGroup label="Work">
+                <SidebarGroup label="Review">
                     <SidebarItem
-                        href="/work/tasks"
+                        href="/timeline"
+                        icon={Clock}
+                        label="Timeline"
+                    />
+                    <SidebarItem
+                        href="/captures"
+                        icon={Mic}
+                        label="Captures"
+                    />
+                </SidebarGroup>
+
+                <SidebarGroup label="Plan" className="mt-6">
+                    <SidebarItem
+                        href="/tasks"
                         icon={ListTodo}
                         label="Tasks"
+                    />
+                    <SidebarItem
+                        href="/goals"
+                        icon={Target}
+                        label="Goals"
+                    />
+                    <SidebarItem
+                        href="/money"
+                        icon={Wallet}
+                        label="Money"
                     />
                 </SidebarGroup>
 
                 <SidebarGroup label="Library" className="mt-6">
                     <SidebarItem
-                        href="/work/resources"
+                        href="/records"
+                        icon={Boxes}
+                        label="Records"
+                    />
+                    <SidebarItem
+                        href="/resources"
                         icon={ServerCog}
                         label="Resources"
                     />
-                    <SidebarItem
-                        href="/work/documents"
-                        icon={Boxes}
-                        label="Documents"
-                    />
                 </SidebarGroup>
 
-                <SidebarGroup label="Platform" className="mt-6">
+                <SidebarGroup label="System" className="mt-6">
                     <SidebarItem
-                        href="/work/scopes"
-                        icon={Shapes}
-                        label="Scopes"
-                    />
-                    <SidebarItem
-                        href="/work/connections"
-                        icon={Plug}
-                        label="Connections"
-                    />
-                    <SidebarItem
-                        href="/work/settings"
+                        href="/settings"
                         icon={Settings}
                         label="Settings"
                     />

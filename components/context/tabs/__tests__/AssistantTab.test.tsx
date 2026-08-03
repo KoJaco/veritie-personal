@@ -54,23 +54,16 @@ describe("AssistantTab", () => {
   });
 
   it.each([
+    ["timeline", "timeline"],
+    ["captures_index", "captures_index"],
+    ["capture_detail", "capture_detail"],
     ["task_detail", "task_detail"],
     ["task_index", "task_index"],
-    ["documents_detail", "documents_detail"],
-    ["documents_index", "documents_index"],
+    ["records_detail", "records_detail"],
+    ["records_index", "records_index"],
     ["resources_detail", "resources_detail"],
     ["resources_index", "resources_index"],
-    ["connections_index", "connections_index"],
-    ["connections_detail", "connections_detail"],
     ["settings", "settings"],
-    ["scopes_index", "scopes_index"],
-    ["scopes_operations_readiness", "scopes_operations_readiness"],
-    ["scopes_delivery_observability", "scopes_delivery_observability"],
-    ["scopes_workspace_resilience", "scopes_workspace_resilience"],
-    ["scopes_knowledge_hygiene", "scopes_knowledge_hygiene"],
-    ["scope_checks_index", "scope_checks_index"],
-    ["scope_check_detail", "scope_check_detail"],
-    ["work", "work"],
   ] as const)(
     "renders assistant thread when route scope matches: %s",
     (routeId, scopeType) => {
@@ -89,8 +82,8 @@ describe("AssistantTab", () => {
 
   it("shows loading skeleton and does not render assistant thread when route scope mismatches", () => {
     mockUseRailContract.mockReturnValue({
-      routeId: "scopes_delivery_observability",
-      context: { scope: { type: "scopes_operations_readiness" } },
+      routeId: "timeline",
+      context: { scope: { type: "task_index" } },
     });
 
     render(<AssistantTab />);
@@ -102,7 +95,7 @@ describe("AssistantTab", () => {
 
   it("shows loading skeleton and does not render assistant thread when scope is missing", () => {
     mockUseRailContract.mockReturnValue({
-      routeId: "work",
+      routeId: "timeline",
       context: undefined,
     });
 
@@ -115,7 +108,7 @@ describe("AssistantTab", () => {
   it("renders assistant thread for unknown route ids (default branch)", () => {
     mockUseRailContract.mockReturnValue({
       routeId: "unknown",
-      context: { scope: { type: "scopes_operations_readiness" } },
+      context: { scope: { type: "timeline" } },
     });
 
     render(<AssistantTab />);
@@ -126,8 +119,8 @@ describe("AssistantTab", () => {
   it("shows loading skeleton when chat hydration is not ready", () => {
     mockHasHydrated = false;
     mockUseRailContract.mockReturnValue({
-      routeId: "work",
-      context: { scope: { type: "work" } },
+      routeId: "timeline",
+      context: { scope: { type: "timeline" } },
     });
 
     render(<AssistantTab />);
@@ -141,8 +134,8 @@ describe("AssistantTab", () => {
     (phase) => {
       mockRunPhase = phase;
       mockUseRailContract.mockReturnValue({
-        routeId: "work",
-        context: { scope: { type: "work" } },
+        routeId: "timeline",
+        context: { scope: { type: "timeline" } },
       });
 
       render(<AssistantTab />);

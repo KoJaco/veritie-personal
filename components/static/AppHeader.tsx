@@ -30,29 +30,26 @@ interface BreadcrumbCrumb {
 }
 
 const ROUTE_MAP: Record<string, string> = {
-    work: "Work",
-    resources: "Resources",
-    documents: "Documents",
-    scopes: "Scopes",
-    checks: "Checks",
-    connections: "Connections",
-    settings: "Settings",
+    timeline: "Timeline",
+    captures: "Captures",
     tasks: "Tasks",
+    records: "Records",
+    resources: "Resources",
+    goals: "Goals",
+    money: "Money",
+    settings: "Settings",
 };
 
 function buildBreadcrumbs(pathname: string): BreadcrumbCrumb[] {
     const segments = pathname.split("/").filter(Boolean);
-    const workIndex = segments.indexOf("work");
 
-    if (workIndex === -1) {
-        return [{ label: "Work", href: "/work" }];
+    if (segments.length === 0) {
+        return [{ label: "Timeline", href: "/timeline" }];
     }
 
-    const crumbs: BreadcrumbCrumb[] = [{ label: "Work", href: "/work" }];
-    const afterWork = segments.slice(workIndex + 1);
-
-    afterWork.forEach((segment, index) => {
-        const path = `/work/${afterWork.slice(0, index + 1).join("/")}`;
+    const crumbs: BreadcrumbCrumb[] = [];
+    segments.forEach((segment, index) => {
+        const path = `/${segments.slice(0, index + 1).join("/")}`;
         const label = ROUTE_MAP[segment.toLowerCase()] || segment;
         crumbs.push({ label, href: path });
     });
@@ -91,9 +88,9 @@ function AppHeaderInner() {
                                 {crumbs.length === 1 ? (
                                     <BreadcrumbPage className="flex items-center gap-1.5">
                                         <span className="text-sm font-medium text-muted-foreground">
-                                            Work
+                                            Home
                                         </span>
-                                        <span className="sr-only">Work</span>
+                                        <span className="sr-only">Home</span>
                                     </BreadcrumbPage>
                                 ) : (
                                     <BreadcrumbLink asChild>
@@ -102,7 +99,7 @@ function AppHeaderInner() {
                                             className="flex items-center gap-1.5"
                                         >
                                             <HomeIcon className="h-4 w-4" />
-                                            <span className="sr-only">Work</span>
+                                            <span className="sr-only">Home</span>
                                         </Link>
                                     </BreadcrumbLink>
                                 )}

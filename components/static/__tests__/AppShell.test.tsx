@@ -32,6 +32,14 @@ jest.mock("@/components/context/ContextRail", () => ({
     ContextRail: () => <div data-testid="context-rail" />,
 }));
 
+jest.mock("@/components/capture/GlobalCaptureLauncher", () => ({
+    GlobalCaptureLauncher: () => (
+        <button type="button" aria-label="Open capture launcher">
+            Capture
+        </button>
+    ),
+}));
+
 describe("AppShell", () => {
     beforeEach(() => {
         mockUseContextRail.mockReset();
@@ -49,7 +57,7 @@ describe("AppShell", () => {
             routeId: "dashboard",
             contractVersion: 1,
             enabled: true,
-            showTrigger: true,
+            showTrigger: false,
             defaultTab: "assistant",
             tabs: [{ key: "assistant", label: "Assistant" }],
             context: undefined,
@@ -58,15 +66,18 @@ describe("AppShell", () => {
         mockUseIsMobileViewport.mockReturnValue(false);
     });
 
-    it("renders floating trigger when rail is closed and route allows trigger", () => {
+    it("renders capture launcher instead of global assistant FAB", () => {
         render(<AppShell>content</AppShell>);
 
         expect(
-            screen.getByRole("button", { name: "Toggle AI assistant" }),
+            screen.getByRole("button", { name: "Open capture launcher" }),
         ).toBeInTheDocument();
+        expect(
+            screen.queryByRole("button", { name: "Toggle AI assistant" }),
+        ).not.toBeInTheDocument();
     });
 
-    it("hides floating trigger and renders overlay rail when OPEN_OVERLAY", () => {
+    it("renders overlay rail when OPEN_OVERLAY", () => {
         mockUseContextRail.mockReturnValue({
             state: "OPEN_OVERLAY",
             isHydrated: true,
@@ -76,9 +87,6 @@ describe("AppShell", () => {
 
         render(<AppShell>content</AppShell>);
 
-        expect(
-            screen.queryByRole("button", { name: "Toggle AI assistant" }),
-        ).not.toBeInTheDocument();
         expect(screen.getByTestId("context-rail")).toBeInTheDocument();
     });
 

@@ -28,48 +28,32 @@ describe("useRailContract", () => {
         );
     });
 
-    it("maps scope routes and preserves payload context", () => {
+    it("maps timeline route and preserves payload context", () => {
         mockUseContextPayloadStore.mockImplementation(
             (selector: (state: { contextPayload: unknown }) => unknown) =>
                 selector({
-                    contextPayload: { scope: { type: "scopes_operations_readiness" } },
+                    contextPayload: { scope: { type: "timeline" } },
                 }),
         );
 
-        mockUseSelectedLayoutSegments.mockReturnValue(["scopes", "operations-readiness"]);
+        mockUseSelectedLayoutSegments.mockReturnValue(["timeline"]);
         const { result } = renderHook(() => useRailContract());
 
-        expect(result.current.routeId).toBe("scopes_operations_readiness");
+        expect(result.current.routeId).toBe("timeline");
         expect(result.current.context?.scope).toEqual({
-            type: "scopes_operations_readiness",
+            type: "timeline",
         });
     });
 
-    it("maps active work routes correctly", () => {
-        mockUseSelectedLayoutSegments.mockReturnValue([
-            "scopes",
-            "delivery-observability",
-        ]);
+    it("maps active personal app routes correctly", () => {
+        mockUseSelectedLayoutSegments.mockReturnValue(["captures"]);
         expect(renderHook(() => useRailContract()).result.current.routeId).toBe(
-            "scopes_delivery_observability",
+            "captures_index",
         );
 
-        mockUseSelectedLayoutSegments.mockReturnValue([
-            "scopes",
-            "workspace-resilience",
-        ]);
+        mockUseSelectedLayoutSegments.mockReturnValue(["captures", "cap_1"]);
         expect(renderHook(() => useRailContract()).result.current.routeId).toBe(
-            "scopes_workspace_resilience",
-        );
-
-        mockUseSelectedLayoutSegments.mockReturnValue([
-            "scopes",
-            "operations-readiness",
-            "checks",
-            "check_1",
-        ]);
-        expect(renderHook(() => useRailContract()).result.current.routeId).toBe(
-            "scope_check_detail",
+            "capture_detail",
         );
 
         mockUseSelectedLayoutSegments.mockReturnValue(["tasks"]);
@@ -82,14 +66,14 @@ describe("useRailContract", () => {
             "task_detail",
         );
 
-        mockUseSelectedLayoutSegments.mockReturnValue(["documents"]);
+        mockUseSelectedLayoutSegments.mockReturnValue(["records"]);
         expect(renderHook(() => useRailContract()).result.current.routeId).toBe(
-            "documents_index",
+            "records_index",
         );
 
-        mockUseSelectedLayoutSegments.mockReturnValue(["documents", "obj-1"]);
+        mockUseSelectedLayoutSegments.mockReturnValue(["records", "rec-1"]);
         expect(renderHook(() => useRailContract()).result.current.routeId).toBe(
-            "documents_detail",
+            "records_detail",
         );
 
         mockUseSelectedLayoutSegments.mockReturnValue(["resources"]);
@@ -102,36 +86,18 @@ describe("useRailContract", () => {
             "resources_detail",
         );
 
-        mockUseSelectedLayoutSegments.mockReturnValue(["connections"]);
-        expect(renderHook(() => useRailContract()).result.current.routeId).toBe(
-            "connections_index",
-        );
-
-        mockUseSelectedLayoutSegments.mockReturnValue([
-            "connections",
-            "conn_azure_ad",
-        ]);
-        expect(renderHook(() => useRailContract()).result.current.routeId).toBe(
-            "connections_detail",
-        );
-
         mockUseSelectedLayoutSegments.mockReturnValue(["settings"]);
         expect(renderHook(() => useRailContract()).result.current.routeId).toBe(
             "settings",
         );
 
-        mockUseSelectedLayoutSegments.mockReturnValue(["scopes"]);
-        expect(renderHook(() => useRailContract()).result.current.routeId).toBe(
-            "scopes_index",
-        );
-
         mockUseSelectedLayoutSegments.mockReturnValue([]);
         expect(renderHook(() => useRailContract()).result.current.routeId).toBe(
-            "work",
+            "timeline",
         );
     });
 
-    it.each([["assets"], ["evidence"], ["controls"], ["frameworks"]] as const)(
+    it.each([["work"], ["scopes"], ["documents"], ["connections"]] as const)(
         "maps retired legacy route segment %s to unknown",
         (segment) => {
             mockUseSelectedLayoutSegments.mockReturnValue([segment]);

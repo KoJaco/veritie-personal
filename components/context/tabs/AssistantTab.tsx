@@ -28,40 +28,26 @@ export function AssistantTab({ context }: AssistantTabProps) {
         const scope = railContract.context?.scope;
         if (!scope) return false;
         switch (railContract.routeId) {
+            case "timeline":
+                return scope.type === "timeline";
+            case "captures_index":
+                return scope.type === "captures_index";
+            case "capture_detail":
+                return scope.type === "capture_detail";
             case "task_detail":
                 return scope.type === "task_detail";
             case "task_index":
                 return scope.type === "task_index";
-            case "documents_detail":
-                return scope.type === "documents_detail";
-            case "documents_index":
-                return scope.type === "documents_index";
+            case "records_detail":
+                return scope.type === "records_detail";
+            case "records_index":
+                return scope.type === "records_index";
             case "resources_detail":
                 return scope.type === "resources_detail";
             case "resources_index":
                 return scope.type === "resources_index";
-            case "connections_index":
-                return scope.type === "connections_index";
-            case "connections_detail":
-                return scope.type === "connections_detail";
-            case "scope_checks_index":
-                return scope.type === "scope_checks_index";
-            case "scope_check_detail":
-                return scope.type === "scope_check_detail";
             case "settings":
                 return scope.type === "settings";
-            case "scopes_index":
-                return scope.type === "scopes_index";
-            case "scopes_operations_readiness":
-                return scope.type === "scopes_operations_readiness";
-            case "scopes_delivery_observability":
-                return scope.type === "scopes_delivery_observability";
-            case "scopes_workspace_resilience":
-                return scope.type === "scopes_workspace_resilience";
-            case "scopes_knowledge_hygiene":
-                return scope.type === "scopes_knowledge_hygiene";
-            case "work":
-                return scope.type === "work";
             default:
                 return true;
         }

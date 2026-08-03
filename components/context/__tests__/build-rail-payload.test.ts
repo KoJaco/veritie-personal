@@ -3,8 +3,8 @@ import { buildRailPayload } from "@/components/context/build-rail-payload";
 describe("buildRailPayload", () => {
     it("projects explicit scope, lens, snapshot and aggregates", () => {
         const payload = buildRailPayload({
-            scope: { type: "scopes_delivery_observability" },
-            lens: { scope: "delivery-observability" },
+            scope: { type: "timeline" },
+            lens: { scope: "work" },
             asOf: "2026-02-23T00:00:00.000Z",
             timezone: "Australia/Sydney",
             aggregates: {
@@ -21,7 +21,7 @@ describe("buildRailPayload", () => {
                 },
                 topBlockingTaskIds: ["t1", "t2"],
                 topBlockingTaskSummaries: [{ id: "t1", title: "Task 1" }],
-                scopesInView: ["Delivery Observability"],
+                scopesInView: ["Work"],
             },
         });
 
@@ -29,20 +29,20 @@ describe("buildRailPayload", () => {
         if (!payload) {
             throw new Error("Expected payload to be present");
         }
-        expect(payload.scope).toEqual({ type: "scopes_delivery_observability" });
+        expect(payload.scope).toEqual({ type: "timeline" });
         expect(payload.data?.asOf).toBe("2026-02-23T00:00:00.000Z");
         expect(payload.data?.timezone).toBe("Australia/Sydney");
         expect(payload.data?.lens).toEqual({
-            scope: "delivery-observability",
+            scope: "work",
         });
         expect(payload.data?.snapshot?.coverageGapDays).toBe(9);
         expect(payload.data?.topBlockingTaskIds).toEqual(["t1", "t2"]);
-        expect(payload.data?.scopesInView).toEqual(["Delivery Observability"]);
+        expect(payload.data?.scopesInView).toEqual(["Work"]);
     });
 
     it("fills asOf/timezone defaults when omitted", () => {
         const payload = buildRailPayload({
-            scope: { type: "work" },
+            scope: { type: "timeline" },
         });
 
         expect(payload).not.toBeNull();

@@ -41,47 +41,41 @@ const TOP_BLOCKING_SUMMARY_KEYS = ["id", "title"] as const;
 const LENS_KEYS = ["scope"] as const;
 
 const VALID_SCOPE_TYPES = new Set<RailScope["type"]>([
-    "work",
-    "scopes_index",
-    "scopes_operations_readiness",
-    "scopes_delivery_observability",
-    "scopes_workspace_resilience",
-    "scopes_knowledge_hygiene",
-    "scope_checks_index",
-    "scope_check_detail",
+    "timeline",
+    "captures_index",
+    "capture_detail",
     "task_index",
     "task_detail",
-    "documents_index",
-    "documents_detail",
+    "records_index",
+    "records_detail",
     "resources_index",
     "resources_detail",
-    "connections_index",
-    "connections_detail",
     "settings",
 ]);
 
 const DETAIL_SCOPE_TYPES = new Set<RailScope["type"]>([
     "task_detail",
-    "documents_detail",
+    "records_detail",
     "resources_detail",
-    "scope_check_detail",
-    "connections_detail",
+    "capture_detail",
 ]);
 
 const VALID_PRIMARY_OBJECT_TYPES = new Set<PrimaryObject["type"]>([
     "task",
     "attachment",
-    "check",
+    "capture",
     "artifact",
     "resource",
+    "timeline_event",
 ]);
 
 const VALID_LENS_SCOPES = new Set([
     "all",
-    "operations-readiness",
-    "delivery-observability",
-    "workspace-resilience",
-    "knowledge-hygiene",
+    "finance",
+    "fitness",
+    "work",
+    "personal",
+    "admin",
 ]);
 
 function isNonEmptyString(value: unknown): value is string {
