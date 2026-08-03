@@ -28,7 +28,7 @@ CI verification, manual E2E, security review, documentation updates. Final gate 
 
 - [ ] RLS spot-check: cross-account read blocked with user JWT
 - [ ] OAuth redirect allowlist: no open redirect via `next` param
-- [ ] No `SUPABASE_SERVICE_ROLE_KEY` or `VERITIE_API_KEY` in client bundle
+- [ ] No `SUPABASE_SECRET_KEY` or `VERITIE_API_KEY` in client bundle
 - [ ] `/api/veritie/*` requires session
 - [ ] Capture persist enforces `accountId` ownership
 

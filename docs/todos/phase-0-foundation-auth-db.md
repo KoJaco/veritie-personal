@@ -12,19 +12,23 @@ Supabase client utilities, Drizzle runtime client, identity schema from `auth-ex
 
 ## Implementation checklist
 
-- [ ] Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` to `.env.example`
-- [ ] Align `AUTH_SERVICE_ROLE_KEY` → `SUPABASE_SERVICE_ROLE_KEY` (or map in env layer)
-- [ ] `lib/supabase/client.ts` — browser client (`createBrowserClient`)
-- [ ] `lib/supabase/server.ts` — server client with cookie read/write (`createServerClient`)
-- [ ] `lib/supabase/middleware.ts` — session refresh helper (`updateSession`)
-- [ ] `lib/db/index.ts` — Drizzle + postgres driver pool
-- [ ] `db/schema/identity.ts` — port identity/RBAC/billing tables from `auth-example/schema.ts`
-- [ ] Update `db/schema/capture.ts` — add `accountId` (uuid FK → `accounts.id`) on tenant tables
-- [ ] Update `db/schema/objects.ts` — add `accountId` on tenant tables
-- [ ] Update `db/schema/index.ts` — export identity schema
-- [ ] `drizzle-kit generate` — initial migration(s)
-- [ ] npm scripts: `db:generate`, `db:migrate`, `db:studio` (optional)
-- [ ] Update `lib/config/env.server.ts` and `lib/config/env.public.ts`
+- [x] Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to `.env.example`
+- [x] `SUPABASE_SECRET_KEY` on server (`lib/config/env.server.ts`); legacy anon/service-role names as optional fallbacks
+- [x] `lib/supabase/client.ts` — browser client (`createBrowserClient`)
+- [x] `lib/supabase/server.ts` — server client with cookie read/write (`createServerClient`)
+- [x] `lib/supabase/middleware.ts` — session refresh helper (`updateSession`)
+- [x] `lib/db/index.ts` — Drizzle + postgres driver pool
+- [x] `db/schema/identity.ts` — port identity/RBAC/billing tables from `auth-example/schema.ts`
+- [x] Update `db/schema/capture.ts` — add `accountId` (uuid FK → `accounts.id`) on tenant tables
+- [x] Update `db/schema/objects.ts` — add `accountId` on tenant tables
+- [x] Update `db/schema/index.ts` — export identity schema
+- [x] `drizzle-kit generate` — initial migration(s)
+- [x] npm scripts: `db:generate`, `db:migrate`, `db:studio` (optional)
+- [x] Update `lib/config/env.server.ts` and `lib/config/env.public.ts`
+
+## Handoff
+
+See [phase-0-handoff.md](./phase-0-handoff.md) for review checklist and auditor notes.
 
 ## Schema notes
 
@@ -44,18 +48,18 @@ Supabase client utilities, Drizzle runtime client, identity schema from `auth-ex
 
 ## Verification
 
-- [ ] `npm run typecheck`
-- [ ] `drizzle-kit generate` completes without errors
-- [ ] No service role key in client bundle
+- [x] `npm run typecheck`
+- [x] `drizzle-kit generate` completes without errors
+- [x] No service role key in client bundle
 
 ## Phase review
 
-- [ ] Performance review notes — N/A (no runtime query paths yet)
-- [ ] Security review notes — env vars documented; secrets server-only
-- [ ] Maintainability review notes — schema split: `identity.ts` vs `capture.ts` vs `objects.ts`
+- [x] Performance review notes — N/A (no runtime query paths yet)
+- [x] Security review notes — env vars documented; secrets server-only
+- [x] Maintainability review notes — schema split: `identity.ts` vs `capture.ts` vs `objects.ts`
 
 ## Agent review record
 
-- Date: pending
-- Findings: pending
-- Resolved: pending
+- Date: 2026-08-04
+- Findings: indent fix on env.public; shared `accountIdColumn`; Drizzle reads `envServer.databaseUrl`; middleware soft-noop documented for Phase 2
+- Resolved: audit fixes applied before commit; migration generated but not applied

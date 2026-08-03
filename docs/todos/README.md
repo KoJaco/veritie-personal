@@ -31,6 +31,7 @@ Working checklists for the Supabase auth and database persistence branch. Archiv
 | Phase | File | Focus |
 | --- | --- | --- |
 | 0 | [phase-0-foundation-auth-db.md](./phase-0-foundation-auth-db.md) | Env, Supabase clients, Drizzle client, schema layout |
+| | [phase-0-handoff.md](./phase-0-handoff.md) | Phase 0 review handoff (auditor checklist) |
 | 1 | [phase-1-db-bootstrap-rls.md](./phase-1-db-bootstrap-rls.md) | Migrations, RLS, account bootstrap, `requireUser` |
 | 2 | [phase-2-auth-routes-middleware.md](./phase-2-auth-routes-middleware.md) | `/auth/*` routes, middleware, landing/onboarding wiring |
 | 3 | [phase-3-drizzle-persistence.md](./phase-3-drizzle-persistence.md) | Replace stub stores with Drizzle repositories |
