@@ -10,6 +10,7 @@ export function usePersistedCaptureLauncherTucked() {
 
     useEffect(() => {
         try {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate tucked launcher preference from localStorage
             setIsTuckedState(localStorage.getItem(STORAGE_KEY) === "1");
         } catch {
             // ignore storage errors

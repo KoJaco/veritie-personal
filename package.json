@@ -4,14 +4,15 @@
     "private": true,
     "scripts": {
         "dev": "next dev",
-        "build": "next build",
+        "build:sdk": "node scripts/ensure-sdk-built.mjs",
+        "postinstall": "npm run build:sdk",
+        "build": "npm run build:sdk && next build",
         "start": "next start",
         "lint": "eslint",
-        "check:terminology": "node scripts/check-terminology.mjs",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "npm run build:sdk && tsc --noEmit",
         "test": "npx --yes jest",
         "test:watch": "npx --yes jest --watch",
-        "test:ci": "npm run check:terminology && npx --yes jest --ci --coverage --maxWorkers=2"
+        "test:ci": "npm run build:sdk && npm run check:terminology && npx --yes jest --ci --coverage --maxWorkers=2"
     },
     "dependencies": {
         "@assistant-ui/react": "^0.12.9",

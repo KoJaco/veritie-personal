@@ -23,7 +23,7 @@ describe("resources route contract validation", () => {
                 meta: {
                     title: "Resources",
                     breadcrumbs: [{ label: "Resources" }],
-                    scope: { scopeId: "all" },
+                    aspect: { aspectId: "all" },
                 },
                 view: { key: "bad_view" },
                 sections: [],
@@ -45,7 +45,7 @@ describe("resources route contract validation", () => {
                 meta: {
                     title: "Resources",
                     breadcrumbs: [{ label: "Resources" }],
-                    scope: { scopeId: "all" },
+                    aspect: { aspectId: "all" },
                 },
                 view: { key: "resources_index" },
                 sections: [],
@@ -53,9 +53,8 @@ describe("resources route contract validation", () => {
                 actions: { available: [] },
             },
             railPayloadCandidate: null,
-            // @ts-expect-error invalid shape for test coverage
             debug: true,
-        });
+        } as Parameters<typeof enforceResourcesRouteContract>[0]);
 
         expect(pageModelValidation.ok).toBe(false);
         expect(payload).toBeNull();

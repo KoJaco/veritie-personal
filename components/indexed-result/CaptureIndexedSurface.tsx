@@ -38,10 +38,17 @@ export function CaptureIndexedSurface({
     initialExtractedValueId?: string | null;
 }) {
     const [activeExtractedId, setActiveExtractedId] = useState<string | null>(
-        initialExtractedValueId ?? null,
+        () => initialExtractedValueId ?? null,
     );
     const [requestedSeekMs, setRequestedSeekMs] = useState<number | null>(null);
     const [timingsOpen, setTimingsOpen] = useState(false);
+
+    useEffect(() => {
+        if (initialExtractedValueId) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- sync anchor highlight when capture deep-link changes
+            setActiveExtractedId(initialExtractedValueId);
+        }
+    }, [initialExtractedValueId]);
 
     const activeAnchor = useMemo(
         () =>
@@ -67,12 +74,6 @@ export function CaptureIndexedSurface({
         },
         [detail.sourceAnchors],
     );
-
-    useEffect(() => {
-        if (initialExtractedValueId) {
-            setActiveExtractedId(initialExtractedValueId);
-        }
-    }, [initialExtractedValueId]);
 
     const transcriptText =
         detail.voiceLog?.transcriptText ??

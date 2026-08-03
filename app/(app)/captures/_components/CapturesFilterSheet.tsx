@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Filter } from "lucide-react";
 import { PageHeaderActionButton } from "@/components/route/PageHeaderActionButton";
@@ -100,7 +101,7 @@ export function CapturesFilterSheet({
                     <SheetFooter className="px-0">
                         <Button type="submit">Apply filters</Button>
                         <Button type="button" variant="outline" asChild>
-                            <a href="/captures">Clear all</a>
+                            <Link href="/captures">Clear all</Link>
                         </Button>
                     </SheetFooter>
                 </form>

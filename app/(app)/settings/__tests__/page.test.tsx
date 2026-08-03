@@ -94,6 +94,14 @@ function createAdapterMock(
         settings: {
             getSettings: () => settings,
         },
+        timeline: {
+            getTimelineIndex: jest.fn(),
+            getTimelineEventDetail: jest.fn(),
+        },
+        captures: {
+            getCapturesIndex: jest.fn(),
+            getCaptureDetail: jest.fn(),
+        },
     };
 }
 
@@ -215,9 +223,8 @@ describe("SettingsPage scope configuration", () => {
         mockedGetStubServerBootstrap.mockResolvedValue({
             onboardingCompleted: true,
             summary: {
-                companySize: "11_50",
-                industry: "saas",
-                dataSensitivity: "moderate",
+                enabledAspects: ["work", "personal"],
+                capturePreference: "voice_first",
                 aiMode: "guided",
             },
         });

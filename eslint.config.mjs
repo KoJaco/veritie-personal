@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Generated artifacts
     "coverage/**",
+    // Vendored Veritie SDK (linted via sdk's own scripts)
+    "sdk/**",
+    // Design exploration copies — not production surfaces
+    "ui-suggestions/**",
   ]),
 ]);
 

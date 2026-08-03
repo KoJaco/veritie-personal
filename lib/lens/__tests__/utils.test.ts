@@ -25,7 +25,9 @@ describe("lens utils (aspect bridge)", () => {
         expect(normalizeLens({ scope: "finance" })).toEqual({
             scope: "finance",
         });
-        expect(normalizeLens({ scope: "not-real" })).toEqual({ scope: "all" });
+        expect(normalizeLens({ scope: "not-real" as "work" })).toEqual({
+            scope: "all",
+        });
     });
 
     it("parses query params and degrades unknown values to all", () => {
@@ -136,8 +138,7 @@ describe("lens utils (aspect bridge)", () => {
             getLensFromSearchParams(new URLSearchParams("aspect=finance")),
         ).toEqual({ scope: "finance" });
 
-        expect(isSoc2TypeII({ scope: "work" })).toBe(false);
-        expect(isSoc2TypeII({ scope: "all" })).toBe(false);
+        expect(isSoc2TypeII()).toBe(false);
     });
 
     it("preserves lens query state across dashboard route transitions", () => {
@@ -161,7 +162,11 @@ describe("lens utils (aspect bridge)", () => {
     });
 
     it("filters scope ids and builds prefetch hrefs for primary surfaces", () => {
-        const aspectIds = ["work", "finance", "personal"] as const;
+        const aspectIds: Array<"work" | "finance" | "personal"> = [
+            "work",
+            "finance",
+            "personal",
+        ];
         expect(filterScopeIdsForLens(aspectIds, { scope: "all" })).toEqual(
             aspectIds,
         );

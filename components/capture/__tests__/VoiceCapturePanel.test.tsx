@@ -1,13 +1,10 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-const mockCreateAndUploadJob = jest.fn<() => Promise<{ job: { job_id: string } }>>();
-const mockGetJob = jest.fn<() => Promise<unknown>>();
+const mockCreateAndUploadJob = jest.fn();
+const mockGetJob = jest.fn();
 const mockToastError = jest.fn();
-const mockPersistCaptureFn = jest.fn<
-    () => Promise<{ captureId: string; timelineEventCount: number }>
->();
+const mockPersistCaptureFn = jest.fn();
 
 jest.mock("sonner", () => ({
     toast: {

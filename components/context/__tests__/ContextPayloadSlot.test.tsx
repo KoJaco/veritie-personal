@@ -30,7 +30,7 @@ describe("ContextPayloadSlot", () => {
 
     it("sets payload on mount and update", () => {
         const payload = {
-            scope: { type: "work" as const },
+            scope: { type: "timeline" as const },
         };
 
         const { rerender } = render(<ContextPayloadSlot payload={payload} />);
