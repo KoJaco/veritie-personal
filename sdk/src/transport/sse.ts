@@ -21,6 +21,7 @@ import type {
     StreamJobOptions,
     VeritieClientConfig,
 } from "../types";
+import { defaultFetch } from "./default-fetch";
 
 const SHOW_SDK_DEBUG_LOGS =
     typeof process === "undefined" || process.env.NODE_ENV !== "production";
@@ -423,7 +424,7 @@ export class SSETransport {
     private readonly config: VeritieClientConfig;
 
     constructor(config: VeritieClientConfig) {
-        this.fetchImpl = config.fetch ?? fetch;
+        this.fetchImpl = config.fetch ?? defaultFetch;
         this.config = config;
     }
 

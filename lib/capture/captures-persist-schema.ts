@@ -1,13 +1,5 @@
 import { z } from "zod";
 
-const ASPECT_KEYS = [
-    "finance",
-    "fitness",
-    "work",
-    "personal",
-    "admin",
-] as const;
-
 const JOB_STATUSES = [
     "awaiting_upload",
     "queued",
@@ -44,7 +36,7 @@ const transcriptSegmentSchema = z.object({
 });
 
 const extractionCandidateSchema = z.object({
-    aspect: z.enum(ASPECT_KEYS).optional(),
+    aspect: z.string().max(64).optional(),
     title: z.string().max(500).optional(),
     confidence: z.number().min(0).max(1).optional(),
     fields: z
@@ -65,7 +57,7 @@ const extractionPayloadSchema = z
             ]),
         ),
     )
-    .strict()
+    .passthrough()
     .optional();
 
 export const capturesPersistRequestSchema = z

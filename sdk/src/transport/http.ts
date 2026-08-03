@@ -1,6 +1,7 @@
 import { buildAuthHeaders } from "../auth";
 import { VeritieSDKError, errorFromResponse } from "../errors";
 import type { ErrorResponse, FetchLike, VeritieClientConfig } from "../types";
+import { defaultFetch } from "./default-fetch";
 
 export interface HttpRequestOptions {
   method: string;
@@ -26,7 +27,7 @@ export class HttpTransport {
     }
 
     this.baseUrl = config.baseUrl.replace(/\/+$/, "");
-    this.fetchImpl = config.fetch ?? fetch;
+    this.fetchImpl = config.fetch ?? defaultFetch;
     this.config = config;
   }
 

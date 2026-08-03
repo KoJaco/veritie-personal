@@ -17,6 +17,10 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { VoiceCaptureLauncherPanel } from "@/components/capture/VoiceCaptureLauncherPanel";
+import {
+    VeritieCaptureLeaseProvider,
+    useVeritieCaptureLease,
+} from "@/components/capture/VeritieCaptureLeaseContext";
 import { usePersistedCaptureLauncherTucked } from "@/lib/hooks/usePersistedCaptureLauncherTucked";
 import { useEscapeClose, useInitialFocus } from "@/lib/hooks/useEscapeClose";
 import { LAYER_CLASS } from "@/lib/ui/layering";
@@ -40,6 +44,14 @@ function isSwipeRightToHide(deltaX: number, deltaY: number) {
 }
 
 export function GlobalCaptureLauncher() {
+    return (
+        <VeritieCaptureLeaseProvider>
+            <GlobalCaptureLauncherInner />
+        </VeritieCaptureLeaseProvider>
+    );
+}
+
+function GlobalCaptureLauncherInner() {
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState<LauncherMode>("options");
     const shouldReduceMotion = useReducedMotion();
@@ -55,6 +67,8 @@ export function GlobalCaptureLauncher() {
     const suppressTriggerClickRef = useRef(false);
     const openedAtRef = useRef(0);
 
+    const { prepareLease, releaseLease } = useVeritieCaptureLease();
+
     const resetTransientState = useCallback(() => {
         setMode("options");
     }, []);
@@ -63,12 +77,14 @@ export function GlobalCaptureLauncher() {
         openedAtRef.current = Date.now();
         setOpen(true);
         resetTransientState();
-    }, [resetTransientState]);
+        void prepareLease();
+    }, [prepareLease, resetTransientState]);
 
     const close = useCallback(() => {
         setOpen(false);
         resetTransientState();
-    }, [resetTransientState]);
+        releaseLease();
+    }, [releaseLease, resetTransientState]);
 
     const returnToOptions = useCallback(() => {
         resetTransientState();
@@ -197,7 +213,7 @@ export function GlobalCaptureLauncher() {
 
             <motion.div
                 className={cn(
-                    "fixed bottom-8 flex flex-col items-end gap-3 pb-[env(safe-area-inset-bottom)]",
+                    "fixed bottom-8 flex flex-col items-end gap-3",
                     LAUNCHER_CHROME_Z,
                     isLauncherTucked ? "right-0" : "right-6",
                 )}
@@ -251,7 +267,7 @@ export function GlobalCaptureLauncher() {
                                     icon={AudioWaveform}
                                     onSelect={() => setMode("voice")}
                                 />
-                                <CaptureOption
+                                {/* <CaptureOption
                                     label="PDF"
                                     icon={FileIcon}
                                     disabled
@@ -268,7 +284,7 @@ export function GlobalCaptureLauncher() {
                                     icon={TextIcon}
                                     disabled
                                     hint="Coming soon"
-                                />
+                                /> */}
                                 <CaptureOption
                                     label="Hide"
                                     icon={EyeOffIcon}
@@ -317,7 +333,7 @@ export function GlobalCaptureLauncher() {
                             LAUNCHER_CHROME_Z,
                             "bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4",
                             "w-[min(calc(100vw-2rem),24rem)] md:w-[min(calc(100vw-2rem),42rem)]",
-                            "max-h-[min(85dvh,800px)] overflow-y-auto",
+                            "max-h-[min(85dvh,800px)] min-h-[300px] overflow-y-auto",
                         )}
                         initial={
                             shouldReduceMotion ? false : { opacity: 0, y: 20, x: 16 }
@@ -329,17 +345,7 @@ export function GlobalCaptureLauncher() {
                         transition={{ type: "spring", stiffness: 380, damping: 32 }}
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <div className="mb-3 space-y-1">
-                            <h2
-                                id="capture-voice-title"
-                                className="text-base font-semibold"
-                            >
-                                Voice log
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                Record a voice note. Extraction runs via Veritie.
-                            </p>
-                        </div>
+
                         <VoiceCaptureLauncherPanel
                             onBack={returnToOptions}
                             onComplete={close}

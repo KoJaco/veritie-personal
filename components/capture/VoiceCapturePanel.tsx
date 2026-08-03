@@ -2,12 +2,25 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, Mic, Square } from "lucide-react";
-import type { useVeritie } from "@veritie/sdk";
-import { hasPendingJobEnrichment } from "@veritie/sdk";
-import { toast } from "sonner";
+import type { useVeritie, PipelineHandle, LiveJobSession } from "@veritie/sdk";
 import { Button } from "@/components/ui/button";
 import { LiveAudioWaveform } from "@/components/capture/LiveAudioWaveform";
+import type { CaptureLeasePhase } from "@/components/capture/VeritieCaptureLeaseContext";
+import {
+    captureFlowLog,
+    flushPendingChunkUploads,
+    type CaptureFlowDiagnostics,
+} from "@/lib/capture/capture-flow-logger";
+import { enqueueCaptureBackgroundPipeline } from "@/lib/capture/capture-background-pipeline";
+import {
+    createLiveChunkStreamState,
+    endLiveAudioStream,
+    sendLiveAudioChunk,
+    type LiveChunkStreamState,
+} from "@/lib/capture/live-audio-stream";
 import { persistCaptureForVoiceFlow } from "@/lib/capture/persist-capture-client";
+import { isTranscriptPending } from "@/lib/capture/transcript-readiness";
+import { useScreenWakeLock } from "@/lib/hooks/useScreenWakeLock";
 import { SURFACE_CLASS_NESTED } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +34,6 @@ type VoicePhase =
     | "recording"
     | "processing"
     | "transcript_ready"
-    | "save_failed"
     | "failed";
 
 type PersistCaptureResult = {
@@ -31,16 +43,23 @@ type PersistCaptureResult = {
 
 export function VoiceCapturePanel({
     veritie,
+    captureHandle,
+    leasePhase,
+    leaseError = null,
+    renewLease,
     embedded = true,
     onBack,
     onComplete,
     persistCaptureFn = persistCaptureForVoiceFlow,
 }: {
     veritie: VeritieHook;
+    captureHandle: PipelineHandle | null;
+    leasePhase: CaptureLeasePhase;
+    leaseError?: string | null;
+    renewLease: () => Promise<void>;
     embedded?: boolean;
     onBack: () => void;
     onComplete: () => void;
-    /** Override for tests; production uses server action via persistCaptureForVoiceFlow. */
     persistCaptureFn?: (jobId: string) => Promise<PersistCaptureResult>;
 }) {
     const [phase, setPhase] = useState<VoicePhase>("ready");
@@ -48,17 +67,54 @@ export function VoiceCapturePanel({
     const [statusLine, setStatusLine] = useState<string | null>(null);
     const [transcript, setTranscript] = useState<string | null>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
-    const [pendingJobId, setPendingJobId] = useState<string | null>(null);
     const [recordingElapsedMs, setRecordingElapsedMs] = useState(0);
 
     const recorderRef = useRef<MediaRecorder | null>(null);
-    const chunksRef = useRef<BlobPart[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
-    const abortRef = useRef<AbortController | null>(null);
+    const openAbortRef = useRef<AbortController | null>(null);
+    const finalizeAbortRef = useRef<AbortController | null>(null);
     const mountedRef = useRef(true);
     const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const recordingStartedAtRef = useRef<number | null>(null);
     const finishCaptureRef = useRef<(() => Promise<void>) | null>(null);
+    const liveSessionRef = useRef<LiveJobSession | null>(null);
+    const chunkStreamStateRef = useRef<LiveChunkStreamState>(
+        createLiveChunkStreamState(),
+    );
+    const chunkSendChainRef = useRef<Promise<void>>(Promise.resolve());
+    const diagnosticsRef = useRef<CaptureFlowDiagnostics>({
+        dataAvailableEvents: 0,
+        dataAvailableEmpty: 0,
+        dataAvailableBytes: 0,
+        chunksSent: 0,
+        chunksBytesSent: 0,
+    });
+
+    const logDiagnostics = useCallback((step: string, extra?: Record<string, unknown>) => {
+        captureFlowLog.snapshot(step, {
+            ...diagnosticsRef.current,
+            ...extra,
+        });
+    }, []);
+
+    const resetDiagnostics = useCallback((partial?: Partial<CaptureFlowDiagnostics>) => {
+        diagnosticsRef.current = {
+            dataAvailableEvents: 0,
+            dataAvailableEmpty: 0,
+            dataAvailableBytes: 0,
+            chunksSent: 0,
+            chunksBytesSent: 0,
+            ...partial,
+        };
+    }, []);
+
+    const leaseReady = leasePhase === "ready" && captureHandle !== null;
+
+    const shouldKeepScreenAwake =
+        phase === "requesting_microphone" ||
+        phase === "recording" ||
+        phase === "processing";
+    useScreenWakeLock(shouldKeepScreenAwake);
 
     const stopLocalRecording = useCallback(() => {
         if (recordingTimerRef.current) {
@@ -82,10 +138,31 @@ export function VoiceCapturePanel({
         setStream(null);
     }, []);
 
-    const abortInFlightWork = useCallback(() => {
-        abortRef.current?.abort();
-        abortRef.current = null;
+    const closeLiveSession = useCallback(() => {
+        const session = liveSessionRef.current;
+        if (session && !session.closed) {
+            session.close(1000, "capture cancelled");
+        }
+        liveSessionRef.current = null;
+        chunkStreamStateRef.current = createLiveChunkStreamState();
+        chunkSendChainRef.current = Promise.resolve();
     }, []);
+
+    const abortOpenWork = useCallback(() => {
+        openAbortRef.current?.abort();
+        openAbortRef.current = null;
+    }, []);
+
+    const abortFinalizeWork = useCallback(() => {
+        finalizeAbortRef.current?.abort();
+        finalizeAbortRef.current = null;
+    }, []);
+
+    const abortInFlightWork = useCallback(() => {
+        abortOpenWork();
+        abortFinalizeWork();
+        closeLiveSession();
+    }, [abortOpenWork, abortFinalizeWork, closeLiveSession]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -96,71 +173,67 @@ export function VoiceCapturePanel({
         };
     }, [abortInFlightWork, stopLocalRecording]);
 
-    const persistCapture = useCallback(async (jobId: string, signal: AbortSignal) => {
-        if (signal.aborted) {
-            throw new DOMException("Aborted", "AbortError");
-        }
-
-        const abortPromise = new Promise<never>((_, reject) => {
-            const onAbort = () => reject(new DOMException("Aborted", "AbortError"));
-            if (signal.aborted) {
-                onAbort();
-                return;
-            }
-            signal.addEventListener("abort", onAbort, { once: true });
-        });
-
-        return Promise.race([persistCaptureFn(jobId), abortPromise]);
-    }, [persistCaptureFn]);
-
-    const retrySave = useCallback(async () => {
-        if (!pendingJobId) return;
-
-        const controller = new AbortController();
-        abortRef.current = controller;
-        setError(null);
-        setStatusLine("Saving capture…");
-        setPhase("processing");
-
-        try {
-            await persistCapture(pendingJobId, controller.signal);
-            if (!mountedRef.current || controller.signal.aborted) return;
-            setPhase("transcript_ready");
-            setStatusLine(null);
-            setPendingJobId(null);
-        } catch (saveError) {
-            if (!mountedRef.current || controller.signal.aborted) return;
-            const message =
-                saveError instanceof Error
-                    ? saveError.message
-                    : "Failed to save capture";
-            setError(message);
-            setPhase("save_failed");
-            setStatusLine(null);
-            toast.error("Transcript ready but not saved", { description: message });
-        }
-    }, [pendingJobId, persistCapture]);
-
     const startCapture = useCallback(async () => {
+        if (!captureHandle || !leaseReady) {
+            setError(
+                leaseError ??
+                (leasePhase === "preparing"
+                    ? "Veritie lease is still preparing."
+                    : "Veritie capture lease is not ready."),
+            );
+            setPhase("failed");
+            return;
+        }
+
         abortInFlightWork();
+        resetDiagnostics({
+            jobId: captureHandle.snapshot.jobId,
+            leasePhase,
+        });
+        captureFlowLog.info("capture.start", {
+            jobId: captureHandle.snapshot.jobId,
+            leasePhase,
+        });
         setError(null);
         setStatusLine(null);
         setTranscript(null);
-        setPendingJobId(null);
         setPhase("requesting_microphone");
 
-        const controller = new AbortController();
-        abortRef.current = controller;
+        const openController = new AbortController();
+        openAbortRef.current = openController;
+        const { signal: openSignal } = openController;
 
         try {
             if (!navigator.mediaDevices?.getUserMedia) {
                 throw new Error("Microphone not available in this browser.");
             }
 
+            setStatusLine("Opening live session…");
+            const liveSession = await captureHandle.startCapture({
+                signal: openSignal,
+            });
+            if (!mountedRef.current || openSignal.aborted) {
+                liveSession.close(1000, "aborted");
+                return;
+            }
+
+            // Session is open — do not abort openSignal during finalize (closes WebSocket).
+            openAbortRef.current = null;
+
+            liveSessionRef.current = liveSession;
+            diagnosticsRef.current.sessionId = liveSession.sessionId;
+            chunkStreamStateRef.current = createLiveChunkStreamState();
+            chunkSendChainRef.current = Promise.resolve();
+
+            captureFlowLog.info("live.session.opened", {
+                jobId: captureHandle.snapshot.jobId,
+                sessionId: liveSession.sessionId,
+            });
+
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
             });
-            if (!mountedRef.current || controller.signal.aborted) {
+            if (!mountedRef.current || openSignal.aborted) {
                 mediaStream.getTracks().forEach((track) => track.stop());
                 return;
             }
@@ -174,23 +247,92 @@ export function VoiceCapturePanel({
             const recorder = mimeType
                 ? new MediaRecorder(mediaStream, { mimeType })
                 : new MediaRecorder(mediaStream);
+            diagnosticsRef.current.recorderMimeType = recorder.mimeType;
 
-            chunksRef.current = [];
             recorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    chunksRef.current.push(event.data);
+                diagnosticsRef.current.dataAvailableEvents =
+                    (diagnosticsRef.current.dataAvailableEvents ?? 0) + 1;
+
+                if (event.data.size === 0) {
+                    diagnosticsRef.current.dataAvailableEmpty =
+                        (diagnosticsRef.current.dataAvailableEmpty ?? 0) + 1;
+                    captureFlowLog.debug("recorder.dataavailable.empty", {
+                        jobId: captureHandle.snapshot.jobId,
+                        recorderState: recorder.state,
+                    });
+                    return;
                 }
+
+                if (!liveSessionRef.current) {
+                    captureFlowLog.warn("recorder.dataavailable.no_session", {
+                        jobId: captureHandle.snapshot.jobId,
+                        bytes: event.data.size,
+                    });
+                    return;
+                }
+
+                diagnosticsRef.current.dataAvailableBytes =
+                    (diagnosticsRef.current.dataAvailableBytes ?? 0) + event.data.size;
+
+                captureFlowLog.debug("recorder.dataavailable", {
+                    jobId: captureHandle.snapshot.jobId,
+                    bytes: event.data.size,
+                    recorderState: recorder.state,
+                });
+
+                chunkSendChainRef.current = chunkSendChainRef.current
+                    .then(async () => {
+                        if (!liveSessionRef.current) return;
+                        const before = chunkStreamStateRef.current;
+                        chunkStreamStateRef.current = await sendLiveAudioChunk(
+                            liveSessionRef.current,
+                            chunkStreamStateRef.current,
+                            event.data,
+                        );
+                        if (chunkStreamStateRef.current.sequence > before.sequence) {
+                            diagnosticsRef.current.chunksSent =
+                                chunkStreamStateRef.current.sequence;
+                            diagnosticsRef.current.chunksBytesSent =
+                                chunkStreamStateRef.current.offsetBytes;
+                        }
+                    })
+                    .catch((chunkError) => {
+                        captureFlowLog.error("chunk.send_failed", {
+                            jobId: captureHandle.snapshot.jobId,
+                            error:
+                                chunkError instanceof Error
+                                    ? chunkError.message
+                                    : String(chunkError),
+                        });
+                        if (!mountedRef.current) return;
+                        setError(
+                            chunkError instanceof Error
+                                ? chunkError.message
+                                : "Failed to stream audio chunk.",
+                        );
+                        setPhase("failed");
+                        stopLocalRecording();
+                        closeLiveSession();
+                        void renewLease();
+                    });
             };
             recorder.onerror = () => {
                 if (!mountedRef.current) return;
                 setError("Recording failed.");
                 setPhase("failed");
                 stopLocalRecording();
+                closeLiveSession();
+                void renewLease();
             };
 
             recorder.start(250);
             recorderRef.current = recorder;
             recordingStartedAtRef.current = Date.now();
+            captureFlowLog.info("recorder.started", {
+                jobId: captureHandle.snapshot.jobId,
+                mimeType: recorder.mimeType,
+                timesliceMs: 250,
+            });
             recordingTimerRef.current = setInterval(() => {
                 const startedAt = recordingStartedAtRef.current;
                 if (!startedAt) return;
@@ -200,37 +342,59 @@ export function VoiceCapturePanel({
                     void finishCaptureRef.current?.();
                 }
             }, 500);
+            setStatusLine(null);
             setPhase("recording");
         } catch (captureError) {
-            if (!mountedRef.current || controller.signal.aborted) return;
+            if (!mountedRef.current || openController.signal.aborted) return;
             stopLocalRecording();
+            closeLiveSession();
+            captureFlowLog.error("capture.start_failed", {
+                jobId: captureHandle?.snapshot.jobId,
+                error:
+                    captureError instanceof Error
+                        ? captureError.message
+                        : String(captureError),
+            });
             setError(
                 captureError instanceof Error
                     ? captureError.message
                     : "Could not access microphone.",
             );
             setPhase("failed");
+            setStatusLine(null);
+            void renewLease();
         }
-    }, [abortInFlightWork, stopLocalRecording]);
+    }, [
+        abortInFlightWork,
+        captureHandle,
+        closeLiveSession,
+        leaseError,
+        leasePhase,
+        leaseReady,
+        renewLease,
+        stopLocalRecording,
+        resetDiagnostics,
+    ]);
 
     const finishCapture = useCallback(async () => {
         const recorder = recorderRef.current;
-        if (!recorder || phase !== "recording") {
+        if (!recorder || recorder.state === "inactive") {
             return;
         }
 
-        abortInFlightWork();
-        const controller = new AbortController();
-        abortRef.current = controller;
-        const { signal } = controller;
+        const finalizeController = new AbortController();
+        finalizeAbortRef.current = finalizeController;
+        const { signal } = finalizeController;
 
         setPhase("processing");
         setStatusLine("Finishing recording…");
 
-        let jobIdForSave: string | null = null;
-        let capturedTranscript: string | null = null;
+        const handle = captureHandle;
 
         try {
+            const recordingStartedAt = recordingStartedAtRef.current;
+            diagnosticsRef.current.recorderState = recorder.state;
+
             await new Promise<void>((resolve, reject) => {
                 recorder.addEventListener("stop", () => resolve(), { once: true });
                 recorder.addEventListener(
@@ -243,36 +407,50 @@ export function VoiceCapturePanel({
 
             if (!mountedRef.current || signal.aborted) return;
 
+            diagnosticsRef.current.recordingDurationMs = recordingStartedAt
+                ? Date.now() - recordingStartedAt
+                : undefined;
+            diagnosticsRef.current.recorderState = recorder.state;
+
+            captureFlowLog.info("recorder.stopped", {
+                jobId: handle?.snapshot.jobId,
+                recordingDurationMs: diagnosticsRef.current.recordingDurationMs,
+                dataAvailableEvents: diagnosticsRef.current.dataAvailableEvents,
+            });
+
             stopLocalRecording();
 
-            const blob = new Blob(chunksRef.current, {
-                type: recorder.mimeType || "audio/webm",
-            });
-            if (blob.size === 0) {
-                throw new Error("No audio was captured.");
+            const session = liveSessionRef.current;
+            if (!session || !handle) {
+                throw new Error("Live capture session is not available.");
             }
 
-            setStatusLine("Uploading to Veritie…");
+            setStatusLine("Finalizing live stream…");
+            await flushPendingChunkUploads(chunkSendChainRef.current);
+            diagnosticsRef.current.uploadChainSettled = true;
+            diagnosticsRef.current.chunkSequenceAtEnd =
+                chunkStreamStateRef.current.sequence;
 
-            const result = await veritie.createAndUploadJob({
-                create: {
-                    audio_content_type: blob.type || "audio/webm",
-                },
-                file: blob,
-                signal,
-                upload: { signal },
+            logDiagnostics("stream.end.before", {
+                sessionId: session.sessionId,
             });
 
-            if (!mountedRef.current || signal.aborted) return;
+            await endLiveAudioStream(session, chunkStreamStateRef.current);
+            liveSessionRef.current = null;
 
-            const jobId = result.job.job_id;
-            jobIdForSave = jobId;
-            setPendingJobId(jobId);
+            captureFlowLog.info("stream.ended", {
+                jobId: handle.snapshot.jobId,
+                sessionId: session.sessionId,
+                chunks: chunkStreamStateRef.current.sequence,
+                totalBytes: chunkStreamStateRef.current.offsetBytes,
+            });
 
-            let job = await veritie.getJob(jobId, { signal });
-            setStatusLine("Waiting for extraction…");
+            const jobId = handle.snapshot.jobId;
+
+            let job = await handle.refresh({ signal });
+            setStatusLine("Waiting for transcript…");
             let polls = 0;
-            while (hasPendingJobEnrichment(job) && polls < 40) {
+            while (isTranscriptPending(job) && polls < 40) {
                 if (!mountedRef.current || signal.aborted) return;
                 await sleep(1500, signal);
                 job = await veritie.getJob(jobId, { signal });
@@ -282,51 +460,54 @@ export function VoiceCapturePanel({
             if (!mountedRef.current || signal.aborted) return;
 
             const transcriptText = job.transcript?.text?.trim();
-            capturedTranscript = transcriptText ?? null;
-            if (transcriptText) {
-                setTranscript(transcriptText);
+            if (!transcriptText) {
+                throw new Error("Transcript is not available yet.");
             }
 
-            setStatusLine("Saving capture…");
-            await persistCapture(jobId, signal);
-
-            if (!mountedRef.current || signal.aborted) return;
-
+            setTranscript(transcriptText);
             setPhase("transcript_ready");
             setStatusLine(null);
-            setPendingJobId(null);
+            finalizeAbortRef.current = null;
+
+            captureFlowLog.info("transcript.ready", {
+                jobId,
+                transcriptLength: transcriptText.length,
+                polls,
+            });
+
+            enqueueCaptureBackgroundPipeline({
+                jobId,
+                veritie,
+                persistCaptureFn,
+            });
         } catch (captureError) {
             if (!mountedRef.current || signal.aborted) return;
             stopLocalRecording();
-
-            if (jobIdForSave || capturedTranscript) {
-                const message =
-                    captureError instanceof Error
-                        ? captureError.message
-                        : "Failed to save capture";
-                setError(message);
-                setPhase("save_failed");
-                setStatusLine(null);
-                toast.error("Transcript ready but not saved", {
-                    description: message,
-                });
-                return;
-            }
+            closeLiveSession();
 
             setError(
                 captureError instanceof Error
                     ? captureError.message
                     : "Capture failed.",
             );
+            logDiagnostics("capture.failed", {
+                error:
+                    captureError instanceof Error
+                        ? captureError.message
+                        : String(captureError),
+            });
             setPhase("failed");
             setStatusLine(null);
+            void renewLease();
         }
     }, [
-        abortInFlightWork,
-        persistCapture,
-        phase,
+        captureHandle,
+        closeLiveSession,
+        persistCaptureFn,
+        renewLease,
         stopLocalRecording,
         veritie,
+        logDiagnostics,
     ]);
 
     finishCaptureRef.current = finishCapture;
@@ -334,23 +515,24 @@ export function VoiceCapturePanel({
     const cancelCapture = useCallback(() => {
         abortInFlightWork();
         stopLocalRecording();
-        chunksRef.current = [];
         setError(null);
         setStatusLine(null);
         setTranscript(null);
-        setPendingJobId(null);
         setPhase("ready");
-    }, [abortInFlightWork, stopLocalRecording]);
+        void renewLease();
+    }, [abortInFlightWork, renewLease, stopLocalRecording]);
 
     const waveformMode =
         phase === "recording"
             ? "active"
             : phase === "processing" || phase === "requesting_microphone"
-              ? "passive"
-              : "idle";
+                ? "passive"
+                : "idle";
 
     const isRecording = phase === "recording";
-    const canStart = phase === "ready" || phase === "failed";
+    const canStart =
+        (phase === "ready" || phase === "failed") && leaseReady;
+    const isPreparingLease = leasePhase === "preparing";
 
     const recordingMinutes = Math.floor(recordingElapsedMs / 60_000);
     const recordingSeconds = Math.floor((recordingElapsedMs % 60_000) / 1000);
@@ -358,8 +540,7 @@ export function VoiceCapturePanel({
     return (
         <div
             className={cn(
-                embedded ? SURFACE_CLASS_NESTED : "rounded-2xl border bg-card p-4",
-                "w-full space-y-5",
+                "w-full space-y-3",
                 phase === "processing" && "animate-pulse",
             )}
         >
@@ -388,25 +569,23 @@ export function VoiceCapturePanel({
                         Transcript ready
                     </span>
                 )}
-                {phase === "save_failed" && (
-                    <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                        Save failed
-                    </span>
-                )}
             </div>
 
-            {phase !== "transcript_ready" && phase !== "save_failed" ? (
+            {phase !== "transcript_ready" ? (
                 <LiveAudioWaveform stream={stream} mode={waveformMode} />
             ) : null}
 
-            {error && (
+            {isPreparingLease && phase === "ready" && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Preparing Veritie lease…
+                </div>
+            )}
+
+            {(error || leaseError) && (
                 <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    <p className="font-medium">
-                        {phase === "save_failed"
-                            ? "Transcript ready but not saved"
-                            : "Voice log unavailable"}
-                    </p>
-                    <p className="mt-1 text-destructive/90">{error}</p>
+                    <p className="font-medium">Voice log unavailable</p>
+                    <p className="mt-1 text-destructive/90">{error ?? leaseError}</p>
                 </div>
             )}
 
@@ -451,20 +630,14 @@ export function VoiceCapturePanel({
                 {(isRecording ||
                     phase === "requesting_microphone" ||
                     phase === "processing") && (
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={cancelCapture}
-                    >
-                        Cancel
-                    </Button>
-                )}
-
-                {phase === "save_failed" && (
-                    <Button type="button" onClick={() => void retrySave()}>
-                        Retry save
-                    </Button>
-                )}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={cancelCapture}
+                        >
+                            Cancel
+                        </Button>
+                    )}
 
                 {phase === "transcript_ready" && (
                     <Button type="button" onClick={onComplete}>

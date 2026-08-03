@@ -5,7 +5,9 @@ import { getTimelineEventDetail } from "@/lib/data-source/timeline-read-model";
 import { updateExtractedValueReviewState } from "@/lib/data-source/timeline-read-model";
 import {
     persistCaptureFromVeritieJob,
+    enrichCaptureFromVeritieJob,
     type PersistCaptureFromJobResult,
+    type EnrichCaptureFromJobResult,
 } from "@/lib/capture/persist-capture-from-job";
 import { extractedValueReviewRequestSchema } from "@/lib/capture/extracted-value-review-schema";
 import type { TimelineEventDetailReadModel } from "@/lib/data-source/timeline-read-model";
@@ -15,6 +17,12 @@ export async function persistCaptureAction(
     jobId: string,
 ): Promise<PersistCaptureFromJobResult> {
     return persistCaptureFromVeritieJob(jobId);
+}
+
+export async function enrichCaptureAction(
+    jobId: string,
+): Promise<EnrichCaptureFromJobResult> {
+    return enrichCaptureFromVeritieJob(jobId);
 }
 
 export async function getTimelineEventDetailAction(eventId: string): Promise<{
