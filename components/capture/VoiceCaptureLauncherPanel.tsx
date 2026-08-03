@@ -1,8 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useVeritie } from "@veritie/sdk";
-import { envPublic } from "@/lib/config/env.public";
+import { useVeritieCaptureLease } from "@/components/capture/VeritieCaptureLeaseContext";
 
 const VoiceCapturePanel = dynamic(
     () =>
@@ -19,17 +18,16 @@ export function VoiceCaptureLauncherPanel({
     onBack: () => void;
     onComplete: () => void;
 }) {
-    const veritie = useVeritie({
-        config: {
-            baseUrl: envPublic.veritieApiUrl ?? "http://localhost:3001",
-            pipelineAlias:
-                envPublic.veritiePipelineAlias ?? "veritie-personal",
-        },
-    });
+    const { veritie, captureHandle, leasePhase, leaseError, renewLease } =
+        useVeritieCaptureLease();
 
     return (
         <VoiceCapturePanel
             veritie={veritie}
+            captureHandle={captureHandle}
+            leasePhase={leasePhase}
+            leaseError={leaseError}
+            renewLease={renewLease}
             embedded
             onBack={onBack}
             onComplete={onComplete}
