@@ -8,11 +8,12 @@ import {
 } from "react";
 import {
     AudioWaveform,
-    Camera,
-    EyeOff,
-    FileText,
-    Images,
+    EyeOffIcon,
+    FileTextIcon,
+    FileIcon,
+    ImageIcon,
     X,
+    TextIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -242,7 +243,7 @@ export function GlobalCaptureLauncher() {
                                     Capture
                                 </h2>
                                 <p className="mt-1 text-sm text-white/75">
-                                    Choose how you want to add something.
+                                    Choose how you want <br />to add something.
                                 </p>
                             </div>
                             <div className="flex flex-col items-end gap-2">
@@ -252,26 +253,26 @@ export function GlobalCaptureLauncher() {
                                     onSelect={() => setMode("voice")}
                                 />
                                 <CaptureOption
-                                    label="Photo"
-                                    icon={Camera}
+                                    label="PDF"
+                                    icon={FileIcon}
                                     disabled
                                     hint="Coming soon"
                                 />
                                 <CaptureOption
                                     label="Image"
-                                    icon={Images}
+                                    icon={ImageIcon}
                                     disabled
                                     hint="Coming soon"
                                 />
                                 <CaptureOption
                                     label="Text"
-                                    icon={FileText}
+                                    icon={TextIcon}
                                     disabled
                                     hint="Coming soon"
                                 />
                                 <CaptureOption
                                     label="Hide"
-                                    icon={EyeOff}
+                                    icon={EyeOffIcon}
                                     onSelect={hideLauncher}
                                 />
                             </div>
@@ -282,7 +283,7 @@ export function GlobalCaptureLauncher() {
                 <Button
                     type="button"
                     size="icon-lg"
-                    className="h-14 w-14 rounded-2xl shadow-lg"
+                    className={cn("h-14 w-14 rounded-2xl shadow-lg", open && "bg-background text-foreground hover:bg-background/80")}
                     aria-label={
                         open
                             ? "Close capture launcher"
@@ -297,9 +298,9 @@ export function GlobalCaptureLauncher() {
                     onPointerCancel={handleFabPointerCancel}
                 >
                     {open ? (
-                        <X className="h-5 w-5" />
+                        <X className="h-8 w-8" />
                     ) : (
-                        <AudioWaveform className="h-5 w-5" />
+                        <AudioWaveform className="h-8 w-8" />
                     )}
                 </Button>
             </motion.div>
@@ -371,7 +372,7 @@ function CaptureOption({
             disabled={disabled}
             onClick={() => onSelect?.()}
             className={cn(
-                "flex w-auto items-center gap-2 rounded-full border border-white/15 bg-card px-3 py-2 text-sm font-medium text-foreground shadow-lg",
+                "flex w-auto items-center gap-2 rounded-2xl border border-white/15 bg-card px-3 py-2 text-sm font-medium text-foreground shadow-lg",
                 "transition-colors hover:bg-accent/80",
                 disabled && "opacity-45",
             )}
