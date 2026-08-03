@@ -1,15 +1,18 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, Mic, Square } from "lucide-react";
 import type { useVeritie } from "@veritie/sdk";
 import { hasPendingJobEnrichment } from "@veritie/sdk";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { LiveAudioWaveform } from "./LiveAudioWaveform";
+import { LiveAudioWaveform } from "@/components/capture/LiveAudioWaveform";
 import { SURFACE_CLASS_NESTED } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
 
 type VeritieHook = ReturnType<typeof useVeritie>;
+
+const MAX_RECORDING_MS = 5 * 60 * 1000;
 
 type VoicePhase =
     | "ready"
@@ -17,6 +20,7 @@ type VoicePhase =
     | "recording"
     | "processing"
     | "transcript_ready"
+    | "save_failed"
     | "failed";
 
 export function VoiceCapturePanel({
@@ -35,12 +39,26 @@ export function VoiceCapturePanel({
     const [statusLine, setStatusLine] = useState<string | null>(null);
     const [transcript, setTranscript] = useState<string | null>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
+    const [pendingJobId, setPendingJobId] = useState<string | null>(null);
+    const [recordingElapsedMs, setRecordingElapsedMs] = useState(0);
 
     const recorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<BlobPart[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
+    const abortRef = useRef<AbortController | null>(null);
+    const mountedRef = useRef(true);
+    const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const recordingStartedAtRef = useRef<number | null>(null);
+    const finishCaptureRef = useRef<(() => Promise<void>) | null>(null);
 
     const stopLocalRecording = useCallback(() => {
+        if (recordingTimerRef.current) {
+            clearInterval(recordingTimerRef.current);
+            recordingTimerRef.current = null;
+        }
+        recordingStartedAtRef.current = null;
+        setRecordingElapsedMs(0);
+
         const recorder = recorderRef.current;
         if (recorder && recorder.state !== "inactive") {
             recorder.stop();
@@ -55,11 +73,86 @@ export function VoiceCapturePanel({
         setStream(null);
     }, []);
 
+    const abortInFlightWork = useCallback(() => {
+        abortRef.current?.abort();
+        abortRef.current = null;
+    }, []);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+            abortInFlightWork();
+            stopLocalRecording();
+        };
+    }, [abortInFlightWork, stopLocalRecording]);
+
+    const persistCapture = useCallback(
+        async (jobId: string, signal: AbortSignal) => {
+            const response = await fetch("/api/captures", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ jobId }),
+                signal,
+            });
+
+            if (!response.ok) {
+                let message = "Failed to save capture";
+                try {
+                    const body = (await response.json()) as { error?: string };
+                    if (body.error) message = body.error;
+                } catch {
+                    // ignore parse errors
+                }
+                throw new Error(message);
+            }
+
+            return response.json() as Promise<{
+                captureId: string;
+                timelineEventCount: number;
+            }>;
+        },
+        [],
+    );
+
+    const retrySave = useCallback(async () => {
+        if (!pendingJobId) return;
+
+        const controller = new AbortController();
+        abortRef.current = controller;
+        setError(null);
+        setStatusLine("Saving capture…");
+        setPhase("processing");
+
+        try {
+            await persistCapture(pendingJobId, controller.signal);
+            if (!mountedRef.current || controller.signal.aborted) return;
+            setPhase("transcript_ready");
+            setStatusLine(null);
+            setPendingJobId(null);
+        } catch (saveError) {
+            if (!mountedRef.current || controller.signal.aborted) return;
+            const message =
+                saveError instanceof Error
+                    ? saveError.message
+                    : "Failed to save capture";
+            setError(message);
+            setPhase("save_failed");
+            setStatusLine(null);
+            toast.error("Transcript ready but not saved", { description: message });
+        }
+    }, [pendingJobId, persistCapture]);
+
     const startCapture = useCallback(async () => {
+        abortInFlightWork();
         setError(null);
         setStatusLine(null);
         setTranscript(null);
+        setPendingJobId(null);
         setPhase("requesting_microphone");
+
+        const controller = new AbortController();
+        abortRef.current = controller;
 
         try {
             if (!navigator.mediaDevices?.getUserMedia) {
@@ -69,6 +162,11 @@ export function VoiceCapturePanel({
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
             });
+            if (!mountedRef.current || controller.signal.aborted) {
+                mediaStream.getTracks().forEach((track) => track.stop());
+                return;
+            }
+
             streamRef.current = mediaStream;
             setStream(mediaStream);
 
@@ -86,6 +184,7 @@ export function VoiceCapturePanel({
                 }
             };
             recorder.onerror = () => {
+                if (!mountedRef.current) return;
                 setError("Recording failed.");
                 setPhase("failed");
                 stopLocalRecording();
@@ -93,8 +192,19 @@ export function VoiceCapturePanel({
 
             recorder.start(250);
             recorderRef.current = recorder;
+            recordingStartedAtRef.current = Date.now();
+            recordingTimerRef.current = setInterval(() => {
+                const startedAt = recordingStartedAtRef.current;
+                if (!startedAt) return;
+                const elapsed = Date.now() - startedAt;
+                setRecordingElapsedMs(elapsed);
+                if (elapsed >= MAX_RECORDING_MS) {
+                    void finishCaptureRef.current?.();
+                }
+            }, 500);
             setPhase("recording");
         } catch (captureError) {
+            if (!mountedRef.current || controller.signal.aborted) return;
             stopLocalRecording();
             setError(
                 captureError instanceof Error
@@ -103,7 +213,7 @@ export function VoiceCapturePanel({
             );
             setPhase("failed");
         }
-    }, [stopLocalRecording]);
+    }, [abortInFlightWork, stopLocalRecording]);
 
     const finishCapture = useCallback(async () => {
         const recorder = recorderRef.current;
@@ -111,17 +221,29 @@ export function VoiceCapturePanel({
             return;
         }
 
+        abortInFlightWork();
+        const controller = new AbortController();
+        abortRef.current = controller;
+        const { signal } = controller;
+
         setPhase("processing");
         setStatusLine("Finishing recording…");
+
+        let jobIdForSave: string | null = null;
+        let capturedTranscript: string | null = null;
 
         try {
             await new Promise<void>((resolve, reject) => {
                 recorder.addEventListener("stop", () => resolve(), { once: true });
-                recorder.addEventListener("error", () => reject(new Error("Recording failed")), {
-                    once: true,
-                });
+                recorder.addEventListener(
+                    "error",
+                    () => reject(new Error("Recording failed")),
+                    { once: true },
+                );
                 recorder.stop();
             });
+
+            if (!mountedRef.current || signal.aborted) return;
 
             stopLocalRecording();
 
@@ -132,7 +254,6 @@ export function VoiceCapturePanel({
                 throw new Error("No audio was captured.");
             }
 
-            const captureId = `capture_${Date.now()}`;
             setStatusLine("Uploading to Veritie…");
 
             const result = await veritie.createAndUploadJob({
@@ -142,30 +263,56 @@ export function VoiceCapturePanel({
                 file: blob,
             });
 
-            let job = await veritie.getJob(result.job.job_id);
+            if (!mountedRef.current || signal.aborted) return;
+
+            const jobId = result.job.job_id;
+            jobIdForSave = jobId;
+            setPendingJobId(jobId);
+
+            let job = await veritie.getJob(jobId);
             setStatusLine("Waiting for extraction…");
             let polls = 0;
             while (hasPendingJobEnrichment(job) && polls < 40) {
-                await sleep(1500);
-                job = await veritie.getJob(result.job.job_id);
+                if (!mountedRef.current || signal.aborted) return;
+                await sleep(1500, signal);
+                job = await veritie.getJob(jobId);
                 polls += 1;
             }
 
-            setStatusLine("Saving capture…");
-            await fetch("/api/captures", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ job, captureId }),
-            });
+            if (!mountedRef.current || signal.aborted) return;
 
             const transcriptText = job.transcript?.text?.trim();
+            capturedTranscript = transcriptText ?? null;
             if (transcriptText) {
                 setTranscript(transcriptText);
             }
+
+            setStatusLine("Saving capture…");
+            await persistCapture(jobId, signal);
+
+            if (!mountedRef.current || signal.aborted) return;
+
             setPhase("transcript_ready");
             setStatusLine(null);
+            setPendingJobId(null);
         } catch (captureError) {
+            if (!mountedRef.current || signal.aborted) return;
             stopLocalRecording();
+
+            if (jobIdForSave || capturedTranscript) {
+                const message =
+                    captureError instanceof Error
+                        ? captureError.message
+                        : "Failed to save capture";
+                setError(message);
+                setPhase("save_failed");
+                setStatusLine(null);
+                toast.error("Transcript ready but not saved", {
+                    description: message,
+                });
+                return;
+            }
+
             setError(
                 captureError instanceof Error
                     ? captureError.message
@@ -174,16 +321,26 @@ export function VoiceCapturePanel({
             setPhase("failed");
             setStatusLine(null);
         }
-    }, [phase, stopLocalRecording, veritie]);
+    }, [
+        abortInFlightWork,
+        persistCapture,
+        phase,
+        stopLocalRecording,
+        veritie,
+    ]);
+
+    finishCaptureRef.current = finishCapture;
 
     const cancelCapture = useCallback(() => {
+        abortInFlightWork();
         stopLocalRecording();
         chunksRef.current = [];
         setError(null);
         setStatusLine(null);
         setTranscript(null);
+        setPendingJobId(null);
         setPhase("ready");
-    }, [stopLocalRecording]);
+    }, [abortInFlightWork, stopLocalRecording]);
 
     const waveformMode =
         phase === "recording"
@@ -194,6 +351,9 @@ export function VoiceCapturePanel({
 
     const isRecording = phase === "recording";
     const canStart = phase === "ready" || phase === "failed";
+
+    const recordingMinutes = Math.floor(recordingElapsedMs / 60_000);
+    const recordingSeconds = Math.floor((recordingElapsedMs % 60_000) / 1000);
 
     return (
         <div
@@ -213,6 +373,11 @@ export function VoiceCapturePanel({
                     <ArrowLeft className="size-4" />
                     Capture
                 </Button>
+                {isRecording && (
+                    <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                        {recordingMinutes}:{recordingSeconds.toString().padStart(2, "0")}
+                    </span>
+                )}
                 {phase === "processing" && (
                     <span className="text-xs font-medium text-muted-foreground animate-pulse">
                         Processing…
@@ -223,15 +388,24 @@ export function VoiceCapturePanel({
                         Transcript ready
                     </span>
                 )}
+                {phase === "save_failed" && (
+                    <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                        Save failed
+                    </span>
+                )}
             </div>
 
-            {phase !== "transcript_ready" ? (
+            {phase !== "transcript_ready" && phase !== "save_failed" ? (
                 <LiveAudioWaveform stream={stream} mode={waveformMode} />
             ) : null}
 
             {error && (
                 <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    <p className="font-medium">Voice log unavailable</p>
+                    <p className="font-medium">
+                        {phase === "save_failed"
+                            ? "Transcript ready but not saved"
+                            : "Voice log unavailable"}
+                    </p>
                     <p className="mt-1 text-destructive/90">{error}</p>
                 </div>
             )}
@@ -280,10 +454,15 @@ export function VoiceCapturePanel({
                     <Button
                         type="button"
                         variant="outline"
-                        disabled={phase === "processing"}
                         onClick={cancelCapture}
                     >
                         Cancel
+                    </Button>
+                )}
+
+                {phase === "save_failed" && (
+                    <Button type="button" onClick={() => void retrySave()}>
+                        Retry save
                     </Button>
                 )}
 
@@ -297,6 +476,23 @@ export function VoiceCapturePanel({
     );
 }
 
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+        if (signal?.aborted) {
+            reject(new DOMException("Aborted", "AbortError"));
+            return;
+        }
+
+        const timeoutId = setTimeout(() => {
+            signal?.removeEventListener("abort", onAbort);
+            resolve();
+        }, ms);
+
+        const onAbort = () => {
+            clearTimeout(timeoutId);
+            reject(new DOMException("Aborted", "AbortError"));
+        };
+
+        signal?.addEventListener("abort", onAbort, { once: true });
+    });
 }
