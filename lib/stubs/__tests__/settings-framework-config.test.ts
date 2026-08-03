@@ -21,7 +21,7 @@ describe("settings scope mapping config stubs", () => {
             "/work/documents",
         );
         expect(config.topValidationErrors[2]?.remediation.href).toContain(
-            "/work/scopes/operations-readiness",
+            "/work/scopes/admin",
         );
     });
 

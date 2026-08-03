@@ -1,39 +1,34 @@
 import { validatePageModel } from "@/lib/page-model";
-import { buildWorkOverviewPageModel } from "@/app/(app)/work/_page-model/build";
+import { buildTimelineRouteContract } from "@/app/(app)/timeline/_page-model/build";
 import {
     PAYLOAD_HARD_LIMIT_BYTES,
     PAYLOAD_SOFT_LIMIT_BYTES,
 } from "@/lib/contracts/validation";
-import type { DashboardMetrics } from "@/app/(app)/work/_page-model/composeVM";
 
-const baseMetrics: DashboardMetrics = {
-    tasksTotal: 20,
-    tasksInScope: 10,
-    checksComplete: 4,
-    checksTotal: 8,
-    blockedChecks: 2,
-    overdueTasks: 3,
-    missingAttachments: 5,
-    unmappedChecks: 1,
-    completionPercent: 50,
+const baseTimelineIndex = {
+    items: [
+        {
+            id: "timeline_event_1",
+            type: "task_detected" as const,
+            title: "Call Medibank about the claim",
+            summary: "Detected from morning voice log",
+            aspect: "admin" as const,
+            occurredAt: "2026-08-01T08:22:30.000Z",
+            captureId: "capture_seed_morning_log",
+            extractedValueId: "extracted_task_medibank",
+            extractedObjectType: "task" as const,
+            reviewState: "pending" as const,
+            confidence: 0.86,
+        },
+    ],
+    total: 1,
 };
 
 describe("validatePageModel", () => {
-    it("accepts a valid minimal dashboard page model", () => {
-        const pageModel = buildWorkOverviewPageModel({
-            lens: { scope: "delivery-observability" },
-            metrics: baseMetrics,
-            blockingTaskSummaries: [
-                {
-                    id: "task-1",
-                    title: "Collect access review attachment",
-                    status: "todo",
-                    priority: "high",
-                    dueAt: null,
-                    blockingReason: "Missing policy attachment",
-                },
-            ],
-            scopesInView: ["Operations Readiness"],
+    it("accepts a valid minimal timeline page model", () => {
+        const { pageModel } = buildTimelineRouteContract({
+            lens: { scope: "finance" },
+            timelineIndex: baseTimelineIndex,
         });
 
         const result = validatePageModel(pageModel);
@@ -48,11 +43,11 @@ describe("validatePageModel", () => {
     it("rejects unknown top-level keys", () => {
         const result = validatePageModel({
             meta: {
-                title: "Work",
-                breadcrumbs: [{ label: "Dashboard" }],
-                scope: { scopeId: "all" },
+                title: "Timeline",
+                breadcrumbs: [{ label: "Timeline" }],
+                aspect: { aspectId: "all" },
             },
-            view: { key: "work_overview" },
+            view: { key: "timeline_index" },
             sections: [],
             capabilities: {},
             actions: { available: [] },
@@ -68,11 +63,11 @@ describe("validatePageModel", () => {
     it("rejects raw-document payload fields inside sections", () => {
         const result = validatePageModel({
             meta: {
-                title: "Work",
-                breadcrumbs: [{ label: "Dashboard" }],
-                scope: { scopeId: "all" },
+                title: "Timeline",
+                breadcrumbs: [{ label: "Timeline" }],
+                aspect: { aspectId: "all" },
             },
-            view: { key: "work_overview" },
+            view: { key: "timeline_index" },
             sections: [
                 {
                     key: "danger",
@@ -98,20 +93,17 @@ describe("validatePageModel", () => {
 
     it("sets soft-limit reason when payload is large but valid", () => {
         const largeTitle = "x".repeat(PAYLOAD_SOFT_LIMIT_BYTES + 2000);
-        const pageModel = buildWorkOverviewPageModel({
-            lens: { scope: "operations-readiness" },
-            metrics: baseMetrics,
-            blockingTaskSummaries: [
-                {
-                    id: "task-1",
-                    title: largeTitle,
-                    status: "todo",
-                    priority: "high",
-                    dueAt: null,
-                    blockingReason: "Needs attachment mapping",
-                },
-            ],
-            scopesInView: ["Operations Readiness"],
+        const { pageModel } = buildTimelineRouteContract({
+            lens: { scope: "finance" },
+            timelineIndex: {
+                items: [
+                    {
+                        ...baseTimelineIndex.items[0],
+                        title: largeTitle,
+                    },
+                ],
+                total: 1,
+            },
         });
 
         const result = validatePageModel(pageModel);
@@ -125,20 +117,17 @@ describe("validatePageModel", () => {
 
     it("rejects payloads above hard limit", () => {
         const veryLargeTitle = "x".repeat(PAYLOAD_HARD_LIMIT_BYTES + 1000);
-        const pageModel = buildWorkOverviewPageModel({
-            lens: { scope: "operations-readiness" },
-            metrics: baseMetrics,
-            blockingTaskSummaries: [
-                {
-                    id: "task-1",
-                    title: veryLargeTitle,
-                    status: "todo",
-                    priority: "high",
-                    dueAt: null,
-                    blockingReason: "Needs attachment mapping",
-                },
-            ],
-            scopesInView: ["Operations Readiness"],
+        const { pageModel } = buildTimelineRouteContract({
+            lens: { scope: "finance" },
+            timelineIndex: {
+                items: [
+                    {
+                        ...baseTimelineIndex.items[0],
+                        title: veryLargeTitle,
+                    },
+                ],
+                total: 1,
+            },
         });
 
         const result = validatePageModel(pageModel);

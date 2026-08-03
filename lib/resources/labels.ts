@@ -3,7 +3,7 @@ import type {
     ResourceCriticality,
     ResourceSensitivity,
 } from "@/lib/stubs";
-import { getScopeLabel } from "@/lib/lens/scope-definitions";
+import { getAspectLabel } from "@/lib/aspect/definitions";
 import type { ScopeKey } from "@/lib/lens";
 
 export function resourceCategoryLabel(category: ResourceCategory): string {
@@ -44,5 +44,5 @@ export function resourceSensitivityLabel(value: ResourceSensitivity): string {
 }
 
 export function scopeLabel(scopeId: ScopeKey): string {
-    return getScopeLabel(scopeId);
+    return getAspectLabel(scopeId);
 }

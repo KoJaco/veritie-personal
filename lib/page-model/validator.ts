@@ -27,7 +27,7 @@ const RAW_DOC_FORBIDDEN_KEYS = new Set([
     "body",
 ]);
 
-const META_KEYS = ["title", "description", "breadcrumbs", "scope"] as const;
+const META_KEYS = ["title", "description", "breadcrumbs", "aspect"] as const;
 const VIEW_KEYS = ["key", "featureFlags"] as const;
 const REFS_KEYS = ["primary", "visible"] as const;
 const SECTION_KEYS = ["key", "title", "kind", "dataRef", "items"] as const;
@@ -319,11 +319,14 @@ export function validatePageModel(input: unknown): ValidationResult<PageModel> {
         }
     }
 
-    if (!isPlainObject(input.meta.scope) || !isNonEmptyString(input.meta.scope.scopeId)) {
+    if (
+        !isPlainObject(input.meta.aspect) ||
+        !isNonEmptyString(input.meta.aspect.aspectId)
+    ) {
         return {
             ok: false,
             errorCode: "INVALID_SHAPE",
-            reason: "meta.scope.scopeId must be a non-empty string",
+            reason: "meta.aspect.aspectId must be a non-empty string",
         };
     }
 

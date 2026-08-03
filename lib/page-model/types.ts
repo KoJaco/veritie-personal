@@ -19,7 +19,7 @@ export type PageModel = {
         title: string;
         description?: string;
         breadcrumbs: Array<{ label: string; href?: string }>;
-        scope: { scopeId: string | "all" };
+        aspect: { aspectId: string | "all" };
     };
     view: {
         key: string;
