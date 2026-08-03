@@ -68,12 +68,19 @@ function passiveBarEnergies(timeSeconds: number) {
     });
 }
 
+type CanvasSize = {
+    width: number;
+    height: number;
+    ratio: number;
+};
+
 export function LiveAudioWaveform({
     stream,
     mode,
     className,
 }: LiveAudioWaveformProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const sizeRef = useRef<CanvasSize>({ width: 0, height: 0, ratio: 1 });
 
     useEffect(() => {
         if (typeof window === "undefined") {
@@ -85,19 +92,45 @@ export function LiveAudioWaveform({
             return;
         }
 
+        const syncCanvasSize = () => {
+            const rect = canvas.getBoundingClientRect();
+            const ratio = window.devicePixelRatio || 1;
+            const width = Math.max(1, Math.floor(rect.width * ratio));
+            const height = Math.max(1, Math.floor(rect.height * ratio));
+            const current = sizeRef.current;
+
+            if (
+                current.width !== width ||
+                current.height !== height ||
+                current.ratio !== ratio
+            ) {
+                canvas.width = width;
+                canvas.height = height;
+                sizeRef.current = { width, height, ratio };
+            }
+        };
+
+        syncCanvasSize();
+        const resizeObserver =
+            typeof ResizeObserver !== "undefined"
+                ? new ResizeObserver(() => {
+                      syncCanvasSize();
+                  })
+                : null;
+        resizeObserver?.observe(canvas);
+
         const fillStyle = resolveWaveformFill();
         let frameId = 0;
         let cancelled = false;
 
         const drawFrame = (energies: number[]) => {
+            syncCanvasSize();
             const rect = canvas.getBoundingClientRect();
-            const ratio = window.devicePixelRatio || 1;
-            canvas.width = Math.max(1, Math.floor(rect.width * ratio));
-            canvas.height = Math.max(1, Math.floor(rect.height * ratio));
             const ctx = canvas.getContext("2d");
             if (!ctx) {
                 return;
             }
+            const ratio = sizeRef.current.ratio;
             ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
             ctx.clearRect(0, 0, rect.width, rect.height);
             drawWaveformBars(ctx, rect, energies, fillStyle);
@@ -109,6 +142,7 @@ export function LiveAudioWaveform({
                 (window as unknown as { webkitAudioContext?: typeof AudioContext })
                     .webkitAudioContext;
             if (!AudioContextCtor) {
+                resizeObserver?.disconnect();
                 return;
             }
 
@@ -149,6 +183,7 @@ export function LiveAudioWaveform({
 
             return () => {
                 cancelled = true;
+                resizeObserver?.disconnect();
                 window.cancelAnimationFrame(frameId);
                 source.disconnect();
                 void context.close();
@@ -169,6 +204,7 @@ export function LiveAudioWaveform({
 
             return () => {
                 cancelled = true;
+                resizeObserver?.disconnect();
                 window.cancelAnimationFrame(frameId);
             };
         }
@@ -176,6 +212,7 @@ export function LiveAudioWaveform({
         drawFrame(idleBarEnergies());
         return () => {
             cancelled = true;
+            resizeObserver?.disconnect();
             window.cancelAnimationFrame(frameId);
         };
     }, [mode, stream]);

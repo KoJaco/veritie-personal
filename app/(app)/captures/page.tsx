@@ -6,6 +6,18 @@ import {
     getAspectLensFromSearchParams,
     type SearchParamRecord,
 } from "@/lib/aspect-lens";
+import {
+    getStringParam,
+    INDEX_SEARCH_SUGGESTION_LIMIT,
+    parseCaptureStatus,
+    parseCapturesSortBy,
+    parseCapturesView,
+    parseSortDir,
+} from "@/lib/route/search-params";
+import {
+    buildCapturesRouteContract,
+    canOpenAssistantFromCapturesContract,
+} from "./_page-model/build";
 import { CapturesClientView } from "./_components/CapturesClientView";
 import { CapturesFilterSheet } from "./_components/CapturesFilterSheet";
 
@@ -16,11 +28,11 @@ interface CapturesPageProps {
 export default async function CapturesPage({ searchParams }: CapturesPageProps) {
     const resolved = await searchParams;
     const lens = getAspectLensFromSearchParams(resolved);
-    const search = getString(resolved.q);
-    const status = parseStatus(getString(resolved.status));
-    const sortBy = parseSortBy(getString(resolved.sortBy));
-    const sortDir = parseSortDir(getString(resolved.sortDir));
-    const view = parseView(getString(resolved.view));
+    const search = getStringParam(resolved.q);
+    const status = parseCaptureStatus(getStringParam(resolved.status));
+    const sortBy = parseCapturesSortBy(getStringParam(resolved.sortBy));
+    const sortDir = parseSortDir(getStringParam(resolved.sortDir));
+    const view = parseCapturesView(getStringParam(resolved.view));
 
     const dataSource = getDataSourceAdapters();
     const capturesIndex = dataSource.captures.getCapturesIndex({
@@ -31,12 +43,19 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
         sortDir,
     });
 
-    const captureSearchItems = capturesIndex.items.map((item) => ({
-        id: item.id,
-        title: item.title,
-        summary: `${item.type} · ${item.status} · ${item.extractedCount} extracted`,
-        searchTerms: [item.type, item.status],
-    }));
+    const contract = buildCapturesRouteContract({
+        lens: { scope: lens.aspect },
+        capturesIndex,
+    });
+
+    const captureSearchItems = capturesIndex.items
+        .slice(0, INDEX_SEARCH_SUGGESTION_LIMIT)
+        .map((item) => ({
+            id: item.id,
+            title: item.title,
+            summary: `${item.type} · ${item.status} · ${item.extractedCount} extracted`,
+            searchTerms: [item.type, item.status],
+        }));
 
     const headerBaseParams = {
         aspect: lens.aspect,
@@ -80,7 +99,11 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
                                 baseParams={headerBaseParams}
                                 view={view}
                             />
-                            <PageAssistantAction canOpenAssistant={true} />
+                            <PageAssistantAction
+                                canOpenAssistant={canOpenAssistantFromCapturesContract(
+                                    contract,
+                                )}
+                            />
                         </>
                     }
                 />
@@ -97,33 +120,4 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
             />
         </PageFrame>
     );
-}
-
-function getString(value: string | string[] | undefined): string | undefined {
-    if (Array.isArray(value)) return value[0];
-    return value;
-}
-
-function parseStatus(
-    value: string | undefined,
-): "completed" | "processing" | "failed" | undefined {
-    if (value === "completed" || value === "processing" || value === "failed") {
-        return value;
-    }
-    return undefined;
-}
-
-function parseSortBy(
-    value: string | undefined,
-): "createdAt" | "title" | "extractedCount" {
-    if (value === "title" || value === "extractedCount") return value;
-    return "createdAt";
-}
-
-function parseSortDir(value: string | undefined): "asc" | "desc" {
-    return value === "asc" ? "asc" : "desc";
-}
-
-function parseView(value: string | undefined): "cards" | "table" {
-    return value === "table" ? "table" : "cards";
 }

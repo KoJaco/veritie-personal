@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TimelineIndexItem } from "@/lib/data-source/timeline-read-model";
 import type { TimelineEventDetailReadModel } from "@/lib/data-source/timeline-read-model";
 import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-model";
@@ -20,20 +20,63 @@ function groupByDate(items: TimelineIndexItem[]) {
 
 export function TimelineClientView({
     items,
-    detailsById,
-    capturesById,
 }: {
     items: TimelineIndexItem[];
-    detailsById: Record<string, TimelineEventDetailReadModel>;
-    capturesById: Record<string, CaptureDetailReadModel>;
 }) {
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [selectedDetail, setSelectedDetail] =
+        useState<TimelineEventDetailReadModel | null>(null);
+    const [selectedCapture, setSelectedCapture] =
+        useState<CaptureDetailReadModel | null>(null);
+    const [detailError, setDetailError] = useState<string | null>(null);
+    const [detailLoading, setDetailLoading] = useState(false);
     const groups = useMemo(() => groupByDate(items), [items]);
-    const selectedDetail = selectedId ? detailsById[selectedId] : null;
-    const selectedCaptureId = selectedDetail?.event.captureId;
-    const selectedCapture = selectedCaptureId
-        ? capturesById[selectedCaptureId]
-        : null;
+
+    const loadDetail = useCallback(async (eventId: string, signal: AbortSignal) => {
+        setDetailLoading(true);
+        setDetailError(null);
+
+        try {
+            const response = await fetch(`/api/timeline/events/${eventId}`, {
+                signal,
+            });
+            if (!response.ok) {
+                throw new Error("Could not load event detail");
+            }
+            const body = (await response.json()) as {
+                detail: TimelineEventDetailReadModel;
+                captureDetail: CaptureDetailReadModel | null;
+            };
+            if (signal.aborted) return;
+            setSelectedDetail(body.detail);
+            setSelectedCapture(body.captureDetail);
+        } catch (error) {
+            if (signal.aborted) return;
+            setSelectedDetail(null);
+            setSelectedCapture(null);
+            setDetailError(
+                error instanceof Error ? error.message : "Could not load event detail",
+            );
+        } finally {
+            if (!signal.aborted) {
+                setDetailLoading(false);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!selectedId) {
+            setSelectedDetail(null);
+            setSelectedCapture(null);
+            setDetailError(null);
+            setDetailLoading(false);
+            return;
+        }
+
+        const controller = new AbortController();
+        void loadDetail(selectedId, controller.signal);
+        return () => controller.abort();
+    }, [loadDetail, selectedId]);
 
     return (
         <div className="relative">
@@ -65,8 +108,17 @@ export function TimelineClientView({
                     </p>
                 )}
             </div>
+
+            {detailError && selectedId && (
+                <p className="mt-4 text-sm text-destructive">{detailError}</p>
+            )}
+
+            {detailLoading && selectedId && (
+                <p className="mt-4 text-sm text-muted-foreground">Loading detail…</p>
+            )}
+
             <TimelineDetailPanel
-                detail={selectedDetail}
+                detail={detailLoading ? null : selectedDetail}
                 captureDetail={selectedCapture}
                 onClose={() => setSelectedId(null)}
             />
