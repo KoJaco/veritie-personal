@@ -4,6 +4,7 @@
  */
 import { readFileSync } from "node:fs";
 import type { JobDetailResponse } from "@veritie/sdk";
+import { veritieJobPersistSchema } from "../lib/capture/captures-persist-schema";
 import { mapVeritieJobToCaptureBundle } from "../lib/capture/map-veritie-job";
 import { appendCaptureFromJob } from "../lib/data-source/captures-read-model";
 import { appendTimelineEvents } from "../lib/data-source/timeline-read-model";
@@ -20,7 +21,8 @@ const raw = JSON.parse(readFileSync(inputPath, "utf8")) as {
 };
 
 const captureId = raw.captureId ?? `capture_import_${Date.now()}`;
-const bundle = mapVeritieJobToCaptureBundle(raw.job, captureId);
+const validatedJob = veritieJobPersistSchema.parse(raw.job);
+const bundle = mapVeritieJobToCaptureBundle(validatedJob, captureId);
 appendCaptureFromJob({
     capture: bundle.capture,
     voiceLog: bundle.voiceLog,

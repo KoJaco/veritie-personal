@@ -1,5 +1,5 @@
-import type { JobDetailResponse } from "@veritie/sdk";
 import type { AspectKey } from "@/lib/domain/aspect";
+import type { ValidatedVeritieJob } from "@/lib/capture/captures-persist-schema";
 import type { TimelineEventStub } from "@/lib/stubs/timeline-stubs";
 import type {
     CaptureStub,
@@ -9,7 +9,7 @@ import type {
 } from "@/lib/stubs/capture-stubs";
 
 export function mapVeritieJobToCaptureBundle(
-    job: JobDetailResponse,
+    job: ValidatedVeritieJob,
     captureId: string,
 ): {
     capture: CaptureStub;
@@ -45,9 +45,9 @@ export function mapVeritieJobToCaptureBundle(
             id: `segment_${captureId}_${index}`,
             voiceLogId: voiceLog.id,
             index: segment.index ?? index,
-            startMs: segment.start_ms,
-            endMs: segment.end_ms,
-            text: segment.text,
+            startMs: segment.start_ms ?? 0,
+            endMs: segment.end_ms ?? 0,
+            text: segment.text ?? "",
             speakerLabel: segment.speaker_label,
             confidence: segment.confidence,
         })) ?? [];
@@ -57,7 +57,7 @@ export function mapVeritieJobToCaptureBundle(
 
     const payload = job.extraction?.payload ?? {};
     const lists: Array<{
-        key: string;
+        key: keyof typeof payload;
         objectType: ExtractedValueStub["objectType"];
         eventType: TimelineEventStub["type"];
     }> = [
@@ -71,12 +71,12 @@ export function mapVeritieJobToCaptureBundle(
     ];
 
     for (const list of lists) {
-        const candidates = (payload[list.key] as Array<Record<string, unknown>>) ?? [];
+        const candidates = payload[list.key] ?? [];
         for (const [index, candidate] of candidates.entries()) {
             const extractedId = `extracted_${captureId}_${list.key}_${index}`;
-            const aspect = (candidate.aspect as AspectKey) ?? "personal";
+            const aspect: AspectKey = candidate.aspect ?? "personal";
             const title = String(candidate.title ?? list.key);
-            const confidence = Number(candidate.confidence ?? 0.5);
+            const confidence = Math.min(1, Math.max(0, candidate.confidence ?? 0.5));
             extractedValues.push({
                 id: extractedId,
                 extractionRunId: `extraction_${captureId}`,
@@ -84,7 +84,7 @@ export function mapVeritieJobToCaptureBundle(
                 objectType: list.objectType,
                 aspect,
                 title,
-                fields: (candidate.fields as Record<string, unknown>) ?? {},
+                fields: candidate.fields ?? {},
                 confidence,
                 reviewState: "pending",
                 createdAt: now,
