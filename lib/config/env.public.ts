@@ -27,8 +27,12 @@ export const envPublic = {
     // Build-time metadata
     gitSha: getEnvVar("NEXT_PUBLIC_GIT_SHA", "unknown"),
 
-    // Auth
+    // Auth (Supabase)
     authProvider: getEnvVarOptional("NEXT_PUBLIC_AUTH_PROVIDER"),
+    supabaseUrl: getEnvVarOptional("NEXT_PUBLIC_SUPABASE_URL"),
+    supabasePublishableKey:
+        getEnvVarOptional("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") ??
+        getEnvVarOptional("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
 
     // Feature flags
     featureSdui: getBooleanEnvVar("NEXT_PUBLIC_FEATURE_SDUI", true),

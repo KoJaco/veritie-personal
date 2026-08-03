@@ -25,9 +25,20 @@ export const envServer = {
         | "test"
         | undefined,
 
-    // Auth secrets (server-only)
-    // TODO: which auth provider are we using?
-    authServiceRoleKey: getEnvVarOptional("AUTH_SERVICE_ROLE_KEY"),
+    // Database
+    databaseUrl: getEnvVarOptional("DATABASE_URL"),
+
+    // Supabase — publishable key for server-side SSR client (browser uses NEXT_PUBLIC_*)
+    supabasePublishableKey:
+        getEnvVarOptional("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") ??
+        getEnvVarOptional("SUPABASE_PUBLISHABLE_KEY") ??
+        getEnvVarOptional("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+
+    // Supabase secret key (server-only; bypasses RLS for bootstrap/admin)
+    supabaseSecretKey:
+        getEnvVarOptional("SUPABASE_SECRET_KEY") ??
+        getEnvVarOptional("SUPABASE_SERVICE_ROLE_KEY") ??
+        getEnvVarOptional("AUTH_SERVICE_ROLE_KEY"),
     authWebhookSecret: getEnvVarOptional("AUTH_WEBHOOK_SECRET"),
 
     // Veritie server credentials (captures persist)

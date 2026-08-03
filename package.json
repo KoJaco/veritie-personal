@@ -12,7 +12,10 @@
         "typecheck": "npm run build:sdk && tsc --noEmit",
         "test": "npx --yes jest",
         "test:watch": "npx --yes jest --watch",
-        "test:ci": "npm run build:sdk && npm run check:terminology && npx --yes jest --ci --coverage --maxWorkers=2"
+        "test:ci": "npm run build:sdk && npm run check:terminology && npx --yes jest --ci --coverage --maxWorkers=2",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "drizzle-kit migrate",
+        "db:studio": "drizzle-kit studio"
     },
     "dependencies": {
         "@assistant-ui/react": "^0.12.9",
@@ -37,6 +40,7 @@
         "next": "^16.3.0-preview.10",
         "next-themes": "^0.4.6",
         "openai": "^6.19.0",
+        "postgres": "^3.4.9",
         "radix-ui": "^1.4.3",
         "react": "19.2.3",
         "react-day-picker": "^9.13.2",
