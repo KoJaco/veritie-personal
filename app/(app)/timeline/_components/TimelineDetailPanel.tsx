@@ -26,7 +26,7 @@ import {
     DrawerTitle,
 } from "@/components/ui/drawer";
 import { useIsMobileViewport } from "@/lib/hooks/useIsMobileViewport";
-import { LAYER_Z_INDEX, layerClass } from "@/lib/ui/layering";
+import { LAYER_CLASS } from "@/lib/ui/layering";
 import { cn } from "@/lib/utils";
 
 function TimelineDetailBody({
@@ -122,7 +122,7 @@ export function TimelineDetailPanel({
                 <DrawerContent
                     className={cn(
                         "flex h-[90vh] flex-col p-0 overscroll-y-contain",
-                        layerClass(LAYER_Z_INDEX.detailPanel),
+                        LAYER_CLASS.detailPanel,
                     )}
                 >
                     <DrawerHeader className="flex shrink-0 flex-row items-start justify-between gap-3 border-b border-border/70 p-4 text-left">
@@ -167,7 +167,7 @@ export function TimelineDetailPanel({
                 showCloseButton={false}
                 className={cn(
                     "flex max-h-[min(85dvh,800px)] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl",
-                    layerClass(LAYER_Z_INDEX.detailPanel),
+                    LAYER_CLASS.detailPanel,
                 )}
             >
                 <DialogHeader className="shrink-0 space-y-0 border-b border-border/70 p-4 text-left">

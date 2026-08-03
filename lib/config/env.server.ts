@@ -35,7 +35,7 @@ export const envServer = {
     veritiePipelineAlias: getEnvVarOptional("VERITIE_PIPELINE_ALIAS"),
     veritieApiKey: getEnvVarOptional("VERITIE_API_KEY"),
 
-    // Interim gate for POST /api/captures until session auth lands
+    // Interim bearer gate for programmatic stub APIs until session auth lands
     capturesPersistSecret: getEnvVarOptional("CAPTURES_PERSIST_SECRET"),
 
     // Stub read-model mutations (dev/test default on, production default off)

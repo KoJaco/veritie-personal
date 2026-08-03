@@ -23,6 +23,8 @@
         "@radix-ui/react-slot": "^1.2.4",
         "@radix-ui/react-tabs": "^1.1.13",
         "@radix-ui/react-visually-hidden": "^1.2.4",
+        "@supabase/ssr": "^0.12.4",
+        "@supabase/supabase-js": "^2.111.0",
         "@veritie/sdk": "file:sdk",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -72,9 +74,11 @@
         "typescript": "^5"
     },
     "overrides": {
+        "esbuild": "^0.28.1",
         "next": {
             "postcss": "^8.5.18"
         },
-        "sharp": "^0.35.3"
+        "sharp": "^0.35.3",
+        "ws": "^8.21.0"
     }
 }

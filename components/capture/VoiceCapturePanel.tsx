@@ -7,6 +7,7 @@ import { hasPendingJobEnrichment } from "@veritie/sdk";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { LiveAudioWaveform } from "@/components/capture/LiveAudioWaveform";
+import { persistCaptureForVoiceFlow } from "@/lib/capture/persist-capture-client";
 import { SURFACE_CLASS_NESTED } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
 
@@ -23,16 +24,24 @@ type VoicePhase =
     | "save_failed"
     | "failed";
 
+type PersistCaptureResult = {
+    captureId: string;
+    timelineEventCount: number;
+};
+
 export function VoiceCapturePanel({
     veritie,
     embedded = true,
     onBack,
     onComplete,
+    persistCaptureFn = persistCaptureForVoiceFlow,
 }: {
     veritie: VeritieHook;
     embedded?: boolean;
     onBack: () => void;
     onComplete: () => void;
+    /** Override for tests; production uses server action via persistCaptureForVoiceFlow. */
+    persistCaptureFn?: (jobId: string) => Promise<PersistCaptureResult>;
 }) {
     const [phase, setPhase] = useState<VoicePhase>("ready");
     const [error, setError] = useState<string | null>(null);
@@ -87,33 +96,22 @@ export function VoiceCapturePanel({
         };
     }, [abortInFlightWork, stopLocalRecording]);
 
-    const persistCapture = useCallback(
-        async (jobId: string, signal: AbortSignal) => {
-            const response = await fetch("/api/captures", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ jobId }),
-                signal,
-            });
+    const persistCapture = useCallback(async (jobId: string, signal: AbortSignal) => {
+        if (signal.aborted) {
+            throw new DOMException("Aborted", "AbortError");
+        }
 
-            if (!response.ok) {
-                let message = "Failed to save capture";
-                try {
-                    const body = (await response.json()) as { error?: string };
-                    if (body.error) message = body.error;
-                } catch {
-                    // ignore parse errors
-                }
-                throw new Error(message);
+        const abortPromise = new Promise<never>((_, reject) => {
+            const onAbort = () => reject(new DOMException("Aborted", "AbortError"));
+            if (signal.aborted) {
+                onAbort();
+                return;
             }
+            signal.addEventListener("abort", onAbort, { once: true });
+        });
 
-            return response.json() as Promise<{
-                captureId: string;
-                timelineEventCount: number;
-            }>;
-        },
-        [],
-    );
+        return Promise.race([persistCaptureFn(jobId), abortPromise]);
+    }, [persistCaptureFn]);
 
     const retrySave = useCallback(async () => {
         if (!pendingJobId) return;
@@ -261,6 +259,8 @@ export function VoiceCapturePanel({
                     audio_content_type: blob.type || "audio/webm",
                 },
                 file: blob,
+                signal,
+                upload: { signal },
             });
 
             if (!mountedRef.current || signal.aborted) return;
@@ -269,13 +269,13 @@ export function VoiceCapturePanel({
             jobIdForSave = jobId;
             setPendingJobId(jobId);
 
-            let job = await veritie.getJob(jobId);
+            let job = await veritie.getJob(jobId, { signal });
             setStatusLine("Waiting for extraction…");
             let polls = 0;
             while (hasPendingJobEnrichment(job) && polls < 40) {
                 if (!mountedRef.current || signal.aborted) return;
                 await sleep(1500, signal);
-                job = await veritie.getJob(jobId);
+                job = await veritie.getJob(jobId, { signal });
                 polls += 1;
             }
 

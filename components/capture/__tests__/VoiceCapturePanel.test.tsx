@@ -5,6 +5,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 const mockCreateAndUploadJob = jest.fn<() => Promise<{ job: { job_id: string } }>>();
 const mockGetJob = jest.fn<() => Promise<unknown>>();
 const mockToastError = jest.fn();
+const mockPersistCaptureFn = jest.fn<
+    () => Promise<{ captureId: string; timelineEventCount: number }>
+>();
 
 jest.mock("sonner", () => ({
     toast: {
@@ -70,6 +73,23 @@ class MockMediaRecorder {
     }
 }
 
+function renderPanel(
+    overrides: Partial<{
+        onBack: () => void;
+        onComplete: () => void;
+        persistCaptureFn: typeof mockPersistCaptureFn;
+    }> = {},
+) {
+    return render(
+        <VoiceCapturePanel
+            veritie={veritieMock as never}
+            onBack={overrides.onBack ?? jest.fn()}
+            onComplete={overrides.onComplete ?? jest.fn()}
+            persistCaptureFn={overrides.persistCaptureFn ?? mockPersistCaptureFn}
+        />,
+    );
+}
+
 describe("VoiceCapturePanel", () => {
     const trackStop = jest.fn();
 
@@ -77,6 +97,10 @@ describe("VoiceCapturePanel", () => {
         jest.clearAllMocks();
         mockCreateAndUploadJob.mockResolvedValue({ job: { job_id: "job_voice_test" } });
         mockGetJob.mockResolvedValue(completedJob);
+        mockPersistCaptureFn.mockResolvedValue({
+            captureId: "capture_test",
+            timelineEventCount: 0,
+        });
 
         Object.defineProperty(global.navigator, "mediaDevices", {
             configurable: true,
@@ -92,21 +116,10 @@ describe("VoiceCapturePanel", () => {
             writable: true,
             value: MockMediaRecorder,
         });
-
-        global.fetch = jest.fn(async () => ({
-            ok: true,
-            json: async () => ({ captureId: "capture_test", timelineEventCount: 0 }),
-        })) as unknown as typeof fetch;
     });
 
     it("stops media tracks on unmount", async () => {
-        const { unmount } = render(
-            <VoiceCapturePanel
-                veritie={veritieMock as never}
-                onBack={jest.fn()}
-                onComplete={jest.fn()}
-            />,
-        );
+        const { unmount } = renderPanel();
 
         fireEvent.click(screen.getByRole("button", { name: /start recording/i }));
         await waitFor(() => {
@@ -118,13 +131,7 @@ describe("VoiceCapturePanel", () => {
     });
 
     it("shows transcript ready after a successful save", async () => {
-        render(
-            <VoiceCapturePanel
-                veritie={veritieMock as never}
-                onBack={jest.fn()}
-                onComplete={jest.fn()}
-            />,
-        );
+        renderPanel();
 
         fireEvent.click(screen.getByRole("button", { name: /start recording/i }));
         await waitFor(() => {
@@ -137,28 +144,13 @@ describe("VoiceCapturePanel", () => {
             expect(screen.getByText("Transcript ready")).toBeInTheDocument();
         });
 
-        expect(global.fetch).toHaveBeenCalledWith(
-            "/api/captures",
-            expect.objectContaining({
-                method: "POST",
-                body: JSON.stringify({ jobId: "job_voice_test" }),
-            }),
-        );
+        expect(mockPersistCaptureFn).toHaveBeenCalledWith("job_voice_test");
     });
 
     it("surfaces save failure separately from capture failure", async () => {
-        global.fetch = jest.fn(async () => ({
-            ok: false,
-            json: async () => ({ error: "Failed to persist capture" }),
-        })) as unknown as typeof fetch;
+        mockPersistCaptureFn.mockRejectedValue(new Error("Failed to persist capture"));
 
-        render(
-            <VoiceCapturePanel
-                veritie={veritieMock as never}
-                onBack={jest.fn()}
-                onComplete={jest.fn()}
-            />,
-        );
+        renderPanel();
 
         fireEvent.click(screen.getByRole("button", { name: /start recording/i }));
         await waitFor(() => {
@@ -182,13 +174,7 @@ describe("VoiceCapturePanel", () => {
                 }),
         );
 
-        render(
-            <VoiceCapturePanel
-                veritie={veritieMock as never}
-                onBack={jest.fn()}
-                onComplete={jest.fn()}
-            />,
-        );
+        renderPanel();
 
         fireEvent.click(screen.getByRole("button", { name: /start recording/i }));
         await waitFor(() => {

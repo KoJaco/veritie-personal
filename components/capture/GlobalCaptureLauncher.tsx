@@ -19,11 +19,11 @@ import { Button } from "@/components/ui/button";
 import { VoiceCaptureLauncherPanel } from "@/components/capture/VoiceCaptureLauncherPanel";
 import { usePersistedCaptureLauncherTucked } from "@/lib/hooks/usePersistedCaptureLauncherTucked";
 import { useEscapeClose, useInitialFocus } from "@/lib/hooks/useEscapeClose";
-import { LAYER_Z_INDEX, layerClass } from "@/lib/ui/layering";
+import { LAYER_CLASS } from "@/lib/ui/layering";
 import { cn } from "@/lib/utils";
 
-const LAUNCHER_BACKDROP_Z = layerClass(LAYER_Z_INDEX.launcherBackdrop);
-const LAUNCHER_CHROME_Z = layerClass(LAYER_Z_INDEX.launcherChrome);
+const LAUNCHER_BACKDROP_Z = LAYER_CLASS.launcherBackdrop;
+const LAUNCHER_CHROME_Z = LAYER_CLASS.launcherChrome;
 const TRIGGER_SIZE_PX = 56;
 const TUCKED_PEEK_PX = 16;
 const TUCKED_OFFSET_PX = TRIGGER_SIZE_PX - TUCKED_PEEK_PX;

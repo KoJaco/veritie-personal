@@ -1,9 +1,12 @@
+import { buildRailPayload } from "@/components/context/build-rail-payload";
+import type { RailContextPayload } from "@/components/context/types";
+import type { CapturesIndexReadModel } from "@/lib/data-source/captures-read-model";
 import type { ScopeLens } from "@/lib/lens";
 import type { PageModel } from "@/lib/page-model/types";
-import type { CapturesIndexReadModel } from "@/lib/data-source/captures-read-model";
 
 export type CapturesRouteContract = {
     pageModel: PageModel;
+    railPayloadCandidate: RailContextPayload | null;
 };
 
 export function buildCapturesRouteContract({
@@ -58,7 +61,20 @@ export function buildCapturesRouteContract({
         },
     };
 
-    return { pageModel };
+    return {
+        pageModel,
+        railPayloadCandidate: buildRailPayload({
+            scope: { type: "captures_index" },
+            lens,
+            aggregates: {
+                snapshot: {
+                    blockedChecks: 0,
+                    overdueTasks: 0,
+                    missingAttachments: 0,
+                },
+            },
+        }),
+    };
 }
 
 export function canOpenAssistantFromCapturesContract(

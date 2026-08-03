@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { getTimelineEventDetailAction } from "@/lib/actions/stub-data-mutations";
 import type { TimelineIndexItem } from "@/lib/data-source/timeline-read-model";
 import type { TimelineEventDetailReadModel } from "@/lib/data-source/timeline-read-model";
 import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-model";
@@ -37,17 +38,11 @@ export function TimelineClientView({
         setDetailError(null);
 
         try {
-            const response = await fetch(`/api/timeline/events/${eventId}`, {
-                signal,
-            });
-            if (!response.ok) {
+            const body = await getTimelineEventDetailAction(eventId);
+            if (signal.aborted) return;
+            if (!body) {
                 throw new Error("Could not load event detail");
             }
-            const body = (await response.json()) as {
-                detail: TimelineEventDetailReadModel;
-                captureDetail: CaptureDetailReadModel | null;
-            };
-            if (signal.aborted) return;
             setSelectedDetail(body.detail);
             setSelectedCapture(body.captureDetail);
         } catch (error) {

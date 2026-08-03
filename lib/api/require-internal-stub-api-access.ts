@@ -1,13 +1,17 @@
 import type { NextRequest } from "next/server";
 import { envServer } from "@/lib/config/env.server";
 
-export type CapturesPersistAccessResult =
+export type InternalStubApiAccessResult =
     | { allowed: true }
     | { allowed: false; status: 401; message: string };
 
-export function requireCapturesPersistAccess(
+/**
+ * Bearer gate for programmatic stub mutation APIs (scripts, admin).
+ * Browser flows should use server actions instead of exposing this secret client-side.
+ */
+export function requireInternalStubApiAccess(
     request: NextRequest,
-): CapturesPersistAccessResult {
+): InternalStubApiAccessResult {
     if (envServer.nodeEnv === "development" || envServer.nodeEnv === "test") {
         return { allowed: true };
     }
@@ -17,7 +21,7 @@ export function requireCapturesPersistAccess(
         return {
             allowed: false,
             status: 401,
-            message: "Capture persist is not configured",
+            message: "Stub API is not configured",
         };
     }
 

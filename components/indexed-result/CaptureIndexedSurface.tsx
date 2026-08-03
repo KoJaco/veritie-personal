@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-model";
 import type { SourceAnchorStub } from "@/lib/stubs/capture-stubs";
+import { updateExtractedValueReviewAction } from "@/lib/actions/stub-data-mutations";
 import { Button } from "@/components/ui/button";
 import {
     Collapsible,
@@ -209,21 +210,17 @@ export function ExtractedValueReviewActions({
     const submitReview = async (nextState: "confirmed" | "rejected") => {
         setPending(true);
         try {
-            const response = await fetch("/api/extracted-values/review", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    extractedValueId,
-                    reviewState: nextState,
-                }),
-            });
-            if (!response.ok) {
-                throw new Error("Review update failed");
+            const result = await updateExtractedValueReviewAction(
+                extractedValueId,
+                nextState,
+            );
+            if (!result.ok) {
+                throw new Error(result.error);
             }
             setLocalState(nextState);
             onUpdated?.(nextState);
-        } catch (error) {
-            console.error(error);
+        } catch {
+            // Review update failed — state unchanged
         } finally {
             setPending(false);
         }

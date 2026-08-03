@@ -571,6 +571,7 @@ export class VeritieSDK {
         ...options.headers,
       },
       json: request,
+      signal: options.signal,
     });
   }
 
@@ -650,6 +651,7 @@ export class VeritieSDK {
       pipelineAlias: options.pipelineAlias,
       headers: options.headers,
       json: request,
+      signal: options.signal,
     });
   }
 
@@ -659,6 +661,7 @@ export class VeritieSDK {
       path: `/v1/jobs/${jobId}`,
       pipelineAlias: options.pipelineAlias,
       headers: options.headers,
+      signal: options.signal,
     });
     return normalizeJobDetailResponse(response);
   }
@@ -752,19 +755,24 @@ export class VeritieSDK {
   }
 
   async createAndUploadJob(options: CreateAndUploadJobOptions): Promise<CreateAndUploadJobResult> {
+    const signal = options.signal ?? options.upload?.signal;
     const bootstrap = await this.createJob(options.create, {
       pipelineAlias: options.pipelineAlias,
       idempotencyKey: options.idempotencyKey,
+      signal,
     });
 
-    const upload = await this.uploadToSignedUrl(bootstrap.upload, options.file, options.upload);
+    const upload = await this.uploadToSignedUrl(bootstrap.upload, options.file, {
+      ...options.upload,
+      signal: options.upload?.signal ?? signal,
+    });
     const job = await this.finalizeUpload(
       bootstrap.job_id,
       {
         audio_uri: bootstrap.upload.audio_uri,
         ...upload.telemetry,
       },
-      { pipelineAlias: options.pipelineAlias },
+      { pipelineAlias: options.pipelineAlias, signal },
     );
 
     return { bootstrap, job };

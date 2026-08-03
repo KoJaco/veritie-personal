@@ -1,7 +1,9 @@
+import { ContextPayloadSlot } from "@/components/context/ContextPayloadSlot";
 import { IndexSearchCommand, IndexViewToggle, PageHeader } from "@/components/route";
 import { PageFrame } from "@/components/static/PageFrame";
 import { PageAssistantAction } from "@/components/assistant-ui/PageAssistantAction";
 import { getDataSourceAdapters } from "@/lib/data-source";
+import { logger } from "@/lib/logging/server-logger";
 import {
     getAspectLensFromSearchParams,
     type SearchParamRecord,
@@ -18,6 +20,7 @@ import {
     buildCapturesRouteContract,
     canOpenAssistantFromCapturesContract,
 } from "./_page-model/build";
+import { enforceCapturesRouteContract } from "./_page-model/validate";
 import { CapturesClientView } from "./_components/CapturesClientView";
 import { CapturesFilterSheet } from "./_components/CapturesFilterSheet";
 
@@ -47,6 +50,12 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
         lens: { scope: lens.aspect },
         capturesIndex,
     });
+    const { pageModelValidation, payload } = enforceCapturesRouteContract(contract);
+
+    logger.debug("[page-model] validation", {
+        route: "/captures",
+        ok: pageModelValidation.ok,
+    });
 
     const captureSearchItems = capturesIndex.items
         .slice(0, INDEX_SEARCH_SUGGESTION_LIMIT)
@@ -67,7 +76,9 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
     };
 
     return (
-        <PageFrame
+        <>
+            <ContextPayloadSlot payload={payload} />
+            <PageFrame
             header={
                 <PageHeader
                     title="Captures"
@@ -119,5 +130,6 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
                 view={view}
             />
         </PageFrame>
+        </>
     );
 }

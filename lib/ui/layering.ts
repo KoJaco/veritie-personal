@@ -7,6 +7,10 @@ export const LAYER_Z_INDEX = {
     detailPanel: 100,
 } as const;
 
-export function layerClass(zIndex: number): string {
-    return `z-[${zIndex}]`;
-}
+/** Literal Tailwind classes — dynamic `z-[${n}]` is not emitted by the compiler. */
+export const LAYER_CLASS = {
+    launcherBackdrop: "z-[80]",
+    launcherChrome: "z-[85]",
+    detailBackdrop: "z-[90]",
+    detailPanel: "z-[100]",
+} as const;

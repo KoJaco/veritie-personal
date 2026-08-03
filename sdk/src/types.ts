@@ -414,11 +414,16 @@ export interface AppScopedRequestOptions extends RequestOptions {
 
 export interface CreateJobOptions extends AppScopedRequestOptions {
     idempotencyKey?: string;
+    signal?: AbortSignal;
 }
 
-export interface FinalizeUploadOptions extends AppScopedRequestOptions {}
+export interface FinalizeUploadOptions extends AppScopedRequestOptions {
+    signal?: AbortSignal;
+}
 
-export interface GetJobOptions extends AppScopedRequestOptions {}
+export interface GetJobOptions extends AppScopedRequestOptions {
+    signal?: AbortSignal;
+}
 
 export interface GetPipelineConfigOptions extends AppScopedRequestOptions {}
 
@@ -450,6 +455,7 @@ export interface CreateAndUploadJobOptions {
     file: Blob;
     pipelineAlias?: string;
     idempotencyKey?: string;
+    signal?: AbortSignal;
     upload?: UploadToSignedUrlOptions;
 }
 
