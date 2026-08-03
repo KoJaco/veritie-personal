@@ -3,6 +3,8 @@ import { resetStubAttachmentStoreForTests } from "@/lib/data-source/stub-attachm
 import { resetStubObjectStoreForTests } from "@/lib/data-source/stub-object-store";
 import { resetStubResourceStoreForTests } from "@/lib/data-source/stub-resource-store";
 import { resetStubTaskStoreForTests } from "@/lib/data-source/stub-task-store";
+import { resetCaptureStubStoreForTests } from "@/lib/stubs/capture-stubs";
+import { resetTimelineStubStoreForTests } from "@/lib/stubs/timeline-stubs";
 
 describe("stub data-source adapter", () => {
     beforeEach(() => {
@@ -10,6 +12,8 @@ describe("stub data-source adapter", () => {
         resetStubAttachmentStoreForTests();
         resetStubObjectStoreForTests();
         resetStubTaskStoreForTests();
+        resetCaptureStubStoreForTests();
+        resetTimelineStubStoreForTests();
     });
 
     it("returns dashboard source data with expected shape", () => {

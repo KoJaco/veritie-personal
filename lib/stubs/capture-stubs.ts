@@ -212,3 +212,47 @@ export const SOURCE_ANCHOR_SEEDS: SourceAnchorStub[] = [
 export function getCaptureAspectIds(captureId: string): AspectKey[] {
     return CAPTURE_SEEDS.find((c) => c.id === captureId)?.aspectIds ?? [];
 }
+
+function cloneSeedStore<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value)) as T;
+}
+
+const INITIAL_CAPTURE_SEEDS = cloneSeedStore(CAPTURE_SEEDS);
+const INITIAL_VOICE_LOG_SEEDS = cloneSeedStore(VOICE_LOG_SEEDS);
+const INITIAL_TRANSCRIPT_SEGMENT_SEEDS = cloneSeedStore(TRANSCRIPT_SEGMENT_SEEDS);
+const INITIAL_EXTRACTION_RUN_SEEDS = cloneSeedStore(EXTRACTION_RUN_SEEDS);
+const INITIAL_EXTRACTED_VALUE_SEEDS = cloneSeedStore(EXTRACTED_VALUE_SEEDS);
+const INITIAL_SOURCE_ANCHOR_SEEDS = cloneSeedStore(SOURCE_ANCHOR_SEEDS);
+
+export function resetCaptureStubStoreForTests(): void {
+    CAPTURE_SEEDS.splice(
+        0,
+        CAPTURE_SEEDS.length,
+        ...cloneSeedStore(INITIAL_CAPTURE_SEEDS),
+    );
+    VOICE_LOG_SEEDS.splice(
+        0,
+        VOICE_LOG_SEEDS.length,
+        ...cloneSeedStore(INITIAL_VOICE_LOG_SEEDS),
+    );
+    TRANSCRIPT_SEGMENT_SEEDS.splice(
+        0,
+        TRANSCRIPT_SEGMENT_SEEDS.length,
+        ...cloneSeedStore(INITIAL_TRANSCRIPT_SEGMENT_SEEDS),
+    );
+    EXTRACTION_RUN_SEEDS.splice(
+        0,
+        EXTRACTION_RUN_SEEDS.length,
+        ...cloneSeedStore(INITIAL_EXTRACTION_RUN_SEEDS),
+    );
+    EXTRACTED_VALUE_SEEDS.splice(
+        0,
+        EXTRACTED_VALUE_SEEDS.length,
+        ...cloneSeedStore(INITIAL_EXTRACTED_VALUE_SEEDS),
+    );
+    SOURCE_ANCHOR_SEEDS.splice(
+        0,
+        SOURCE_ANCHOR_SEEDS.length,
+        ...cloneSeedStore(INITIAL_SOURCE_ANCHOR_SEEDS),
+    );
+}

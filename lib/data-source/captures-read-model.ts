@@ -1,3 +1,4 @@
+import { envServer } from "@/lib/config/env.server";
 import type { AspectKey } from "@/lib/domain/aspect";
 import type { ReviewState } from "@/lib/domain/extraction";
 import type { TimelineEventType } from "@/lib/domain/timeline";
@@ -127,12 +128,21 @@ export function getCaptureDetail(id: string): CaptureDetailReadModel | null {
     };
 }
 
+export function findCaptureByVeritieJobId(
+    veritieJobId: string,
+): CaptureStub | undefined {
+    return CAPTURE_SEEDS.find((c) => c.veritieJobId === veritieJobId);
+}
+
 export function appendCaptureFromJob(input: {
     capture: CaptureStub;
     voiceLog: VoiceLogStub;
     segments: TranscriptSegmentStub[];
     extractedValues: ExtractedValueStub[];
 }): CaptureStub {
+    if (!envServer.allowStubCaptureMutations) {
+        throw new Error("Stub capture mutations are disabled");
+    }
     CAPTURE_SEEDS.push(input.capture);
     VOICE_LOG_SEEDS.push(input.voiceLog);
     TRANSCRIPT_SEGMENT_SEEDS.push(...input.segments);

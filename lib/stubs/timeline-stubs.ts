@@ -56,3 +56,15 @@ export const TIMELINE_EVENT_SEEDS: TimelineEventStub[] = [
         createdAt: "2026-08-02T07:38:20.000Z",
     },
 ];
+
+const INITIAL_TIMELINE_EVENT_SEEDS = JSON.parse(
+    JSON.stringify(TIMELINE_EVENT_SEEDS),
+) as TimelineEventStub[];
+
+export function resetTimelineStubStoreForTests(): void {
+    TIMELINE_EVENT_SEEDS.splice(
+        0,
+        TIMELINE_EVENT_SEEDS.length,
+        ...JSON.parse(JSON.stringify(INITIAL_TIMELINE_EVENT_SEEDS)),
+    );
+}

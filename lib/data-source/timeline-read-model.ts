@@ -1,3 +1,4 @@
+import { envServer } from "@/lib/config/env.server";
 import type { AspectKey } from "@/lib/domain/aspect";
 import type { ReviewState } from "@/lib/domain/extraction";
 import type { TimelineEventType } from "@/lib/domain/timeline";
@@ -137,6 +138,9 @@ export function getTimelineEventDetail(
 }
 
 export function appendTimelineEvents(events: TimelineEventStub[]): void {
+    if (!envServer.allowStubCaptureMutations) {
+        throw new Error("Stub timeline mutations are disabled");
+    }
     TIMELINE_EVENT_SEEDS.push(...events);
 }
 
