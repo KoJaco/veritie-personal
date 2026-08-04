@@ -1,50 +1,62 @@
-# Phase 1 — Database bootstrap + RLS
+# Phase 1 — Init account, RLS, auth libraries
 
 ## Scope
 
-Run migrations against Supabase, enable hybrid RLS policies, account bootstrap on first Google OAuth, `requireUser` / permissions server guards, soft-delete enforcement on login.
+RLS SQL kit (manual apply), Drizzle `initAccountWithUser`, permission seed, `requireUser` / `hasPermission`, onboarding `appConfig` on `accounts.settings`. **Library only** — no `/auth/*` routes (Phase 2).
 
 ## Prerequisites
 
-- Phase 0 complete: schema, Drizzle client, env vars, generated migrations.
+- Phase 0 complete: schema, Drizzle client, env vars, migration applied to Supabase.
 
 ## Implementation checklist
 
-- [ ] Run migrations against Supabase (`DATABASE_URL` transaction pooler)
-- [ ] RLS policies on tenant tables (identity + domain) — `account_id = (select account_id from users where id = auth.uid())`
-- [ ] `lib/auth/bootstrap-account.ts` — port `createAccountWithUser` from `auth-example/_auth.callback.tsx`
-- [ ] Account bootstrap on first OAuth: create `accounts`, `users` (id = auth uid), owner `roles`, seed `permissions` + `permission_roles` for personal-app entities
-- [ ] `lib/auth/require-user.ts` — resolve `appUser` (user + `accountId` + role) from session + DB
-- [ ] `lib/permissions.server.ts` — port `hasPermission` / `requirePermission` from auth-example
-- [ ] Soft-delete check on login/callback (sign out + error if `users.deletedAt` or `accounts.deletedAt` set)
-- [ ] Document: RLS is defense-in-depth; all Drizzle queries must still filter by `accountId`
+- [x] `db/rls/` — helpers, enable RLS, identity + domain policies + README
+- [x] `lib/domain/app-config.ts` — Zod schema, defaults from onboarding stub
+- [x] `lib/domain/billing-config.ts` — billing tier + usage unit catalog
+- [x] `lib/auth/init-account.ts` — `initAccountWithUser` (not `bootstrap-account`)
+- [x] `lib/auth/permission-seed.ts` — full catalog; owner grants: account, captures, timeline_events
+- [x] `lib/auth/require-user.ts` — session → `AppUser`
+- [x] `lib/auth/deleted-account.ts` — soft-delete checks
+- [x] `lib/permissions.server.ts` — `hasPermission` / `requirePermission`
+- [x] `docs/architecture/db-access.md` — DATABASE_URL tenancy, RLS role, metering conventions
+- [x] Unit tests for init-account, permission seed, app-config, require-user
+- [ ] **Manual:** apply `db/rls/*.sql` in Supabase (see [phase-1-handoff.md](./phase-1-handoff.md))
 
 ## Files
 
-- `db/migrations/*`
-- `db/rls/*.sql` or migration-embedded policies
-- `lib/auth/bootstrap-account.ts`
-- `lib/auth/require-user.ts`
+- `db/rls/*.sql`, `db/rls/README.md`
+- `lib/domain/app-config.ts`, `lib/domain/billing-config.ts`
+- `lib/auth/init-account.ts`, `lib/auth/permission-seed.ts`, `lib/auth/require-user.ts`
+- `lib/auth/deleted-account.ts`, `lib/auth/types.ts`, `lib/auth/errors.ts`
 - `lib/permissions.server.ts`
+- `lib/auth/__tests__/*`, `lib/domain/__tests__/app-config.test.ts`
+- `docs/architecture/db-access.md`
+- `docs/todos/phase-1-handoff.md`
 
 ## RLS strategy (hybrid)
 
-- Enable RLS on all tenant-scoped tables
-- App server uses `DATABASE_URL` pooler via Drizzle for bootstrap/migrations
-- Route handlers use session from `requireUser()` and explicit `accountId` in queries
-- Anon key + user JWT should be blocked from cross-account reads by RLS policies
+- SQL in `db/rls/` — apply manually in Supabase
+- App server uses `DATABASE_URL` pooler via Drizzle; **enforce `accountId` in code**
+- RLS = defense-in-depth for publishable key + user JWT paths
 
 ## Verification
 
-- [ ] Manual OAuth on staging: rows exist in `users` + `accounts`
-- [ ] RLS blocks cross-account read via anon key + another user's JWT
-- [ ] Re-login with soft-deleted account shows error and does not enter app
+- [ ] Applied RLS SQL in Supabase
+- [ ] `npm run typecheck` && `npm test`
+- [ ] `initAccountWithUser` creates account/user/role/permissions/credit_balances
+- [ ] `hasPermission(owner, 'captures', 'create')` true; `hasPermission(owner, 'users', 'retrieve')` false
+- [ ] `accounts.settings.appConfig` matches onboarding profile or defaults
+- [ ] RLS spot-check: cross-account read blocked via JWT client (handoff SQL)
+
+## Handoff
+
+See [phase-1-handoff.md](./phase-1-handoff.md) for apply steps, permission matrix, and verification queries.
 
 ## Phase review
 
-- [ ] Performance review notes — bootstrap runs once per new user on callback
-- [ ] Security review notes — RLS policies reviewed; service role not exposed to client
-- [ ] Maintainability review notes — permissions seed data documented for future multi-tenant branch
+- [ ] Performance review notes — init runs once per new user on callback (Phase 2)
+- [ ] Security review notes — RLS policies reviewed; pooler not exposed to client
+- [ ] Maintainability review notes — permission seed documented for future branches
 
 ## Agent review record
 

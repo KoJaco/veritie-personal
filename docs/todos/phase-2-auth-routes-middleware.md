@@ -6,7 +6,7 @@ Next.js `/auth/*` routes (Google OAuth only), middleware session refresh and rou
 
 ## Prerequisites
 
-- Phase 1 complete: migrations, RLS, `requireUser`, account bootstrap.
+- Phase 1 complete: RLS SQL kit, `initAccountWithUser`, `requireUser`, permissions libraries.
 
 ## Routes
 
@@ -27,9 +27,9 @@ Next.js `/auth/*` routes (Google OAuth only), middleware session refresh and rou
 - [ ] `app/(auth)/auth/login/page.tsx` — Google button, link to onboarding for new users
 - [ ] `app/(auth)/auth/signup/page.tsx` — Google sign-up (expects onboarding completed first)
 - [ ] `app/(auth)/auth/social/route.ts` — `signInWithOAuth` with `provider=google`
-- [ ] `app/(auth)/auth/callback/route.ts` — exchange code, bootstrap account if new, redirect to `next`
+- [ ] `app/(auth)/auth/callback/route.ts` — exchange code, call `initAccountWithUser` if new (onboarding draft from sessionStorage), redirect to `next`
 - [ ] `app/(auth)/auth/logout/route.ts` — `signOut` + redirect
-- [ ] `app/(auth)/auth/error/page.tsx` — display OAuth/DB errors (incl. deleted account)
+- [ ] `app/(auth)/auth/error/page.tsx` — display OAuth/DB errors (incl. deleted account, duplicate user from `initAccountWithUser`)
 - [ ] `app/(auth)/layout.tsx` — auth layout chrome
 - [ ] `app/(site)/page.tsx` — add login CTA; keep onboarding entry
 - [ ] `app/(onboarding)/onboarding/page.tsx` — on completion redirect to `/auth/signup` (sessionStorage until DB-backed)
