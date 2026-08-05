@@ -4,6 +4,7 @@ import {
     veritieJobPersistSchema,
 } from "@/lib/capture/captures-persist-schema";
 import { mapVeritieJobToCaptureBundle } from "@/lib/capture/map-veritie-job";
+import { requireUser } from "@/lib/auth/require-user";
 import { envServer } from "@/lib/config/env.server";
 import {
     appendCaptureFromJob,
@@ -18,6 +19,10 @@ import {
     mergeCaptureEnrichment as mergeDbCaptureEnrichment,
     persistCaptureBundle,
 } from "@/lib/db/repositories/captures";
+import {
+    assertVeritieJobOwnedByAccount,
+    isVeritieJobAccessError,
+} from "@/lib/db/repositories/veritie-job-leases";
 import { getServerVeritieClient } from "@/lib/veritie/server-client";
 import { logger } from "@/lib/logging/server-logger";
 import { captureFlowServerLog } from "@/lib/capture/capture-flow-server-logger";
@@ -47,6 +52,8 @@ function assertStubCaptureMutationsAllowed(): void {
 export async function persistCaptureFromVeritieJob(
     jobId: string,
 ): Promise<PersistCaptureFromJobResult> {
+    await requireUser();
+
     if (!isBackendPersistence()) {
         assertStubCaptureMutationsAllowed();
     }
@@ -75,6 +82,10 @@ export async function persistCaptureFromVeritieJob(
             timelineEventCount: 0,
             duplicate: true,
         };
+    }
+
+    if (scope) {
+        await assertVeritieJobOwnedByAccount(scope, validatedJobId);
     }
 
     const veritie = getServerVeritieClient();
@@ -108,7 +119,18 @@ export async function persistCaptureFromVeritieJob(
     const bundle = mapVeritieJobToCaptureBundle(jobResult.data, captureId);
 
     if (scope) {
-        await persistCaptureBundle(scope, bundle);
+        const persisted = await persistCaptureBundle(scope, bundle);
+        if (persisted.duplicate) {
+            captureFlowServerLog.info("persist.duplicate", {
+                jobId: validatedJobId,
+                captureId: persisted.capture.id,
+            });
+            return {
+                captureId: persisted.capture.id,
+                timelineEventCount: 0,
+                duplicate: true,
+            };
+        }
     } else {
         appendCaptureFromJob({
             capture: bundle.capture,
@@ -135,6 +157,8 @@ export async function persistCaptureFromVeritieJob(
 export async function enrichCaptureFromVeritieJob(
     jobId: string,
 ): Promise<EnrichCaptureFromJobResult> {
+    await requireUser();
+
     if (!isBackendPersistence()) {
         assertStubCaptureMutationsAllowed();
     }
@@ -153,6 +177,10 @@ export async function enrichCaptureFromVeritieJob(
 
     if (!existing) {
         throw new Error("Capture not found for enrichment");
+    }
+
+    if (scope) {
+        await assertVeritieJobOwnedByAccount(scope, validatedJobId);
     }
 
     captureFlowServerLog.info("enrich.fetch_job.start", {

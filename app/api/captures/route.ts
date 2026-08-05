@@ -5,6 +5,7 @@ import {
     capturesPersistRequestSchema,
 } from "@/lib/capture/captures-persist-schema";
 import { persistCaptureFromVeritieJob } from "@/lib/capture/persist-capture-from-job";
+import { isVeritieJobAccessError } from "@/lib/db/repositories/veritie-job-leases";
 import { logger } from "@/lib/logging/server-logger";
 
 /**
@@ -54,7 +55,11 @@ export async function POST(request: NextRequest) {
         });
         const message =
             error instanceof Error ? error.message : "Failed to persist capture";
-        const status = message.includes("not available") ? 503 : 500;
+        const status = message.includes("not available")
+            ? 503
+            : isVeritieJobAccessError(error)
+              ? 403
+              : 500;
         return NextResponse.json({ error: message }, { status });
     }
 }

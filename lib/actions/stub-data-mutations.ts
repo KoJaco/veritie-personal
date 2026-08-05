@@ -1,5 +1,6 @@
 "use server";
 
+import { requireUser } from "@/lib/auth/require-user";
 import { getDataSourceAdapters } from "@/lib/data-source";
 import { getDataSourceKind } from "@/lib/data-source/registry";
 import { requireAccountScope } from "@/lib/db/repositories/context";
@@ -18,12 +19,14 @@ import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-mod
 export async function persistCaptureAction(
     jobId: string,
 ): Promise<PersistCaptureFromJobResult> {
+    await requireUser();
     return persistCaptureFromVeritieJob(jobId);
 }
 
 export async function enrichCaptureAction(
     jobId: string,
 ): Promise<EnrichCaptureFromJobResult> {
+    await requireUser();
     return enrichCaptureFromVeritieJob(jobId);
 }
 
@@ -54,6 +57,8 @@ export async function updateExtractedValueReviewAction(
     extractedValueId: string,
     reviewState: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+    await requireUser();
+
     const parsed = extractedValueReviewRequestSchema.safeParse({
         extractedValueId,
         reviewState,
@@ -65,16 +70,22 @@ export async function updateExtractedValueReviewAction(
 
     if (getDataSourceKind() === "backend") {
         const scope = await requireAccountScope();
-        await updateDbExtractedValueReviewState(
+        const updated = await updateDbExtractedValueReviewState(
             scope,
             parsed.data.extractedValueId,
             parsed.data.reviewState,
         );
+        if (!updated) {
+            return { ok: false, error: "Extracted value not found" };
+        }
     } else {
-        updateStubExtractedValueReviewState(
+        const updated = updateStubExtractedValueReviewState(
             parsed.data.extractedValueId,
             parsed.data.reviewState,
         );
+        if (!updated) {
+            return { ok: false, error: "Extracted value not found" };
+        }
     }
 
     return { ok: true };
