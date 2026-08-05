@@ -65,6 +65,8 @@ Run with `PLATFORM_SHELL_FE_DATA_SOURCE=backend` and live Veritie stack:
 
 ## Pre-deploy checklist
 
+- [ ] Open PR: https://github.com/KoJaco/veritie-personal/compare/main...feat/db-auth-persistence
+- [ ] GitHub CI green on PR (lint, typecheck, test, build)
 - [ ] Apply `db/rls/04_policies_privilege.sql` on production Supabase (if not already)
 - [ ] Confirm Google OAuth redirect URLs for production host
 - [ ] Confirm migrations applied (`npm run db:migrate` or dashboard)
