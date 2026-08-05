@@ -118,11 +118,11 @@ export async function updateExtractedValueReviewState(
     scope: AccountScope,
     extractedValueId: string,
     reviewState: ReviewState,
-) {
+): Promise<boolean> {
     const db = getDb();
     const now = new Date();
 
-    await db
+    const updated = await db
         .update(extractedValues)
         .set({
             reviewState,
@@ -133,7 +133,12 @@ export async function updateExtractedValueReviewState(
                 eq(extractedValues.accountId, scope.accountId),
                 eq(extractedValues.id, extractedValueId),
             ),
-        );
+        )
+        .returning({ id: extractedValues.id });
+
+    if (updated.length === 0) {
+        return false;
+    }
 
     await db
         .update(timelineEvents)
@@ -146,4 +151,6 @@ export async function updateExtractedValueReviewState(
                 eq(timelineEvents.extractedValueId, extractedValueId),
             ),
         );
+
+    return true;
 }

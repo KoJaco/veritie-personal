@@ -30,16 +30,28 @@ export async function POST(request: NextRequest) {
 
         if (getDataSourceKind() === "backend") {
             const scope = await requireAccountScope();
-            await updateDbExtractedValueReviewState(
+            const updated = await updateDbExtractedValueReviewState(
                 scope,
                 parsed.data.extractedValueId,
                 parsed.data.reviewState,
             );
+            if (!updated) {
+                return NextResponse.json(
+                    { error: "Extracted value not found" },
+                    { status: 404 },
+                );
+            }
         } else {
-            updateStubExtractedValueReviewState(
+            const updated = updateStubExtractedValueReviewState(
                 parsed.data.extractedValueId,
                 parsed.data.reviewState,
             );
+            if (!updated) {
+                return NextResponse.json(
+                    { error: "Extracted value not found" },
+                    { status: 404 },
+                );
+            }
         }
 
         return NextResponse.json({ ok: true });
