@@ -30,7 +30,7 @@ export async function createClient() {
                         cookieStore.set(name, value, options);
                     });
                 } catch {
-                    // setAll from Server Component — middleware will refresh session
+                    // setAll from Server Component — proxy.ts refreshes session cookies
                 }
             },
         },

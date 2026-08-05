@@ -32,6 +32,22 @@ function requiresAuth(pathname: string): boolean {
     return true;
 }
 
+function isApiPath(pathname: string): boolean {
+    return pathname.startsWith("/api/");
+}
+
+function copySessionCookies(from: NextResponse, to: NextResponse): void {
+    from.cookies.getAll().forEach((cookie) => {
+        to.cookies.set(cookie);
+    });
+}
+
+function unauthorizedApiResponse(sessionResponse: NextResponse): NextResponse {
+    const response = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    copySessionCookies(sessionResponse, response);
+    return response;
+}
+
 export async function proxy(request: NextRequest) {
     const { response, user } = await updateSession(request);
 
@@ -45,7 +61,11 @@ export async function proxy(request: NextRequest) {
         return response;
     }
 
-    const loginUrl = request.nextUrl.clone();
+    if (isApiPath(pathname)) {
+        return unauthorizedApiResponse(response);
+    }
+
+    const loginUrl = new URL(request.nextUrl.href);
     loginUrl.pathname = "/auth/login";
     loginUrl.search = "";
     loginUrl.searchParams.set("next", sanitizeRedirectPath(pathname));
