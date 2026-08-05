@@ -1,6 +1,6 @@
 import { describe, expect, it, jest, beforeEach } from "@jest/globals";
 
-type AnyMock = jest.MockedFunction<(...args: any[]) => any>;
+type AnyMock = jest.MockedFunction<(...args: never[]) => Promise<unknown>>;
 
 const mockRequireUser = jest.fn() as AnyMock;
 const mockRequireAccountScope = jest.fn() as AnyMock;
@@ -18,10 +18,10 @@ jest.mock("@/lib/db/repositories/context", () => ({
 }));
 
 jest.mock("@/lib/db/repositories/settings", () => ({
-    updateUserProfileFullName: (...args: unknown[]) =>
+    updateUserProfileFullName: (...args: never[]) =>
         mockUpdateUserProfileFullName(...args),
-    updateAccountName: (...args: unknown[]) => mockUpdateAccountName(...args),
-    softDeleteAccount: (...args: unknown[]) => mockSoftDeleteAccount(...args),
+    updateAccountName: (...args: never[]) => mockUpdateAccountName(...args),
+    softDeleteAccount: (...args: never[]) => mockSoftDeleteAccount(...args),
 }));
 
 jest.mock("@/lib/data-source/registry", () => ({
