@@ -22,6 +22,12 @@ if (!("Response" in globalThis)) {
         async json() {
             return this.payload;
         }
+
+        async text() {
+            return typeof this.payload === "string"
+                ? this.payload
+                : JSON.stringify(this.payload);
+        }
     }
 
     (globalThis as { Response?: unknown }).Response = MockResponse;
@@ -46,25 +52,6 @@ jest.mock("next/server", () => ({
         }
 
         async json() {
-            if (this.body instanceof ReadableStream) {
-                const reader = this.body.getReader();
-                const chunks: Uint8Array[] = [];
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    if (value) chunks.push(value);
-                }
-                const merged = new Uint8Array(
-                    chunks.reduce((sum, chunk) => sum + chunk.length, 0),
-                );
-                let offset = 0;
-                for (const chunk of chunks) {
-                    merged.set(chunk, offset);
-                    offset += chunk.length;
-                }
-                return JSON.parse(new TextDecoder().decode(merged));
-            }
-
             if (typeof this.body === "string") {
                 return JSON.parse(this.body);
             }
@@ -73,6 +60,39 @@ jest.mock("next/server", () => ({
         }
     },
 }));
+
+jest.mock("@/lib/auth/require-user", () => ({
+    requireUser: jest.fn(async () => ({
+        id: "user_1",
+        accountId: "account_a",
+    })),
+}));
+
+jest.mock("@/lib/db/repositories/context", () => ({
+    requireAccountScope: jest.fn(async () => ({
+        accountId: "account_a",
+        userId: "user_1",
+    })),
+}));
+
+jest.mock("@/lib/db/repositories/veritie-job-leases", () => ({
+    assertVeritieJobProxyReadAllowed: jest.fn(async () => undefined),
+    VeritieJobAccessError: class VeritieJobAccessError extends Error {
+        name = "VeritieJobAccessError";
+    },
+    isVeritieJobAccessError: (error: unknown) =>
+        error instanceof Error && error.name === "VeritieJobAccessError",
+}));
+
+jest.mock("@/lib/veritie/register-job-lease", () => {
+    const actual = jest.requireActual<typeof import("@/lib/veritie/register-job-lease")>(
+        "@/lib/veritie/register-job-lease",
+    );
+    return {
+        ...actual,
+        registerVeritieJobLeaseFromProxyResponse: jest.fn(async () => undefined),
+    };
+});
 
 jest.mock("@/lib/veritie/proxy-request", () => {
     const actual = jest.requireActual<typeof import("@/lib/veritie/proxy-request")>(
@@ -118,12 +138,47 @@ function createNextRequest(
     } as never;
 }
 
+type AnyMock = jest.MockedFunction<(...args: any[]) => any>;
+
+function getMockFn(modulePath: string, exportName: string): AnyMock {
+    const module = jest.requireMock(modulePath) as Record<string, AnyMock>;
+    return module[exportName];
+}
+
+function createUpstreamResponse(body: unknown, status = 200) {
+    const payload = JSON.stringify(body);
+    return {
+        status,
+        statusText: status === 201 ? "Created" : "OK",
+        headers: {
+            get: (name: string) =>
+                name === "content-type" ? "application/json" : null,
+        },
+        text: async () => payload,
+    } as Response;
+}
+
 describe("app/api/veritie/v1/[...path]/route", () => {
     const originalEnv = { ...process.env };
 
     beforeEach(() => {
-        jest.resetModules();
         mockProxyVeritieRequest.mockReset();
+        getMockFn("@/lib/auth/require-user", "requireUser").mockResolvedValue({
+            id: "user_1",
+            accountId: "account_a",
+        });
+        getMockFn("@/lib/db/repositories/context", "requireAccountScope").mockResolvedValue({
+            accountId: "account_a",
+            userId: "user_1",
+        });
+        getMockFn(
+            "@/lib/db/repositories/veritie-job-leases",
+            "assertVeritieJobProxyReadAllowed",
+        ).mockResolvedValue(undefined);
+        getMockFn(
+            "@/lib/veritie/register-job-lease",
+            "registerVeritieJobLeaseFromProxyResponse",
+        ).mockResolvedValue(undefined);
         process.env = {
             ...originalEnv,
             VERITIE_API_URL: "http://veritie.test",
@@ -136,12 +191,26 @@ describe("app/api/veritie/v1/[...path]/route", () => {
         process.env = originalEnv;
     });
 
+    it("returns 401 when session is missing", async () => {
+        const { UnauthorizedError } = await import("@/lib/auth/errors");
+        getMockFn("@/lib/auth/require-user", "requireUser").mockRejectedValue(
+            new UnauthorizedError(),
+        );
+
+        const { GET } = await import("@/app/api/veritie/v1/[...path]/route");
+        const response = await GET(createNextRequest(), {
+            params: Promise.resolve({ path: ["jobs", "job_1"] }),
+        });
+        const body = await response.json();
+
+        expect(response.status).toBe(401);
+        expect(body.error).toBe("Unauthorized");
+        expect(mockProxyVeritieRequest).not.toHaveBeenCalled();
+    });
+
     it("proxies GET job requests", async () => {
         mockProxyVeritieRequest.mockResolvedValue(
-            new Response(JSON.stringify({ job_id: "job_1" }), {
-                status: 200,
-                headers: { "content-type": "application/json" },
-            }),
+            createUpstreamResponse({ job_id: "job_1" }),
         );
 
         const { GET } = await import("@/app/api/veritie/v1/[...path]/route");
@@ -149,6 +218,15 @@ describe("app/api/veritie/v1/[...path]/route", () => {
             params: Promise.resolve({ path: ["jobs", "job_1"] }),
         });
 
+        expect(
+            getMockFn(
+                "@/lib/db/repositories/veritie-job-leases",
+                "assertVeritieJobProxyReadAllowed",
+            ),
+        ).toHaveBeenCalledWith(
+            { accountId: "account_a", userId: "user_1" },
+            "job_1",
+        );
         expect(mockProxyVeritieRequest).toHaveBeenCalledWith(
             expect.objectContaining({
                 method: "GET",
@@ -159,12 +237,31 @@ describe("app/api/veritie/v1/[...path]/route", () => {
         expect(response.status).toBe(200);
     });
 
-    it("proxies POST job creation", async () => {
+    it("returns 403 when GET job belongs to another account", async () => {
+        const { VeritieJobAccessError } = jest.requireMock<{
+            VeritieJobAccessError: new (message: string) => Error;
+        }>("@/lib/db/repositories/veritie-job-leases");
+        getMockFn(
+            "@/lib/db/repositories/veritie-job-leases",
+            "assertVeritieJobProxyReadAllowed",
+        ).mockRejectedValue(
+            new VeritieJobAccessError("Veritie job belongs to another account"),
+        );
+
+        const { GET } = await import("@/app/api/veritie/v1/[...path]/route");
+        const response = await GET(createNextRequest(), {
+            params: Promise.resolve({ path: ["jobs", "job_other"] }),
+        });
+        const body = await response.json();
+
+        expect(response.status).toBe(403);
+        expect(body.error).toMatch(/another account/i);
+        expect(mockProxyVeritieRequest).not.toHaveBeenCalled();
+    });
+
+    it("proxies POST job creation with tenant metadata", async () => {
         mockProxyVeritieRequest.mockResolvedValue(
-            new Response(JSON.stringify({ job_id: "job_new" }), {
-                status: 201,
-                headers: { "content-type": "application/json" },
-            }),
+            createUpstreamResponse({ job_id: "job_new" }, 201),
         );
 
         const { POST } = await import("@/app/api/veritie/v1/[...path]/route");
@@ -183,11 +280,47 @@ describe("app/api/veritie/v1/[...path]/route", () => {
             expect.objectContaining({
                 method: "POST",
                 pathSegments: ["jobs"],
-                body: JSON.stringify({ audio_content_type: "audio/webm" }),
+                body: JSON.stringify({
+                    audio_content_type: "audio/webm",
+                    metadata: {
+                        account_id: "account_a",
+                        user_id: "user_1",
+                    },
+                }),
             }),
             expect.any(Object),
         );
+        expect(
+            getMockFn(
+                "@/lib/veritie/register-job-lease",
+                "registerVeritieJobLeaseFromProxyResponse",
+            ),
+        ).toHaveBeenCalled();
         expect(response.status).toBe(201);
+    });
+
+    it("returns 413 when POST body exceeds proxy limit", async () => {
+        const { VERITIE_PROXY_MAX_BODY_BYTES } = await import(
+            "@/lib/veritie/proxy-request"
+        );
+        const oversizedBody = "x".repeat(VERITIE_PROXY_MAX_BODY_BYTES + 1);
+
+        const { POST } = await import("@/app/api/veritie/v1/[...path]/route");
+        const response = await POST(
+            createNextRequest({
+                method: "POST",
+                body: oversizedBody,
+                contentType: "application/json",
+            }),
+            {
+                params: Promise.resolve({ path: ["jobs"] }),
+            },
+        );
+        const body = await response.json();
+
+        expect(response.status).toBe(413);
+        expect(body.error).toMatch(/exceeds/i);
+        expect(mockProxyVeritieRequest).not.toHaveBeenCalled();
     });
 
     it("rejects PUT with method not allowed", async () => {

@@ -92,8 +92,9 @@ describe("POST /api/resources", () => {
         const body = await response.json();
 
         expect(response.status).toBe(400);
-        expect(body).toEqual({
-            error: "Resource name is required.",
-        });
+        expect(body.error).toBe("Invalid request body");
+        expect(body.details?.fieldErrors?.name).toEqual(
+            expect.arrayContaining([expect.stringMatching(/Too small/i)]),
+        );
     });
 });

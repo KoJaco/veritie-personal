@@ -45,6 +45,17 @@ jest.mock("@/lib/veritie/server-client", () => ({
     resetServerVeritieClientForTests: jest.fn(),
 }));
 
+jest.mock("@/lib/auth/require-user", () => ({
+    requireUser: jest.fn(async () => ({
+        id: "user_test",
+        accountId: "account_test",
+        email: "test@example.com",
+        role: "owner",
+        plan: "free",
+        appConfig: {},
+    })),
+}));
+
 const completedJob = {
     job_id: "job_test_1",
     status: "completed",
@@ -123,6 +134,8 @@ describe("POST /api/captures", () => {
             VERITIE_PIPELINE_ALIAS: "veritie-personal",
         };
         delete process.env.CAPTURES_PERSIST_SECRET;
+        delete process.env.DATABASE_URL;
+        process.env.PLATFORM_SHELL_FE_DATA_SOURCE = "stub";
 
         const { POST } = await import("@/app/api/captures/route");
         const response = await POST(
