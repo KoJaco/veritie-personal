@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { ChevronDownIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, SquareCheckBig } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -95,7 +95,6 @@ function ScopeLensBody({
     const router = useRouter();
     const isMobile = useIsMobileViewport();
     const [draft, setDraft] = useState<ScopeLens>(normalizeLens(lens));
-    const badgeKey = scopeKeyFromLens(lens);
     const prefetchHrefs = useMemo(() => buildLensPrefetchHrefs(draft), [draft]);
 
     const apply = () => {
@@ -105,22 +104,14 @@ function ScopeLensBody({
 
     const content = (
         <div className="space-y-4">
-            <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Active scope</span>
-                <Badge
-                    variant="outline"
-                    className={cn(badgeKey ? scopeBadgeClass(badgeKey) : undefined)}
-                >
-                    {formatLensLabel(lens)}
-                </Badge>
-            </div>
             <ScopeSelector draft={draft} setDraft={setDraft} />
-            <div className="flex justify-between gap-3">
-                <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            <div className="flex justify-end gap-3 mt-3">
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                     Cancel
                 </Button>
                 <Button type="button" onClick={apply}>
-                    Apply scope
+                    Apply
+                    <SquareCheckBig className="h-4 w-4" />
                 </Button>
             </div>
             <div className="hidden" aria-hidden>
@@ -134,9 +125,9 @@ function ScopeLensBody({
             <Drawer open={open} onOpenChange={setOpen}>
                 <DrawerContent className="px-4 pb-6">
                     <DrawerHeader className="px-0">
-                        <DrawerTitle>Choose scope</DrawerTitle>
+                        <DrawerTitle>Choose Aspect</DrawerTitle>
                         <DrawerDescription>
-                            Select the global operating scope for the current work surfaces.
+                            Select which aspect you want to focus on right now.
                         </DrawerDescription>
                     </DrawerHeader>
                     {content}
@@ -149,9 +140,9 @@ function ScopeLensBody({
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Choose scope</DialogTitle>
+                    <DialogTitle>Choose Aspect</DialogTitle>
                     <DialogDescription>
-                        Select the global operating scope for the current work surfaces.
+                        Select which aspect you want to focus on right now.
                     </DialogDescription>
                 </DialogHeader>
                 {content}
@@ -177,7 +168,7 @@ function UrlLensDialogControlInner() {
                 className="gap-2 rounded-full"
                 onClick={() => setOpen(true)}
             >
-                <span>Scope</span>
+                <span>Aspect</span>
                 {badgeKey ? (
                     <Badge
                         variant="outline"
@@ -185,7 +176,12 @@ function UrlLensDialogControlInner() {
                     >
                         {formatLensLabel(lens)}
                     </Badge>
-                ) : null}
+                ) : <Badge
+                    variant="default"
+                    className={cn("hidden sm:inline-flex", scopeBadgeClass(badgeKey))}
+                >
+                    All aspects
+                </Badge>}
                 <ChevronDownIcon className="h-4 w-4" />
             </Button>
             <ScopeLensBody

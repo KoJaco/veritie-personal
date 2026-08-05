@@ -35,9 +35,20 @@ jest.mock("next/server", () => ({
 }));
 
 describe("POST /api/attachments/versions", () => {
+    const originalEnv = { ...process.env };
+
     beforeEach(() => {
         jest.resetModules();
         resetStubAttachmentStoreForTests();
+        process.env = {
+            ...originalEnv,
+            PLATFORM_SHELL_FE_DATA_SOURCE: "stub",
+        };
+        delete process.env.DATABASE_URL;
+    });
+
+    afterEach(() => {
+        process.env = originalEnv;
     });
 
     it("uploads a new attachment version and returns generic identifiers", async () => {
@@ -45,7 +56,7 @@ describe("POST /api/attachments/versions", () => {
         const { stubDataSourceAdapters: adapters } = await import(
             "@/lib/data-source/stub-adapter"
         );
-        const detailBefore = adapters.attachments.getAttachmentDetail("att_api_1");
+        const detailBefore = await adapters.attachments.getAttachmentDetail("att_api_1");
         const request = {
             json: async () => ({
                 attachmentId: "att_api_1",
@@ -58,7 +69,7 @@ describe("POST /api/attachments/versions", () => {
 
         const response = await POST(request);
         const body = await response.json();
-        const detailAfter = adapters.attachments.getAttachmentDetail("att_api_1");
+        const detailAfter = await adapters.attachments.getAttachmentDetail("att_api_1");
 
         expect(response.status).toBe(200);
         expect(body).toEqual({

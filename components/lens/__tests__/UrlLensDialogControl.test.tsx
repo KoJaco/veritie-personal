@@ -48,7 +48,7 @@ describe("UrlLensDialogControl", () => {
         render(<UrlLensDialogControl />);
 
         expect(
-            screen.queryByRole("button", { name: /scope/i }),
+            screen.queryByRole("button", { name: /aspect/i }),
         ).not.toBeInTheDocument();
     });
 
@@ -60,7 +60,7 @@ describe("UrlLensDialogControl", () => {
         render(<UrlLensDialogControl />);
 
         expect(
-            screen.getByRole("button", { name: /scope/i }),
+            screen.getByRole("button", { name: /aspect/i }),
         ).toBeInTheDocument();
     });
 
@@ -71,12 +71,12 @@ describe("UrlLensDialogControl", () => {
 
         render(<UrlLensDialogControl />);
 
-        fireEvent.click(screen.getByRole("button", { name: /scope/i }));
-        expect(screen.getByText("Choose scope")).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: /aspect/i }));
+        expect(screen.getByText("Choose Aspect")).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
         expect(replace).not.toHaveBeenCalled();
-        expect(screen.queryByText("Choose scope")).not.toBeInTheDocument();
+        expect(screen.queryByText("Choose Aspect")).not.toBeInTheDocument();
     });
 
     it("applies selected lens and preserves non-lens query params", () => {
@@ -86,11 +86,11 @@ describe("UrlLensDialogControl", () => {
 
         render(<UrlLensDialogControl />);
 
-        fireEvent.click(screen.getByRole("button", { name: /scope/i }));
+        fireEvent.click(screen.getByRole("button", { name: /aspect/i }));
         fireEvent.click(
             screen.getByRole("button", { name: /Finance/i }),
         );
-        fireEvent.click(screen.getByRole("button", { name: "Apply scope" }));
+        fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
         expect(replace).toHaveBeenCalledTimes(1);
         expect(prefetch).not.toHaveBeenCalled();
@@ -108,12 +108,12 @@ describe("UrlLensDialogControl", () => {
 
         render(<UrlLensDialogControl />);
 
-        fireEvent.click(screen.getByRole("button", { name: /scope/i }));
-        expect(screen.getByText("Choose scope")).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: /aspect/i }));
+        expect(screen.getByText("Choose Aspect")).toBeInTheDocument();
         fireEvent.click(
             screen.getByRole("button", { name: /Personal/i }),
         );
-        fireEvent.click(screen.getByRole("button", { name: "Apply scope" }));
+        fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
         expect(replace).toHaveBeenCalledTimes(1);
         expect(prefetch).not.toHaveBeenCalled();
@@ -129,11 +129,11 @@ describe("UrlLensDialogControl", () => {
         const { rerender } = render(<UrlLensDialogControl />);
 
         expect(
-            screen.getByRole("button", { name: /scope/i }),
+            screen.getByRole("button", { name: /aspect/i }),
         ).toBeInTheDocument();
 
         rerender(<UrlLensDialogControl />);
-        expect(screen.getByRole("button", { name: /scope/i })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /aspect/i })).toBeInTheDocument();
     });
 
     it("fails closed when lens input is oversized", () => {
@@ -145,7 +145,7 @@ describe("UrlLensDialogControl", () => {
         render(<UrlLensDialogControl />);
 
         expect(
-            screen.getByRole("button", { name: /scope/i }),
+            screen.getByRole("button", { name: /aspect/i }),
         ).toBeInTheDocument();
     });
 });
