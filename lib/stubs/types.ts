@@ -251,6 +251,7 @@ export interface ProfileStub {
     email: string;
     role: string;
     lastLoginAt: string;
+    workspaceName?: string;
 }
 
 export interface TeamMemberStub {
