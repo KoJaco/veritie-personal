@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UnauthorizedError } from "@/lib/auth/errors";
 import { requireUser } from "@/lib/auth/require-user";
+import {
+    BoundedBodyError,
+    boundedBodyErrorResponse,
+    readBoundedText,
+} from "@/lib/api/read-bounded-body";
 import { requireAccountScope } from "@/lib/db/repositories/context";
 import {
-    assertVeritieJobProxyReadAllowed,
+    assertVeritieJobOwnedByAccount,
     isVeritieJobAccessError,
 } from "@/lib/db/repositories/veritie-job-leases";
+import { extractVeritieJobIdFromProxyPath } from "@/lib/veritie/job-path";
 import { assertVeritieProxyAccess } from "@/lib/veritie/proxy-access";
 import {
     extractForwardableClientHeaders,
@@ -63,13 +69,10 @@ async function handleVeritieProxy(
 
         const scope = await requireAccountScope();
 
-        if (
-            method === "GET" &&
-            path.length === 2 &&
-            path[0] === "jobs"
-        ) {
+        const jobId = extractVeritieJobIdFromProxyPath(method, path);
+        if (jobId) {
             try {
-                await assertVeritieJobProxyReadAllowed(scope, path[1]);
+                await assertVeritieJobOwnedByAccount(scope, jobId);
             } catch (error) {
                 if (isVeritieJobAccessError(error)) {
                     const message =
@@ -84,20 +87,21 @@ async function handleVeritieProxy(
         let body: string | null = null;
 
         if (method === "POST") {
-            const rawBody = await request.text();
-            const bodyBytes = Buffer.byteLength(rawBody, "utf8");
-            if (bodyBytes > VERITIE_PROXY_MAX_BODY_BYTES) {
-                return NextResponse.json(
-                    {
-                        error: `Request body exceeds ${VERITIE_PROXY_MAX_BODY_BYTES} bytes`,
-                    },
-                    { status: 413 },
+            try {
+                const rawBody = await readBoundedText(
+                    request,
+                    VERITIE_PROXY_MAX_BODY_BYTES,
                 );
+                body =
+                    path.length === 1 && path[0] === "jobs"
+                        ? injectVeritieJobMetadata(rawBody, scope)
+                        : rawBody;
+            } catch (error) {
+                if (error instanceof BoundedBodyError) {
+                    return boundedBodyErrorResponse(error);
+                }
+                throw error;
             }
-            body =
-                path.length === 1 && path[0] === "jobs"
-                    ? injectVeritieJobMetadata(rawBody, scope)
-                    : rawBody;
         }
 
         const upstream = await proxyVeritieRequest({

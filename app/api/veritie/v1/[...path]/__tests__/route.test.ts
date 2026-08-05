@@ -76,7 +76,7 @@ jest.mock("@/lib/db/repositories/context", () => ({
 }));
 
 jest.mock("@/lib/db/repositories/veritie-job-leases", () => ({
-    assertVeritieJobProxyReadAllowed: jest.fn(async () => undefined),
+    assertVeritieJobOwnedByAccount: jest.fn(async () => undefined),
     VeritieJobAccessError: class VeritieJobAccessError extends Error {
         name = "VeritieJobAccessError";
     },
@@ -119,6 +119,9 @@ function createNextRequest(
         contentType?: string;
     } = {},
 ) {
+    const bodyText = options.body ?? "";
+    const bodyBytes = Buffer.byteLength(bodyText, "utf8");
+
     return {
         method: options.method ?? "GET",
         nextUrl: {
@@ -129,20 +132,32 @@ function createNextRequest(
                 if (name === "content-type") {
                     return options.contentType ?? null;
                 }
+                if (name === "content-length") {
+                    return bodyBytes > 0 ? String(bodyBytes) : null;
+                }
                 return null;
             },
             forEach: () => {},
         },
-        text: async () => options.body ?? "",
+        body:
+            bodyBytes > 0
+                ? new ReadableStream({
+                      start(controller) {
+                          controller.enqueue(new TextEncoder().encode(bodyText));
+                          controller.close();
+                      },
+                  })
+                : null,
+        text: async () => bodyText,
         signal: undefined,
     } as never;
 }
 
-type AnyMock = jest.MockedFunction<(...args: any[]) => any>;
+type AnyMock = jest.MockedFunction<(...args: never[]) => Promise<unknown>>;
 
 function getMockFn(modulePath: string, exportName: string): AnyMock {
-    const module = jest.requireMock(modulePath) as Record<string, AnyMock>;
-    return module[exportName];
+    const mockedModule = jest.requireMock(modulePath) as Record<string, AnyMock>;
+    return mockedModule[exportName];
 }
 
 function createUpstreamResponse(body: unknown, status = 200) {
@@ -173,7 +188,7 @@ describe("app/api/veritie/v1/[...path]/route", () => {
         });
         getMockFn(
             "@/lib/db/repositories/veritie-job-leases",
-            "assertVeritieJobProxyReadAllowed",
+            "assertVeritieJobOwnedByAccount",
         ).mockResolvedValue(undefined);
         getMockFn(
             "@/lib/veritie/register-job-lease",
@@ -221,7 +236,7 @@ describe("app/api/veritie/v1/[...path]/route", () => {
         expect(
             getMockFn(
                 "@/lib/db/repositories/veritie-job-leases",
-                "assertVeritieJobProxyReadAllowed",
+                "assertVeritieJobOwnedByAccount",
             ),
         ).toHaveBeenCalledWith(
             { accountId: "account_a", userId: "user_1" },
@@ -243,7 +258,7 @@ describe("app/api/veritie/v1/[...path]/route", () => {
         }>("@/lib/db/repositories/veritie-job-leases");
         getMockFn(
             "@/lib/db/repositories/veritie-job-leases",
-            "assertVeritieJobProxyReadAllowed",
+            "assertVeritieJobOwnedByAccount",
         ).mockRejectedValue(
             new VeritieJobAccessError("Veritie job belongs to another account"),
         );
@@ -319,7 +334,7 @@ describe("app/api/veritie/v1/[...path]/route", () => {
         const body = await response.json();
 
         expect(response.status).toBe(413);
-        expect(body.error).toMatch(/exceeds/i);
+        expect(body.error).toMatch(/too large/i);
         expect(mockProxyVeritieRequest).not.toHaveBeenCalled();
     });
 
@@ -342,6 +357,101 @@ describe("app/api/veritie/v1/[...path]/route", () => {
 
         expect(response.status).toBe(400);
         expect(body.error).toMatch(/Missing Veritie path/i);
+    });
+
+    it("returns 403 when GET job has no lease", async () => {
+        const { VeritieJobAccessError } = jest.requireMock<{
+            VeritieJobAccessError: new (message: string) => Error;
+        }>("@/lib/db/repositories/veritie-job-leases");
+        getMockFn(
+            "@/lib/db/repositories/veritie-job-leases",
+            "assertVeritieJobOwnedByAccount",
+        ).mockRejectedValue(
+            new VeritieJobAccessError(
+                "Veritie job is not registered for this account",
+            ),
+        );
+
+        const { GET } = await import("@/app/api/veritie/v1/[...path]/route");
+        const response = await GET(createNextRequest(), {
+            params: Promise.resolve({ path: ["jobs", "job_unleased"] }),
+        });
+        const body = await response.json();
+
+        expect(response.status).toBe(403);
+        expect(body.error).toMatch(/not registered/i);
+        expect(mockProxyVeritieRequest).not.toHaveBeenCalled();
+    });
+
+    it("returns 403 when POST upload-finalize has no lease", async () => {
+        const { VeritieJobAccessError } = jest.requireMock<{
+            VeritieJobAccessError: new (message: string) => Error;
+        }>("@/lib/db/repositories/veritie-job-leases");
+        getMockFn(
+            "@/lib/db/repositories/veritie-job-leases",
+            "assertVeritieJobOwnedByAccount",
+        ).mockRejectedValue(
+            new VeritieJobAccessError(
+                "Veritie job is not registered for this account",
+            ),
+        );
+
+        const { POST } = await import("@/app/api/veritie/v1/[...path]/route");
+        const response = await POST(
+            createNextRequest({
+                method: "POST",
+                body: JSON.stringify({}),
+                contentType: "application/json",
+            }),
+            {
+                params: Promise.resolve({
+                    path: ["jobs", "job_unleased", "upload-finalize"],
+                }),
+            },
+        );
+        const body = await response.json();
+
+        expect(response.status).toBe(403);
+        expect(body.error).toMatch(/not registered/i);
+        expect(mockProxyVeritieRequest).not.toHaveBeenCalled();
+    });
+
+    it("proxies POST upload-finalize when job is leased", async () => {
+        mockProxyVeritieRequest.mockResolvedValue(
+            createUpstreamResponse({ status: "finalized" }),
+        );
+
+        const { POST } = await import("@/app/api/veritie/v1/[...path]/route");
+        const response = await POST(
+            createNextRequest({
+                method: "POST",
+                body: JSON.stringify({}),
+                contentType: "application/json",
+            }),
+            {
+                params: Promise.resolve({
+                    path: ["jobs", "job_1", "upload-finalize"],
+                }),
+            },
+        );
+
+        expect(
+            getMockFn(
+                "@/lib/db/repositories/veritie-job-leases",
+                "assertVeritieJobOwnedByAccount",
+            ),
+        ).toHaveBeenCalledWith(
+            { accountId: "account_a", userId: "user_1" },
+            "job_1",
+        );
+        expect(mockProxyVeritieRequest).toHaveBeenCalledWith(
+            expect.objectContaining({
+                method: "POST",
+                pathSegments: ["jobs", "job_1", "upload-finalize"],
+            }),
+            expect.any(Object),
+        );
+        expect(response.status).toBe(200);
     });
 
     it("returns 403 for disallowed proxy paths", async () => {

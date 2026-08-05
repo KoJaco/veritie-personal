@@ -67,17 +67,6 @@ export async function assertVeritieJobOwnedByAccount(
     }
 }
 
-export async function assertVeritieJobProxyReadAllowed(
-    scope: AccountScope,
-    jobId: string,
-): Promise<void> {
-    const lease = await findVeritieJobLease(jobId);
-
-    if (lease && lease.accountId !== scope.accountId) {
-        throw new VeritieJobAccessError("Veritie job belongs to another account");
-    }
-}
-
 export function isVeritieJobAccessError(error: unknown): boolean {
     return (
         error instanceof VeritieJobAccessError ||
