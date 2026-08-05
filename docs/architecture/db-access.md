@@ -80,7 +80,27 @@ After the core path is stable:
 
 Not implemented in Phase 1.
 
+## Repository layer (Phase 3)
+
+Server read/write paths use [`lib/db/repositories/`](../../lib/db/repositories/) — not Drizzle in page components.
+
+| Module | Responsibility |
+| --- | --- |
+| `context.ts` | `AccountScope { accountId, userId }`; `requireAccountScope()` |
+| `captures.ts` | Index/detail, `findByVeritieJobId`, `persistCaptureBundle`, `mergeCaptureEnrichment` |
+| `timeline.ts` | Index/detail, `updateExtractedValueReviewState` |
+| `resources.ts` | Index/detail, `createResource` |
+| `tasks.ts` | Index/detail |
+| `settings.ts` | Minimal `SettingsStub` from identity tables |
+| `mappers/` | DB row ↔ existing read-model / stub shapes |
+
+**Tenancy:** every `where` includes `eq(table.accountId, scope.accountId)`.
+
+**Data source:** [`getDataSourceAdapters()`](../../lib/data-source/registry.ts) routes to stub or backend adapters. Backend adapters call repositories after `requireAccountScope()`. Capture persist branches in [`persist-capture-from-job.ts`](../../lib/capture/persist-capture-from-job.ts).
+
+**Usage metering:** `persistCaptureBundle` inserts `usage_events` with `usage_type = 'voice_log'`, `quantity = 1`, `jobId = veritieJobId`.
+
 ## Related
 
 - Phase 1 handoff: [`docs/todos/phase-1-handoff.md`](../todos/phase-1-handoff.md)
-- Phase 2 auth routes: [`docs/todos/phase-2-auth-routes-middleware.md`](../todos/phase-2-auth-routes-middleware.md)
+- Phase 3 handoff: [`docs/todos/phase-3-handoff.md`](../todos/phase-3-handoff.md)

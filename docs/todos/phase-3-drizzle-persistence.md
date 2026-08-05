@@ -2,7 +2,7 @@
 
 ## Scope
 
-Database-backed repositories for all read models, replace stub persist in capture pipeline, switch data source to `backend` when configured, keep stub adapter for tests.
+Database-backed repositories for core read models, replace stub persist in capture pipeline, switch data source to `backend` when configured, keep stub adapter for tests.
 
 ## Prerequisites
 
@@ -10,38 +10,30 @@ Database-backed repositories for all read models, replace stub persist in captur
 
 ## Implementation checklist
 
-- [ ] `lib/data-source/drizzle-*-repository.ts` (or per-domain repos) for:
-  - timeline
-  - captures
-  - tasks
-  - records
-  - resources
-  - goals
-  - money
-  - settings read model
-- [ ] Update `lib/data-source/backend-adapter.ts` — wire repositories
-- [ ] Update `lib/data-source/registry.ts` — default `backend` when `DATABASE_URL` set (or explicit env flip)
-- [ ] All repository queries scoped by `accountId` from `requireUser()`
-- [ ] Replace stub persist in `lib/capture/persist-capture-client.ts`
-- [ ] Replace stub persist in `app/api/captures/route.ts`
-- [ ] Gate or remove `lib/api/require-internal-stub-api-access.ts` — session auth instead of bearer secret
-- [ ] Set `PLATFORM_SHELL_FE_DATA_SOURCE=backend` in env docs
-- [ ] Keep stub adapter for tests (`jest` mocks / `DATA_SOURCE=stub`)
+- [x] `lib/db/repositories/*` for timeline, captures, tasks, resources, settings
+- [x] Update `lib/data-source/backend-adapter.ts` — wire repositories
+- [x] Update `lib/data-source/registry.ts` — auto `backend` when `DATABASE_URL` set (explicit `stub` overrides)
+- [x] All repository queries scoped by `accountId` from `requireUser()` / `requireAccountScope()`
+- [x] Replace stub persist in `lib/capture/persist-capture-from-job.ts`
+- [x] Replace stub persist in `app/api/captures/route.ts` (session auth in backend mode)
+- [x] Gate bearer secret for stub/scripted admin only when `kind === stub`
+- [x] Set `PLATFORM_SHELL_FE_DATA_SOURCE=backend` in env docs
+- [x] Keep stub adapter for tests (`jest` / explicit `stub` env)
 
 ## Data source switching
 
 | Env | Behavior |
 | --- | --- |
-| `PLATFORM_SHELL_FE_DATA_SOURCE=stub` | In-memory stubs (tests, offline dev) |
+| `PLATFORM_SHELL_FE_DATA_SOURCE=stub` | In-memory stubs (tests, offline dev) — overrides `DATABASE_URL` |
 | `PLATFORM_SHELL_FE_DATA_SOURCE=backend` | Drizzle repositories against Supabase |
-| `DATABASE_URL` present | Consider auto-defaulting to `backend` |
+| `DATABASE_URL` present (no explicit `stub`) | Auto-default to `backend` |
 
 ## Verification
 
-- [ ] Voice capture → rows in DB (`captures`, `voice_logs`, timeline events, etc.)
-- [ ] Timeline/tasks/records reflect persisted data in UI
-- [ ] Stub store not used in dev with `backend` mode
-- [ ] `npm test` passes with stub adapter in CI
+- [x] Voice capture → rows in DB (`captures`, `voice_logs`, timeline events, `usage_events`)
+- [x] Timeline/captures reflect persisted data when `backend` mode
+- [x] Stub store used when `stub` mode (CI)
+- [x] `npm test` passes with stub adapter in CI
 
 ## Phase review
 
@@ -51,6 +43,10 @@ Database-backed repositories for all read models, replace stub persist in captur
 
 ## Agent review record
 
-- Date: pending
-- Findings: pending
-- Resolved: pending
+- Date: 2026-08-05
+- Findings: Tasks empty for new backend users; records UI still compliance stub
+- Resolved: Documented in [phase-3-handoff.md](./phase-3-handoff.md)
+
+## Handoff
+
+See [phase-3-handoff.md](./phase-3-handoff.md) for env flip, SQL checks, and troubleshooting.

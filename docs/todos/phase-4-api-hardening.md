@@ -21,7 +21,8 @@ Close security and persistence items from [post-auth-db-audit.md](./post-auth-db
 ### Capture and mutation APIs
 
 - [ ] `POST /api/captures` — session auth; enforce capture ownership on persist
-- [ ] `POST /api/extracted-values/review` — session auth + `accountId` scope
+- [x] `POST /api/extracted-values/review` — session auth + `accountId` scope (backend); bearer in stub mode
+- [x] `GET /api/timeline/events/[eventId]` — data-source adapters in backend mode
 - [ ] Timeline mutation endpoints — session auth + `accountId` scope
 - [ ] Make duplicate detection account-scoped (not only Veritie job ID scoped)
 - [ ] Store lease/job metadata proving capture was created by current session
