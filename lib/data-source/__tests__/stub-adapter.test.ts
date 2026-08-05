@@ -31,7 +31,7 @@ describe("stub data-source adapter", () => {
         expect(summaries).toHaveLength(tasks.length);
     });
 
-    it("keeps dashboard references aligned to existing task, object, attachment, and resource routes", () => {
+    it("keeps dashboard references aligned to existing task, object, attachment, and resource routes", async () => {
         const tasks = stubDataSourceAdapters.dashboard.getTasks(32);
         const dashboard = stubDataSourceAdapters.dashboard.getWorkDashboard();
         const taskIds = new Set(tasks.map((task) => task.id));
@@ -49,9 +49,9 @@ describe("stub data-source adapter", () => {
 
         for (const activity of dashboard.recentActivity) {
             if (activity.target.type === "task") {
-                expect(() =>
+                await expect(
                     stubDataSourceAdapters.tasks.getTaskDetail(activity.target.id),
-                ).not.toThrow();
+                ).resolves.toBeDefined();
             }
 
             if (activity.target.type === "object") {
@@ -69,9 +69,9 @@ describe("stub data-source adapter", () => {
             }
         }
 
-        expect(() =>
+        await expect(
             stubDataSourceAdapters.resources.getResourceDetail("resource_seed_3"),
-        ).not.toThrow();
+        ).resolves.toBeDefined();
         expect(() =>
             stubDataSourceAdapters.checks.getCheckDetail(
                 { scopeId: "work" },
@@ -86,7 +86,7 @@ describe("stub data-source adapter", () => {
         ).not.toThrow();
     });
 
-    it("returns object and settings payloads via adapter methods", () => {
+    it("returns object and settings payloads via adapter methods", async () => {
         const objects = stubDataSourceAdapters.objects.getObjectsIndex(3);
         const objectDetail = stubDataSourceAdapters.objects.getObjectDetail(
             objects[0]!.id,
@@ -95,7 +95,7 @@ describe("stub data-source adapter", () => {
             stubDataSourceAdapters.connections.getConnectionsIndex();
         const connectionDetail =
             stubDataSourceAdapters.connections.getConnectionDetail("conn_azure_ad");
-        const settings = stubDataSourceAdapters.settings.getSettings();
+        const settings = await stubDataSourceAdapters.settings.getSettings();
 
         expect(objects).toHaveLength(3);
         expect(objectDetail.id).toBeTruthy();
@@ -115,19 +115,19 @@ describe("stub data-source adapter", () => {
         ).toThrow(/not inspectable/i);
     });
 
-    it("returns resource index/detail data and supports create", () => {
-        const resources = stubDataSourceAdapters.resources.getResourcesIndex(3);
-        const detail = stubDataSourceAdapters.resources.getResourceDetail(
+    it("returns resource index/detail data and supports create", async () => {
+        const resources = await stubDataSourceAdapters.resources.getResourcesIndex(3);
+        const detail = await stubDataSourceAdapters.resources.getResourceDetail(
             resources[0]!.id,
         );
-        const created = stubDataSourceAdapters.resources.createResource({
+        const created = await stubDataSourceAdapters.resources.createResource({
             name: "Knowledge Base",
             category: "resource",
             ownerName: "Avery Lee",
             criticality: "medium",
             sensitivity: "internal",
         });
-        const createdDetail = stubDataSourceAdapters.resources.getResourceDetail(
+        const createdDetail = await stubDataSourceAdapters.resources.getResourceDetail(
             created.resourceId,
         );
 
@@ -168,7 +168,7 @@ describe("stub data-source adapter", () => {
         expect(detail.derivedScopes).toBeDefined();
     });
 
-    it("keeps the named task, attachment, and object stories aligned", () => {
+    it("keeps the named task, attachment, and object stories aligned", async () => {
         const stories = [
             {
                 taskId: "task-ac-policy-review",
@@ -203,7 +203,7 @@ describe("stub data-source adapter", () => {
         ] as const;
 
         for (const story of stories) {
-            const task = stubDataSourceAdapters.tasks.getTaskDetail(story.taskId);
+            const task = await stubDataSourceAdapters.tasks.getTaskDetail(story.taskId);
             const object = stubDataSourceAdapters.objects.getObjectDetail(
                 story.objectId,
             );
@@ -237,14 +237,14 @@ describe("stub data-source adapter", () => {
         }
     });
 
-    it("locks core normalization rules for blocked, completed, and overdue named tasks", () => {
-        const blocked = stubDataSourceAdapters.tasks.getTaskDetail(
+    it("locks core normalization rules for blocked, completed, and overdue named tasks", async () => {
+        const blocked = await stubDataSourceAdapters.tasks.getTaskDetail(
             "task-iso-gap-remediation",
         );
-        const completed = stubDataSourceAdapters.tasks.getTaskDetail(
+        const completed = await stubDataSourceAdapters.tasks.getTaskDetail(
             "task-config-hardening-review",
         );
-        const overdue = stubDataSourceAdapters.tasks.getTaskDetail(
+        const overdue = await stubDataSourceAdapters.tasks.getTaskDetail(
             "task-attachment-coverage-reconciliation",
         );
 
@@ -266,12 +266,12 @@ describe("stub data-source adapter", () => {
         expect(overdue.isOverdue).toBe(true);
     });
 
-    it("keeps the access provisioning story aligned across task, resource, attachment, and check detail", () => {
-        const task = stubDataSourceAdapters.tasks.getTaskDetail(
+    it("keeps the access provisioning story aligned across task, resource, attachment, and check detail", async () => {
+        const task = await stubDataSourceAdapters.tasks.getTaskDetail(
             "task-access-provisioning-validation",
         );
         const resource =
-            stubDataSourceAdapters.resources.getResourceDetail("resource_seed_3");
+            await stubDataSourceAdapters.resources.getResourceDetail("resource_seed_3");
         const attachment = stubDataSourceAdapters.attachments.getAttachmentDetail(
             "att_detail",
         );

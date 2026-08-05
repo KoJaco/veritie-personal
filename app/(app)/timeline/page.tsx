@@ -32,7 +32,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
     const reviewState = parseReviewState(getStringParam(resolved.review));
 
     const dataSource = getDataSourceAdapters();
-    const timelineIndex = dataSource.timeline.getTimelineIndex({
+    const timelineIndex = await dataSource.timeline.getTimelineIndex({
         lens: scopeLens,
         search: search || undefined,
         eventTypes: eventType ? [eventType] : undefined,

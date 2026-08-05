@@ -7,7 +7,8 @@ const DATA_SOURCE_ENV_KEY = "PLATFORM_SHELL_FE_DATA_SOURCE";
 export function getDataSourceKind(
     envValue = process.env[DATA_SOURCE_ENV_KEY],
 ): DataSourceKind {
-    if (envValue === "backend") return "backend";
+    if (envValue === "stub") return "stub";
+    if (envValue === "backend" || process.env.DATABASE_URL) return "backend";
     return "stub";
 }
 

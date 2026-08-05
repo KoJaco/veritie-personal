@@ -1,4 +1,9 @@
 import type { DataSourceAdapters } from "./types";
+import { backendCapturesAdapter } from "./backend/captures-adapter";
+import { backendResourcesAdapter } from "./backend/resources-adapter";
+import { backendSettingsAdapter } from "./backend/settings-adapter";
+import { backendTasksAdapter } from "./backend/tasks-adapter";
+import { backendTimelineAdapter } from "./backend/timeline-adapter";
 
 function notImplemented(method: string): never {
     throw new Error(
@@ -12,13 +17,12 @@ export const backendDataSourceAdapters: DataSourceAdapters = {
         getWorkDashboard: () => notImplemented("dashboard.getWorkDashboard"),
         getTaskSummaries: () => notImplemented("dashboard.getTaskSummaries"),
     },
-    tasks: {
-        getTasksIndex: () => notImplemented("tasks.getTasksIndex"),
-        getTaskDetail: () => notImplemented("tasks.getTaskDetail"),
-    },
+    tasks: backendTasksAdapter,
     attachments: {
-        getAttachmentsIndex: () => notImplemented("attachments.getAttachmentsIndex"),
-        getAttachmentDetail: () => notImplemented("attachments.getAttachmentDetail"),
+        getAttachmentsIndex: () =>
+            notImplemented("attachments.getAttachmentsIndex"),
+        getAttachmentDetail: () =>
+            notImplemented("attachments.getAttachmentDetail"),
         uploadAttachmentVersion: () =>
             notImplemented("attachments.uploadAttachmentVersion"),
     },
@@ -26,11 +30,7 @@ export const backendDataSourceAdapters: DataSourceAdapters = {
         getObjectsIndex: () => notImplemented("objects.getObjectsIndex"),
         getObjectDetail: () => notImplemented("objects.getObjectDetail"),
     },
-    resources: {
-        getResourcesIndex: () => notImplemented("resources.getResourcesIndex"),
-        getResourceDetail: () => notImplemented("resources.getResourceDetail"),
-        createResource: () => notImplemented("resources.createResource"),
-    },
+    resources: backendResourcesAdapter,
     checks: {
         getAggregatedChecks: () =>
             notImplemented("checks.getAggregatedChecks"),
@@ -39,19 +39,12 @@ export const backendDataSourceAdapters: DataSourceAdapters = {
         getCheckDetail: () => notImplemented("checks.getCheckDetail"),
     },
     connections: {
-        getConnectionsIndex: () => notImplemented("connections.getConnectionsIndex"),
-        getConnectionDetail: () => notImplemented("connections.getConnectionDetail"),
+        getConnectionsIndex: () =>
+            notImplemented("connections.getConnectionsIndex"),
+        getConnectionDetail: () =>
+            notImplemented("connections.getConnectionDetail"),
     },
-    settings: {
-        getSettings: () => notImplemented("settings.getSettings"),
-    },
-    timeline: {
-        getTimelineIndex: () => notImplemented("timeline.getTimelineIndex"),
-        getTimelineEventDetail: () =>
-            notImplemented("timeline.getTimelineEventDetail"),
-    },
-    captures: {
-        getCapturesIndex: () => notImplemented("captures.getCapturesIndex"),
-        getCaptureDetail: () => notImplemented("captures.getCaptureDetail"),
-    },
+    settings: backendSettingsAdapter,
+    timeline: backendTimelineAdapter,
+    captures: backendCapturesAdapter,
 };

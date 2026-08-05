@@ -38,7 +38,7 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
     const view = parseCapturesView(getStringParam(resolved.view));
 
     const dataSource = getDataSourceAdapters();
-    const capturesIndex = dataSource.captures.getCapturesIndex({
+    const capturesIndex = await dataSource.captures.getCapturesIndex({
         lens: { scope: lens.aspect },
         search: search || undefined,
         status,
