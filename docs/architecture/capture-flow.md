@@ -46,7 +46,7 @@ sequenceDiagram
 | --- | --- |
 | `POST/GET /api/veritie/v1/*` | `requireUser()` → 401; same-origin defense-in-depth |
 | `POST /jobs` | Registers `veritie_job_leases` row for `(jobId, accountId, userId)` |
-| `GET /jobs/:id` | 403 when lease exists for another account |
+| `GET /jobs/:id`, `POST /jobs/:id/upload-finalize` | 403 unless lease exists for current account |
 | `persistCaptureAction` / `POST /api/captures` | Session required; lease ownership before `getJob` |
 | Duplicate persist | Partial unique index on `(account_id, veritie_job_id)` |
 

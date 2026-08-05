@@ -27,15 +27,20 @@ CI verification, manual E2E, security review, documentation updates. Final gate 
 ## Security review
 
 - [ ] RLS spot-check: cross-account read blocked with user JWT
+- [ ] RLS spot-check: direct JWT write blocked on audit/billing/RBAC (after `04_policies_privilege.sql`)
 - [ ] OAuth redirect allowlist: no open redirect via `next` param
 - [ ] No `SUPABASE_SECRET_KEY` or `VERITIE_API_KEY` in client bundle
 - [ ] `/api/veritie/*` requires session
+- [ ] Unleased job GET/finalize returns 403
+- [ ] `/api/chat` and `/api/attachments/versions` return 401 without session
+- [ ] Records pages load with `DATABASE_URL`
 - [ ] Capture persist enforces `accountId` ownership
 
 ## Documentation updates
 
 - [ ] [post-auth-db-audit.md](./post-auth-db-audit.md) — mark items complete (or note exceptions)
 - [ ] [capture-flow.md](../architecture/capture-flow.md) — auth boundary on proxy/persist
+- [ ] [phase-6-audit-remediation.md](./phase-6-audit-remediation.md) — audit findings tracked
 - [ ] `.env.example` — Supabase + DB vars documented
 - [ ] [README.md](./README.md) — phase status notes if needed
 
@@ -47,9 +52,9 @@ CI verification, manual E2E, security review, documentation updates. Final gate 
 
 ## Agent review record
 
-- Date: pending
-- Findings: pending
-- Resolved: pending
+- Date: 2026-08-05
+- Findings: Eight audit items — see [phase-6-audit-remediation.md](./phase-6-audit-remediation.md)
+- Resolved: Code fixes on branch; manual RLS apply pending
 
 ## Branch merge checklist
 

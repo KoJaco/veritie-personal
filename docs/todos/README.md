@@ -39,19 +39,20 @@ Working checklists for the Supabase auth and database persistence branch. Archiv
 | 5 | [phase-5-settings-account-ui.md](./phase-5-settings-account-ui.md) | Profile, sign out, delete account in `/settings` |
 | | [phase-5-handoff.md](./phase-5-handoff.md) | Phase 5 verification handoff |
 | 6 | [phase-6-verification.md](./phase-6-verification.md) | CI, E2E, security review, doc updates |
+| | [phase-6-audit-remediation.md](./phase-6-audit-remediation.md) | Security audit finding closure |
 
 ## Supporting checklists
 
 | File | Purpose |
 | --- | --- |
-| [post-auth-db-audit.md](./post-auth-db-audit.md) | Security and persistence audit items (close in Phase 4) |
+| [post-auth-db-audit.md](./post-auth-db-audit.md) | Security and persistence audit items |
+| [phase-6-audit-remediation.md](./phase-6-audit-remediation.md) | Phase 6 security audit remediation checklist |
 
 ## Reference material
 
 | Path | Purpose |
 | --- | --- |
-| `auth-example/` | Remix auth routes/UI patterns (refactor for Next.js, do not copy directly) |
-| `auth-example/schema.ts` | Identity/RBAC schema source (exclude legacy job/media tables) |
+| `docs/architecture/capture-flow.md` | Voice capture auth boundaries and sequence |
 
 ## Related docs
 

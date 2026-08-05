@@ -80,6 +80,15 @@ After the core path is stable:
 
 Not implemented in Phase 1.
 
+## Session and route protection (Phase 2+)
+
+Next.js 16 uses [`proxy.ts`](../../proxy.ts) at the repo root (replaces `middleware.ts`). On each matched request:
+
+1. [`updateSession`](../../lib/supabase/middleware.ts) refreshes Supabase cookies and resolves the auth user.
+2. Unauthenticated callers to `app/(app)/*` or `/api/*` are redirected to `/auth/login?next=…`.
+
+API routes should still call `requireUser()` or `requireSessionApiAccess()` for defense-in-depth (401 JSON, not redirect). Unauthenticated `/api/*` requests receive **401 JSON** from `proxy.ts`; app pages still redirect to `/auth/login`.
+
 ## Repository layer (Phase 3)
 
 Server read/write paths use [`lib/db/repositories/`](../../lib/db/repositories/) — not Drizzle in page components.
@@ -88,7 +97,7 @@ Server read/write paths use [`lib/db/repositories/`](../../lib/db/repositories/)
 | --- | --- |
 | `context.ts` | `AccountScope { accountId, userId }`; `requireAccountScope()` |
 | `captures.ts` | Index/detail, `findByVeritieJobId`, `persistCaptureBundle`, `mergeCaptureEnrichment`, `assertCaptureInAccount` |
-| `veritie-job-leases.ts` | `registerVeritieJobLease`, `assertVeritieJobOwnedByAccount`, proxy GET lease checks |
+| `veritie-job-leases.ts` | `registerVeritieJobLease`, `assertVeritieJobOwnedByAccount` (all job-scoped proxy paths) |
 | `timeline.ts` | Index/detail, `updateExtractedValueReviewState` |
 | `resources.ts` | Index/detail, `createResource` |
 | `tasks.ts` | Index/detail |
