@@ -41,7 +41,7 @@ Repeat persist for the same `veritie_job_id` within the account — response sho
 
 ### Resources
 
-Create a resource in the UI → row in `resources` with your `account_id`.
+Create a resource in the UI → row in `resources` with your `account_id`. The `/resources` index lists DB rows when `PLATFORM_SHELL_FE_DATA_SOURCE=backend` or onboarding is complete (Phase 4 fix).
 
 ### Tasks
 

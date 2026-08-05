@@ -87,7 +87,8 @@ Server read/write paths use [`lib/db/repositories/`](../../lib/db/repositories/)
 | Module | Responsibility |
 | --- | --- |
 | `context.ts` | `AccountScope { accountId, userId }`; `requireAccountScope()` |
-| `captures.ts` | Index/detail, `findByVeritieJobId`, `persistCaptureBundle`, `mergeCaptureEnrichment` |
+| `captures.ts` | Index/detail, `findByVeritieJobId`, `persistCaptureBundle`, `mergeCaptureEnrichment`, `assertCaptureInAccount` |
+| `veritie-job-leases.ts` | `registerVeritieJobLease`, `assertVeritieJobOwnedByAccount`, proxy GET lease checks |
 | `timeline.ts` | Index/detail, `updateExtractedValueReviewState` |
 | `resources.ts` | Index/detail, `createResource` |
 | `tasks.ts` | Index/detail |
