@@ -90,7 +90,7 @@ export function OnboardingWizard() {
     const finish = () => {
         const summary = buildBootstrapSummary(state.profile);
         persistOnboardingCompletion(summary);
-        router.push("/timeline");
+        router.push("/auth/signup");
     };
 
     return (
@@ -252,7 +252,7 @@ export function OnboardingWizard() {
                 ) : (
                     <Button type="button" onClick={finish}>
                         <Check className="mr-2 h-4 w-4" />
-                        Open timeline
+                        Continue to sign up
                     </Button>
                 )}
             </div>
