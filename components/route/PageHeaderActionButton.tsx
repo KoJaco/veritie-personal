@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 type PageHeaderActionButtonProps = ComponentProps<typeof Button> & {
     icon: LucideIcon;
     label: string;
+    variant?: "default" | "outline";
 };
 
 export function PageHeaderActionButton({
@@ -15,12 +16,13 @@ export function PageHeaderActionButton({
     label,
     className,
     children,
+    variant = "outline",
     ...props
 }: PageHeaderActionButtonProps) {
     return (
         <Button
             type="button"
-            variant="outline"
+            variant={variant}
             size="sm"
             className={cn("gap-2 max-sm:px-2.5", className)}
             aria-label={label}

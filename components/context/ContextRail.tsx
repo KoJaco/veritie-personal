@@ -163,7 +163,7 @@ export function ContextRail({ isScrolled = false }: { isScrolled?: boolean }) {
                 <DrawerContent className="h-[90vh] p-0 flex flex-col overscroll-y-contain">
                     <DrawerHeader className="flex flex-row items-center justify-between p-4 shrink-0">
                         <DrawerTitle className="text-lg font-semibold">
-                            Context Rail
+                            Ask Veritie
                         </DrawerTitle>
                         <DrawerClose asChild>
                             <Button
@@ -197,7 +197,7 @@ export function ContextRail({ isScrolled = false }: { isScrolled?: boolean }) {
                 className="h-full w-full flex flex-col border bg-background rounded-lg overflow-hidden overscroll-y-contain"
             >
                 <div className="flex items-center justify-between p-4 shrink-0">
-                    <h2 className="text-sm font-semibold">Context Rail</h2>
+                    <h2 className="text-sm font-semibold">Ask Veritie</h2>
                     <div className="flex items-center gap-2">
                         <Button
                             variant="ghost"
@@ -228,7 +228,7 @@ export function ContextRail({ isScrolled = false }: { isScrolled?: boolean }) {
 
     // OPEN_OVERLAY: slides in from right, non-modal
     return (
-        <Sheet open={true} onOpenChange={() => {}} modal={true}>
+        <Sheet open={true} onOpenChange={() => { }} modal={true}>
             <SheetContent
                 side="right"
                 nonModal={true}
@@ -243,7 +243,7 @@ export function ContextRail({ isScrolled = false }: { isScrolled?: boolean }) {
                 }}
             >
                 <div className="flex items-center justify-between pt-6 px-4 flex-shrink-0">
-                    <h2 className="text-sm font-semibold">Context Rail</h2>
+                    <h2 className="text-sm font-semibold">Ask Veritie</h2>
                     <div className="flex items-center gap-2">
                         <Button
                             variant="ghost"

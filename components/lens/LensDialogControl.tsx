@@ -42,10 +42,7 @@ function ScopeSelector({
     setDraft: (draft: ScopeLens) => void;
 }) {
     return (
-        <section className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Aspect
-            </p>
+        <section>
             <div className="grid gap-3">
                 <Button
                     type="button"
