@@ -7,10 +7,17 @@ import { mapVeritieJobToCaptureBundle } from "@/lib/capture/map-veritie-job";
 import { envServer } from "@/lib/config/env.server";
 import {
     appendCaptureFromJob,
-    findCaptureByVeritieJobId,
-    mergeCaptureEnrichment,
+    findCaptureByVeritieJobId as findStubCaptureByVeritieJobId,
+    mergeCaptureEnrichment as mergeStubCaptureEnrichment,
 } from "@/lib/data-source/captures-read-model";
 import { appendTimelineEvents } from "@/lib/data-source/timeline-read-model";
+import { getDataSourceKind } from "@/lib/data-source/registry";
+import { requireAccountScope } from "@/lib/db/repositories/context";
+import {
+    findCaptureByVeritieJobId as findDbCaptureByVeritieJobId,
+    mergeCaptureEnrichment as mergeDbCaptureEnrichment,
+    persistCaptureBundle,
+} from "@/lib/db/repositories/captures";
 import { getServerVeritieClient } from "@/lib/veritie/server-client";
 import { logger } from "@/lib/logging/server-logger";
 import { captureFlowServerLog } from "@/lib/capture/capture-flow-server-logger";
@@ -27,11 +34,21 @@ export type EnrichCaptureFromJobResult = {
     extractedValueCount: number;
 };
 
+function isBackendPersistence(): boolean {
+    return getDataSourceKind() === "backend";
+}
+
+function assertStubCaptureMutationsAllowed(): void {
+    if (!envServer.allowStubCaptureMutations) {
+        throw new Error("Capture persistence is not available in this environment");
+    }
+}
+
 export async function persistCaptureFromVeritieJob(
     jobId: string,
 ): Promise<PersistCaptureFromJobResult> {
-    if (!envServer.allowStubCaptureMutations) {
-        throw new Error("Capture persistence is not available in this environment");
+    if (!isBackendPersistence()) {
+        assertStubCaptureMutationsAllowed();
     }
 
     const requestResult = capturesPersistRequestSchema.safeParse({ jobId });
@@ -40,10 +57,14 @@ export async function persistCaptureFromVeritieJob(
     }
 
     const validatedJobId = requestResult.data.jobId;
+    const scope = isBackendPersistence() ? await requireAccountScope() : null;
 
     captureFlowServerLog.info("persist.fetch_job.start", { jobId: validatedJobId });
 
-    const existing = findCaptureByVeritieJobId(validatedJobId);
+    const existing = scope
+        ? await findDbCaptureByVeritieJobId(scope, validatedJobId)
+        : findStubCaptureByVeritieJobId(validatedJobId);
+
     if (existing) {
         captureFlowServerLog.info("persist.duplicate", {
             jobId: validatedJobId,
@@ -85,13 +106,18 @@ export async function persistCaptureFromVeritieJob(
 
     const captureId = `capture_${randomUUID()}`;
     const bundle = mapVeritieJobToCaptureBundle(jobResult.data, captureId);
-    appendCaptureFromJob({
-        capture: bundle.capture,
-        voiceLog: bundle.voiceLog,
-        segments: bundle.segments,
-        extractedValues: bundle.extractedValues,
-    });
-    appendTimelineEvents(bundle.timelineEvents);
+
+    if (scope) {
+        await persistCaptureBundle(scope, bundle);
+    } else {
+        appendCaptureFromJob({
+            capture: bundle.capture,
+            voiceLog: bundle.voiceLog,
+            segments: bundle.segments,
+            extractedValues: bundle.extractedValues,
+        });
+        appendTimelineEvents(bundle.timelineEvents);
+    }
 
     captureFlowServerLog.info("persist.saved", {
         jobId: validatedJobId,
@@ -109,8 +135,8 @@ export async function persistCaptureFromVeritieJob(
 export async function enrichCaptureFromVeritieJob(
     jobId: string,
 ): Promise<EnrichCaptureFromJobResult> {
-    if (!envServer.allowStubCaptureMutations) {
-        throw new Error("Capture persistence is not available in this environment");
+    if (!isBackendPersistence()) {
+        assertStubCaptureMutationsAllowed();
     }
 
     const requestResult = capturesPersistRequestSchema.safeParse({ jobId });
@@ -119,7 +145,12 @@ export async function enrichCaptureFromVeritieJob(
     }
 
     const validatedJobId = requestResult.data.jobId;
-    const existing = findCaptureByVeritieJobId(validatedJobId);
+    const scope = isBackendPersistence() ? await requireAccountScope() : null;
+
+    const existing = scope
+        ? await findDbCaptureByVeritieJobId(scope, validatedJobId)
+        : findStubCaptureByVeritieJobId(validatedJobId);
+
     if (!existing) {
         throw new Error("Capture not found for enrichment");
     }
@@ -149,12 +180,21 @@ export async function enrichCaptureFromVeritieJob(
     const status =
         jobResult.data.status === "completed" ? "completed" : "processing";
 
-    mergeCaptureEnrichment({
-        captureId: existing.id,
-        status,
-        extractedValues: bundle.extractedValues,
-        timelineEvents: bundle.timelineEvents,
-    });
+    if (scope) {
+        await mergeDbCaptureEnrichment(scope, {
+            captureId: existing.id,
+            status,
+            extractedValues: bundle.extractedValues,
+            timelineEvents: bundle.timelineEvents,
+        });
+    } else {
+        mergeStubCaptureEnrichment({
+            captureId: existing.id,
+            status,
+            extractedValues: bundle.extractedValues,
+            timelineEvents: bundle.timelineEvents,
+        });
+    }
 
     captureFlowServerLog.info("enrich.saved", {
         jobId: validatedJobId,

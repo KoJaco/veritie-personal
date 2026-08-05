@@ -1,8 +1,10 @@
 "use server";
 
-import { getCaptureDetail } from "@/lib/data-source/captures-read-model";
-import { getTimelineEventDetail } from "@/lib/data-source/timeline-read-model";
-import { updateExtractedValueReviewState } from "@/lib/data-source/timeline-read-model";
+import { getDataSourceAdapters } from "@/lib/data-source";
+import { getDataSourceKind } from "@/lib/data-source/registry";
+import { requireAccountScope } from "@/lib/db/repositories/context";
+import { updateExtractedValueReviewState as updateDbExtractedValueReviewState } from "@/lib/db/repositories/timeline";
+import { updateExtractedValueReviewState as updateStubExtractedValueReviewState } from "@/lib/data-source/timeline-read-model";
 import {
     persistCaptureFromVeritieJob,
     enrichCaptureFromVeritieJob,
@@ -34,13 +36,16 @@ export async function getTimelineEventDetailAction(eventId: string): Promise<{
         return null;
     }
 
-    const detail = getTimelineEventDetail(trimmed);
+    const adapters = getDataSourceAdapters();
+    const detail = await adapters.timeline.getTimelineEventDetail(trimmed);
     if (!detail) {
         return null;
     }
 
     const captureId = detail.event.captureId;
-    const captureDetail = captureId ? getCaptureDetail(captureId) : null;
+    const captureDetail = captureId
+        ? await adapters.captures.getCaptureDetail(captureId)
+        : null;
 
     return { detail, captureDetail };
 }
@@ -58,10 +63,19 @@ export async function updateExtractedValueReviewAction(
         return { ok: false, error: "Invalid review payload" };
     }
 
-    updateExtractedValueReviewState(
-        parsed.data.extractedValueId,
-        parsed.data.reviewState,
-    );
+    if (getDataSourceKind() === "backend") {
+        const scope = await requireAccountScope();
+        await updateDbExtractedValueReviewState(
+            scope,
+            parsed.data.extractedValueId,
+            parsed.data.reviewState,
+        );
+    } else {
+        updateStubExtractedValueReviewState(
+            parsed.data.extractedValueId,
+            parsed.data.reviewState,
+        );
+    }
 
     return { ok: true };
 }

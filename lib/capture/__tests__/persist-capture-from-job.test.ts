@@ -5,6 +5,10 @@ const mockAppendCaptureFromJob = jest.fn();
 const mockFindCaptureByVeritieJobId = jest.fn();
 const mockMergeCaptureEnrichment = jest.fn();
 
+jest.mock("@/lib/data-source/registry", () => ({
+    getDataSourceKind: () => "stub",
+}));
+
 jest.mock("@/lib/veritie/server-client", () => ({
     getServerVeritieClient: () => ({
         getJob: (jobId: string) => mockGetJob(jobId),
