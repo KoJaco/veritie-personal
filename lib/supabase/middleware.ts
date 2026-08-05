@@ -24,7 +24,7 @@ export async function updateSession(request: NextRequest) {
     });
 
     if (!env) {
-        return supabaseResponse;
+        return { response: supabaseResponse, user: null };
     }
 
     const supabase = createServerClient(env.url, env.publishableKey, {
@@ -46,7 +46,9 @@ export async function updateSession(request: NextRequest) {
         },
     });
 
-    await supabase.auth.getUser();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
 
-    return supabaseResponse;
+    return { response: supabaseResponse, user };
 }

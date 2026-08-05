@@ -7,6 +7,54 @@
 
 import "@testing-library/jest-dom";
 
+if (!("Request" in globalThis)) {
+    class MockRequest {
+        url: string;
+        constructor(url: string) {
+            this.url = url;
+        }
+    }
+    (globalThis as { Request?: unknown }).Request = MockRequest;
+}
+
+if (!("Response" in globalThis)) {
+    class MockResponse {
+        status: number;
+        headers: Headers;
+        private payload: unknown;
+        private rawBody: string;
+
+        constructor(body?: BodyInit | null, init?: ResponseInit) {
+            this.status = init?.status ?? 200;
+            this.headers = new Headers(init?.headers);
+            this.rawBody = typeof body === "string" ? body : "";
+            if (typeof body === "string") {
+                try {
+                    this.payload = JSON.parse(body);
+                } catch {
+                    this.payload = body;
+                }
+            } else {
+                this.payload = body;
+            }
+        }
+
+        async json() {
+            return this.payload;
+        }
+
+        async arrayBuffer() {
+            const buffer = Buffer.from(this.rawBody, "utf8");
+            return buffer.buffer.slice(
+                buffer.byteOffset,
+                buffer.byteOffset + buffer.byteLength,
+            );
+        }
+    }
+
+    (globalThis as { Response?: unknown }).Response = MockResponse;
+}
+
 // Canvas mock for waveform components in jsdom
 if (typeof HTMLCanvasElement !== "undefined") {
     HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
