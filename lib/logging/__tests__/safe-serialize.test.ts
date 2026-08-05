@@ -131,8 +131,24 @@ describe("safeStringify", () => {
 
         expect(parsed.name).toBe("test");
         expect(parsed.public).toBe("visible");
-        expect(parsed._private).toBeUndefined();
-        expect(parsed._alsoPrivate).toBeUndefined();
+        expect(parsed._private).toBe("[REDACTED]");
+        expect(parsed._alsoPrivate).toBe("[REDACTED]");
+    });
+
+    it("should redact sensitive key names", () => {
+        const obj = {
+            apiKey: "sk-secret",
+            Authorization: "Bearer token",
+            nested: { access_token: "at-123", safe: "ok" },
+        };
+
+        const result = safeStringify(obj);
+        const parsed = JSON.parse(result);
+
+        expect(parsed.apiKey).toBe("[REDACTED]");
+        expect(parsed.Authorization).toBe("[REDACTED]");
+        expect(parsed.nested.access_token).toBe("[REDACTED]");
+        expect(parsed.nested.safe).toBe("ok");
     });
 
     it("should handle arrays", () => {
