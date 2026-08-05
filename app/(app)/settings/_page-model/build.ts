@@ -20,8 +20,7 @@ export function buildSettingsRouteContract({
         pageModel: {
             meta: {
                 title: "Settings",
-                description:
-                    "Workspace admin settings and framework configuration state.",
+                description: "Account profile, session, and workspace settings.",
                 breadcrumbs: [
                     { label: "Work", href: "/timeline" },
                     { label: "Settings" },
@@ -35,42 +34,27 @@ export function buildSettingsRouteContract({
                 },
             },
             refs: {
-                visible: settings.team.slice(0, 12).map((member) => ({
-                    kind: "team_member",
-                    id: member.id,
-                    title: member.name,
-                    summary: member.role,
-                })),
+                visible: [
+                    {
+                        kind: "profile",
+                        id: settings.profile.email,
+                        title: settings.profile.name,
+                        summary: settings.profile.role,
+                    },
+                ],
             },
             sections: [
                 {
-                    key: "workspace_admin",
-                    title: "Workspace Admin",
-                    kind: "settings_admin",
+                    key: "account_profile",
+                    title: "Account Profile",
+                    kind: "settings_profile",
                     items: [
                         {
-                            kind: "team",
-                            id: "team_members",
-                            summary: String(settings.team.length),
-                        },
-                        {
-                            kind: "capability",
-                            id: "capabilities",
-                            summary: String(settings.capabilities.length),
+                            kind: "profile",
+                            id: "account_profile",
+                            summary: settings.profile.email,
                         },
                     ],
-                },
-                {
-                    key: "framework_configuration",
-                    title: "Scope Mapping",
-                    kind: "settings_scope_mapping",
-                    items: settings.scopeMapping.topValidationErrors.map(
-                        (error) => ({
-                            kind: "validation_error",
-                            id: error.id,
-                            summary: error.title,
-                        }),
-                    ),
                 },
             ],
             capabilities: {
@@ -88,7 +72,7 @@ export function buildSettingsRouteContract({
                     blockedChecks: 0,
                     overdueTasks: 0,
                     missingAttachments: 0,
-                    criteriaSetStatus: settings.scopeMapping.mappingStatus,
+                    criteriaSetStatus: "valid",
                 },
             },
         }),
