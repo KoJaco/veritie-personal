@@ -163,14 +163,7 @@ function AppHeaderInner() {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2 justify-self-end">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Notifications"
-                        title="Notifications"
-                    >
-                        <Bell className="h-4 w-4" />
-                    </Button>
+
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button
