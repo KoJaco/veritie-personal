@@ -5,6 +5,8 @@
  * These may contain sensitive secrets and should never be exposed to the browser.
  */
 
+import "server-only";
+
 import { getBooleanEnvVar, getEnvVarOptional } from "./utils";
 
 function resolveAllowStubCaptureMutations(): boolean {
@@ -51,4 +53,8 @@ export const envServer = {
 
     // Stub read-model mutations (dev/test default on, production default off)
     allowStubCaptureMutations: resolveAllowStubCaptureMutations(),
+
+    // OpenAI (assistant chat API)
+    openaiApiKey: getEnvVarOptional("OPENAI_API_KEY"),
+    openaiModel: getEnvVarOptional("OPENAI_MODEL") ?? "gpt-4o-mini",
 } as const;

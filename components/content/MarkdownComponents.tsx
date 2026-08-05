@@ -11,7 +11,7 @@ import {
   ThHTMLAttributes,
 } from "react"
 import { Pre } from "./_client/Pre"
-import { logger } from "@/lib/logging/server-logger"
+import { logger } from "@/lib/logging/client-logger"
 import { cn } from "@/lib/utils"
 
 
