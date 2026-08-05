@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals
 
 import { resetCaptureStubStoreForTests } from "@/lib/stubs/capture-stubs";
 import { resetTimelineStubStoreForTests } from "@/lib/stubs/timeline-stubs";
+import { createTestJsonRequest } from "@/lib/api/test-json-request";
 
 if (!("Request" in globalThis)) {
     class MockRequest {}
@@ -40,15 +41,9 @@ function createJsonRequest(
     body: unknown,
     options: { authorization?: string } = {},
 ) {
-    return {
-        headers: {
-            get: (name: string) => {
-                if (name === "authorization") return options.authorization ?? null;
-                return null;
-            },
-        },
-        json: async () => body,
-    } as never;
+    return createTestJsonRequest(body, {
+        authorization: options.authorization,
+    });
 }
 
 function createGetRequest(options: { authorization?: string } = {}) {

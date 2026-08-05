@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireProgrammaticApiAccess } from "@/lib/api/require-programmatic-api-access";
+import {
+    BoundedBodyError,
+    boundedBodyErrorResponse,
+    readBoundedJson,
+} from "@/lib/api/read-bounded-body";
+import { EXTRACTED_VALUE_REVIEW_MAX_BODY_BYTES } from "@/lib/api/body-limits";
 import { extractedValueReviewRequestSchema } from "@/lib/capture/extracted-value-review-schema";
 import { getDataSourceKind } from "@/lib/data-source/registry";
 import { updateExtractedValueReviewState as updateStubExtractedValueReviewState } from "@/lib/data-source/timeline-read-model";
@@ -18,7 +24,10 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-        const body = await request.json();
+        const body = await readBoundedJson(
+            request,
+            EXTRACTED_VALUE_REVIEW_MAX_BODY_BYTES,
+        );
         const parsed = extractedValueReviewRequestSchema.safeParse(body);
 
         if (!parsed.success) {
@@ -56,6 +65,9 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ ok: true });
     } catch (error) {
+        if (error instanceof BoundedBodyError) {
+            return boundedBodyErrorResponse(error);
+        }
         logger.error("[extracted-values] review_failed", {
             error: error instanceof Error ? error : String(error),
         });

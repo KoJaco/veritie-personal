@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals
 
 import { resetCaptureStubStoreForTests } from "@/lib/stubs/capture-stubs";
 import { resetTimelineStubStoreForTests } from "@/lib/stubs/timeline-stubs";
+import {
+    createTestJsonRequest,
+    createTestRequestWithContentLength,
+} from "@/lib/api/test-json-request";
 
 const mockGetJob = jest.fn<() => Promise<unknown>>();
 
@@ -86,19 +90,16 @@ function createRequest(
         contentLength?: string;
     } = {},
 ) {
-    const raw = JSON.stringify(body);
-    return {
-        headers: {
-            get: (name: string) => {
-                if (name === "authorization") return options.authorization ?? null;
-                if (name === "content-length")
-                    return options.contentLength ?? String(raw.length);
-                return null;
-            },
-        },
-        text: async () => raw,
-        json: async () => JSON.parse(raw),
-    } as never;
+    if (options.contentLength && !options.authorization) {
+        return createTestRequestWithContentLength(
+            Number.parseInt(options.contentLength, 10),
+        );
+    }
+
+    return createTestJsonRequest(body, {
+        authorization: options.authorization,
+        contentLength: options.contentLength,
+    });
 }
 
 describe("POST /api/captures", () => {

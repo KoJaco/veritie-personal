@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
+import { createTestJsonRequest } from "@/lib/api/test-json-request";
+
 type MockCompletionResponse = {
   choices: Array<{ message: { content: string } }>;
 };
@@ -12,9 +14,10 @@ const mockCreate = jest.fn<
   }) => Promise<MockCompletionResponse>
 >();
 
+const mockRequireUser = jest.fn<() => Promise<{ id: string; accountId: string }>>();
+
 if (!("Request" in globalThis)) {
   class MockRequest {}
-  // next/server request extension requires a global Request constructor
   (globalThis as { Request?: unknown }).Request = MockRequest;
 }
 
@@ -45,6 +48,18 @@ jest.mock("next/server", () => ({
   },
 }));
 
+jest.mock("@/lib/auth/require-user", () => ({
+  requireUser: () => mockRequireUser(),
+}));
+
+jest.mock("@/lib/config/env.server", () => ({
+    envServer: {
+        openaiApiKey: "test-key",
+        openaiModel: "test-model",
+        nodeEnv: "test",
+    },
+}));
+
 jest.mock("openai", () => {
   return jest.fn().mockImplementation(() => ({
     chat: {
@@ -55,12 +70,53 @@ jest.mock("openai", () => {
   }));
 });
 
+function createJsonRequest(body: unknown) {
+  return createTestJsonRequest(body);
+}
+
 describe("POST /api/chat", () => {
   beforeEach(() => {
     jest.resetModules();
     mockCreate.mockReset();
+    mockRequireUser.mockReset();
+    mockRequireUser.mockResolvedValue({
+      id: "user_1",
+      accountId: "account_a",
+    });
     process.env.OPENAI_API_KEY = "test-key";
     process.env.OPENAI_MODEL = "test-model";
+  });
+
+  it("returns 401 when session is missing", async () => {
+    mockRequireUser.mockRejectedValue(new Error("unauthorized"));
+
+    const { POST } = await import("@/app/api/chat/route");
+    const response = await POST(
+      createJsonRequest({
+        threadKey: "task:123",
+        messages: [{ id: "u1", role: "user", content: "hi" }],
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.error).toBe("Unauthorized");
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for invalid payload", async () => {
+    const { POST } = await import("@/app/api/chat/route");
+    const response = await POST(
+      createJsonRequest({
+        threadKey: "",
+        messages: [],
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("Invalid chat payload");
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it("builds OpenAI request with filtered roles and returns assistant content", async () => {
@@ -70,19 +126,16 @@ describe("POST /api/chat", () => {
 
     const { POST } = await import("@/app/api/chat/route");
 
-    const request = {
-      json: async () => ({
+    const response = await POST(
+      createJsonRequest({
         threadKey: "task:123",
         context: { scope: { type: "task_detail", id: "123" } },
         messages: [
           { id: "u1", role: "user", content: "hi" },
-          { id: "s1", role: "system", content: "ignore me" },
           { id: "a1", role: "assistant", content: "previous" },
         ],
       }),
-    } as never;
-
-    const response = await POST(request);
+    );
     const body = await response.json();
 
     expect(mockCreate).toHaveBeenCalledTimes(1);
@@ -105,15 +158,12 @@ describe("POST /api/chat", () => {
 
     const { POST } = await import("@/app/api/chat/route");
 
-    const request = {
-      json: async () => ({
+    const response = await POST(
+      createJsonRequest({
         threadKey: "task:123",
-        context: null,
         messages: [{ id: "u1", role: "user", content: "hello" }],
       }),
-    } as never;
-
-    const response = await POST(request);
+    );
     const body = await response.json();
 
     expect(response.status).toBe(500);

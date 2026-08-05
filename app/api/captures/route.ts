@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireProgrammaticApiAccess } from "@/lib/api/require-programmatic-api-access";
 import {
-    CAPTURES_PERSIST_MAX_BODY_BYTES,
-    capturesPersistRequestSchema,
-} from "@/lib/capture/captures-persist-schema";
+    BoundedBodyError,
+    boundedBodyErrorResponse,
+    readBoundedText,
+} from "@/lib/api/read-bounded-body";
+import { CAPTURES_PERSIST_MAX_BODY_BYTES } from "@/lib/api/body-limits";
+import { capturesPersistRequestSchema } from "@/lib/capture/captures-persist-schema";
 import { persistCaptureFromVeritieJob } from "@/lib/capture/persist-capture-from-job";
 import { isVeritieJobAccessError } from "@/lib/db/repositories/veritie-job-leases";
 import { logger } from "@/lib/logging/server-logger";
@@ -18,19 +21,8 @@ export async function POST(request: NextRequest) {
         return denied;
     }
 
-    const contentLength = request.headers.get("content-length");
-    if (
-        contentLength &&
-        Number.parseInt(contentLength, 10) > CAPTURES_PERSIST_MAX_BODY_BYTES
-    ) {
-        return NextResponse.json({ error: "Request body too large" }, { status: 413 });
-    }
-
     try {
-        const rawBody = await request.text();
-        if (rawBody.length > CAPTURES_PERSIST_MAX_BODY_BYTES) {
-            return NextResponse.json({ error: "Request body too large" }, { status: 413 });
-        }
+        const rawBody = await readBoundedText(request, CAPTURES_PERSIST_MAX_BODY_BYTES);
 
         let parsedBody: unknown;
         try {
@@ -50,6 +42,10 @@ export async function POST(request: NextRequest) {
         const result = await persistCaptureFromVeritieJob(requestResult.data.jobId);
         return NextResponse.json(result);
     } catch (error) {
+        if (error instanceof BoundedBodyError) {
+            return boundedBodyErrorResponse(error);
+        }
+
         logger.error("[captures] persist_failed", {
             error: error instanceof Error ? error : String(error),
         });
