@@ -19,8 +19,8 @@ Tracks closure of the independent security audit on `feat/db-auth-persistence`. 
 
 ## Manual follow-ups
 
-- [ ] Apply or re-apply `db/rls/04_policies_privilege.sql` on target Supabase project (includes `users_update` / `users_insert` drops)
-- [ ] RLS spot-check: JWT `INSERT` on `audit_logs` / `roles` fails; tenant `SELECT` works
+- [ ] Apply or re-apply `db/rls/04_policies_privilege.sql` on target Supabase project (includes `users_update` / `users_insert` drops) — **deploy step**; verify with [`05_verify_privilege.sql`](../../db/rls/05_verify_privilege.sql)
+- [ ] RLS spot-check: JWT `INSERT` on `audit_logs` / `roles` fails; tenant `SELECT` works — **merge approver**
 - [ ] Per-user rate limiting on chat/veritie proxy (deferred)
 
 ## Key files

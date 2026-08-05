@@ -11,6 +11,7 @@ Run in the Supabase SQL editor (or `psql` against your project) in this order:
 3. [`02_policies_identity.sql`](./02_policies_identity.sql) — identity / RBAC / billing
 4. [`03_policies_domain.sql`](./03_policies_domain.sql) — captures, timeline, objects
 5. [`04_policies_privilege.sql`](./04_policies_privilege.sql) — deny direct JWT writes on RBAC/billing/audit tables
+6. [`05_verify_privilege.sql`](./05_verify_privilege.sql) — post-apply JWT verification (manual)
 
 ## Tables without RLS
 

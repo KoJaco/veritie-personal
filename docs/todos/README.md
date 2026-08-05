@@ -39,6 +39,7 @@ Working checklists for the Supabase auth and database persistence branch. Archiv
 | 5 | [phase-5-settings-account-ui.md](./phase-5-settings-account-ui.md) | Profile, sign out, delete account in `/settings` |
 | | [phase-5-handoff.md](./phase-5-handoff.md) | Phase 5 verification handoff |
 | 6 | [phase-6-verification.md](./phase-6-verification.md) | CI, E2E, security review, doc updates |
+| | [phase-6-handoff.md](./phase-6-handoff.md) | Phase 6 verification evidence + merge sign-off |
 | | [phase-6-audit-remediation.md](./phase-6-audit-remediation.md) | Security audit finding closure |
 
 ## Supporting checklists

@@ -19,6 +19,6 @@ These are audit items from the Veritie integration review. Phase 4 closed the pr
 ## Production hardening
 
 - [x] Enforce request body limits via bounded reader before buffering untrusted bodies (`lib/api/read-bounded-body.ts`).
-- [ ] Re-check live capture cancellation races after persistence moves off the stub store.
+- [ ] Re-check live capture cancellation races after persistence moves off the stub store (deferred; see [phase-6-handoff.md](./phase-6-handoff.md)).
 - [x] Add integration tests for unauthorized proxy access, cross-account job IDs, and persist replay attempts.
 - [x] Phase 6 audit remediation — see [phase-6-audit-remediation.md](./phase-6-audit-remediation.md).
