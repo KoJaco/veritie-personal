@@ -11,40 +11,44 @@ Real user profile in existing `/settings`, sign out, soft-delete account. Hide t
 
 ## Implementation checklist
 
-- [ ] Profile section in `app/(app)/settings/_components/SettingsPageContent.tsx`:
+- [x] Profile section in `app/(app)/settings/_components/SettingsPageContent.tsx`:
   - Google email (from session / `users`)
   - Display name (from `user_profiles`)
   - Last login (`users.lastLoginAt`)
-- [ ] Sign out link/button → `/auth/logout`
-- [ ] Server action: update display name / account name (owner)
-- [ ] Server action: delete account (owner only)
+- [x] Sign out link/button → `/auth/logout`
+- [x] Server action: update display name / account name (owner)
+- [x] Server action: delete account (owner only)
   - Soft-delete `users.deletedAt` + `accounts.deletedAt`
   - Sign out via Supabase
   - Port logic from `auth-example/_dash.dashboard.account.settings.tsx` delete flow
-- [ ] Hide or remove stub team/RBAC/billing sections in settings UI
-- [ ] Update settings page-model builder to use real data instead of stub adapter where applicable
+- [x] Hide or remove stub team/RBAC/billing sections in settings UI
+- [x] Update settings page-model builder to use real data instead of stub adapter where applicable
 
 ## Files
 
 - `app/(app)/settings/_components/SettingsPageContent.tsx`
 - `app/(app)/settings/_page-model/build.ts` (if profile shape changes)
-- Server actions (e.g. `app/(app)/settings/actions.ts`)
+- Server actions (`app/(app)/settings/actions.ts`)
 
 ## Verification
 
-- [ ] Settings shows real user email and profile from DB
-- [ ] Sign out clears session and redirects appropriately
-- [ ] Delete account blocks re-login with deleted-account message (callback/login check)
-- [ ] Non-owner cannot delete account (if multi-user row exists in future)
+- [x] Settings shows real user email and profile from DB
+- [x] Sign out clears session and redirects appropriately
+- [x] Delete account blocks re-login with deleted-account message (callback/login check)
+- [x] Non-owner cannot delete account (if multi-user row exists in future)
 
 ## Phase review
 
-- [ ] Performance review notes — settings page single DB round-trip for profile
-- [ ] Security review notes — delete requires owner + session; soft-delete only
-- [ ] Maintainability review notes — team sections clearly deferred, not half-implemented
+- [x] Performance review notes — settings page single DB round-trip for profile
+- [x] Security review notes — delete requires owner + session; soft-delete only
+- [x] Maintainability review notes — team sections clearly deferred, not half-implemented
 
 ## Agent review record
 
-- Date: pending
-- Findings: pending
-- Resolved: pending
+- Date: 2026-08-05
+- Findings: Audit logs on delete deferred; team/RBAC UI removed not hidden
+- Resolved: Minimal account UI, layout deleted-session redirect, backend-only mutations
+
+## Handoff
+
+See [phase-5-handoff.md](./phase-5-handoff.md).
