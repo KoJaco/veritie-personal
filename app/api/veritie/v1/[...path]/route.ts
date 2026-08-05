@@ -1,4 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { UnauthorizedError } from "@/lib/auth/errors";
+import { requireUser } from "@/lib/auth/require-user";
+import { requireAccountScope } from "@/lib/db/repositories/context";
+import {
+    assertVeritieJobProxyReadAllowed,
+    isVeritieJobAccessError,
+} from "@/lib/db/repositories/veritie-job-leases";
 import { assertVeritieProxyAccess } from "@/lib/veritie/proxy-access";
 import {
     extractForwardableClientHeaders,
@@ -8,6 +15,10 @@ import {
     VERITIE_PROXY_MAX_BODY_BYTES,
     type VeritieProxyMethod,
 } from "@/lib/veritie/proxy-request";
+import {
+    injectVeritieJobMetadata,
+    registerVeritieJobLeaseFromProxyResponse,
+} from "@/lib/veritie/register-job-lease";
 import { logger } from "@/lib/logging/server-logger";
 
 type RouteContext = {
@@ -20,6 +31,15 @@ async function handleVeritieProxy(
     method: VeritieProxyMethod,
 ) {
     try {
+        try {
+            await requireUser();
+        } catch (error) {
+            if (error instanceof UnauthorizedError) {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
+            throw error;
+        }
+
         const access = assertVeritieProxyAccess(request);
         if (!access.allowed) {
             return NextResponse.json(
@@ -41,6 +61,25 @@ async function handleVeritieProxy(
             );
         }
 
+        const scope = await requireAccountScope();
+
+        if (
+            method === "GET" &&
+            path.length === 2 &&
+            path[0] === "jobs"
+        ) {
+            try {
+                await assertVeritieJobProxyReadAllowed(scope, path[1]);
+            } catch (error) {
+                if (isVeritieJobAccessError(error)) {
+                    const message =
+                        error instanceof Error ? error.message : "Forbidden";
+                    return NextResponse.json({ error: message }, { status: 403 });
+                }
+                throw error;
+            }
+        }
+
         const config = getVeritieProxyConfig();
         let body: string | null = null;
 
@@ -55,7 +94,10 @@ async function handleVeritieProxy(
                     { status: 413 },
                 );
             }
-            body = rawBody;
+            body =
+                path.length === 1 && path[0] === "jobs"
+                    ? injectVeritieJobMetadata(rawBody, scope)
+                    : rawBody;
         }
 
         const upstream = await proxyVeritieRequest({
@@ -68,11 +110,27 @@ async function handleVeritieProxy(
             signal: request.signal,
         }, config);
 
-        return new NextResponse(upstream.body, {
+        const responseText = await upstream.text();
+
+        if (method === "POST" && path.length === 1 && path[0] === "jobs") {
+            await registerVeritieJobLeaseFromProxyResponse(
+                scope,
+                path,
+                upstream.status,
+                responseText,
+            );
+        }
+
+        const responseInit: ResponseInit = {
             status: upstream.status,
             statusText: upstream.statusText,
-            headers: upstream.headers,
-        });
+        };
+        const contentType = upstream.headers.get("content-type");
+        if (contentType) {
+            responseInit.headers = { "content-type": contentType };
+        }
+
+        return new NextResponse(responseText, responseInit);
     } catch (error) {
         logger.error("[veritie-proxy] request_failed", {
             error: error instanceof Error ? error : String(error),
