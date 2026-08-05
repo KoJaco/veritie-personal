@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireInternalStubApiAccess } from "@/lib/api/require-internal-stub-api-access";
+import { requireProgrammaticApiAccess } from "@/lib/api/require-programmatic-api-access";
 import {
     CAPTURES_PERSIST_MAX_BODY_BYTES,
     capturesPersistRequestSchema,
@@ -12,12 +12,9 @@ import { logger } from "@/lib/logging/server-logger";
  * `persistCaptureAction` server action instead — no bearer secret in the client.
  */
 export async function POST(request: NextRequest) {
-    const access = requireInternalStubApiAccess(request);
-    if (!access.allowed) {
-        return NextResponse.json(
-            { error: access.message },
-            { status: access.status },
-        );
+    const denied = await requireProgrammaticApiAccess(request);
+    if (denied) {
+        return denied;
     }
 
     const contentLength = request.headers.get("content-length");

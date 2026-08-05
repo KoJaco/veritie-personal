@@ -102,9 +102,11 @@ describe("POST /api/captures", () => {
             ...originalEnv,
             NODE_ENV: "test",
             ALLOW_STUB_CAPTURE_MUTATIONS: "true",
+            PLATFORM_SHELL_FE_DATA_SOURCE: "stub",
             VERITIE_API_URL: "http://localhost:3001",
             VERITIE_PIPELINE_ALIAS: "veritie-personal",
         };
+        delete process.env.DATABASE_URL;
         mockGetJob.mockResolvedValue(completedJob);
     });
 
@@ -138,9 +140,11 @@ describe("POST /api/captures", () => {
             NODE_ENV: "production",
             CAPTURES_PERSIST_SECRET: "test-secret",
             ALLOW_STUB_CAPTURE_MUTATIONS: "true",
+            PLATFORM_SHELL_FE_DATA_SOURCE: "stub",
             VERITIE_API_URL: "http://localhost:3001",
             VERITIE_PIPELINE_ALIAS: "veritie-personal",
         };
+        delete process.env.DATABASE_URL;
 
         const { POST } = await import("@/app/api/captures/route");
         const response = await POST(
