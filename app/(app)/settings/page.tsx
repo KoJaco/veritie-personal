@@ -16,7 +16,7 @@ export default async function SettingsPage({
     searchParams,
 }: SettingsPageProps) {
     const lens = getLensFromSearchParams(await searchParams);
-    const settings = getDataSourceAdapters().settings.getSettings();
+    const settings = await getDataSourceAdapters().settings.getSettings();
     const contract = buildSettingsRouteContract({
         lens,
         settings,

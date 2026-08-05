@@ -56,7 +56,7 @@ const mockedGetDataSourceAdapters = jest.mocked(getDataSourceAdapters);
 const mockedGetStubServerBootstrap = jest.mocked(getStubServerBootstrap);
 
 function createAdapterMock(
-    settings: ReturnType<DataSourceAdapters["settings"]["getSettings"]>,
+    settings: Awaited<ReturnType<DataSourceAdapters["settings"]["getSettings"]>>,
 ): DataSourceAdapters {
     return {
         dashboard: {
@@ -92,7 +92,7 @@ function createAdapterMock(
             getConnectionDetail: jest.fn(),
         },
         settings: {
-            getSettings: () => settings,
+            getSettings: async () => settings,
         },
         timeline: {
             getTimelineIndex: jest.fn(),
