@@ -43,6 +43,11 @@ CREATE POLICY timeline_events_tenant ON public.timeline_events
   USING (account_id = public.current_account_id())
   WITH CHECK (account_id = public.current_account_id());
 
+CREATE POLICY veritie_job_leases_tenant ON public.veritie_job_leases
+  FOR ALL TO authenticated
+  USING (account_id = public.current_account_id())
+  WITH CHECK (account_id = public.current_account_id());
+
 CREATE POLICY tasks_tenant ON public.tasks
   FOR ALL TO authenticated
   USING (account_id = public.current_account_id())

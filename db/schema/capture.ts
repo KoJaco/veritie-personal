@@ -2,6 +2,7 @@
  * Drizzle schema — captures and voice log pipeline.
  * Target: PostgreSQL on Supabase.
  */
+import { sql } from "drizzle-orm";
 import {
     pgTable,
     text,
@@ -10,8 +11,11 @@ import {
     doublePrecision,
     jsonb,
     index,
+    uniqueIndex,
+    uuid,
 } from "drizzle-orm/pg-core";
 
+import { users } from "./identity";
 import { accountIdColumn } from "./tenancy";
 
 export const captures = pgTable(
@@ -30,6 +34,24 @@ export const captures = pgTable(
     (table) => [
         index("captures_account_id_idx").on(table.accountId),
         index("captures_created_at_idx").on(table.createdAt),
+        uniqueIndex("captures_account_veritie_job_uidx")
+            .on(table.accountId, table.veritieJobId)
+            .where(sql`${table.veritieJobId} IS NOT NULL`),
+    ],
+);
+
+export const veritieJobLeases = pgTable(
+    "veritie_job_leases",
+    {
+        jobId: text("job_id").primaryKey(),
+        accountId: accountIdColumn(),
+        userId: uuid("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    },
+    (table) => [
+        index("veritie_job_leases_account_id_idx").on(table.accountId),
     ],
 );
 

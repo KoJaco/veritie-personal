@@ -187,6 +187,33 @@ export async function getCaptureDetail(scope: AccountScope, id: string) {
     });
 }
 
+export async function assertCaptureInAccount(
+    scope: AccountScope,
+    captureId: string,
+): Promise<void> {
+    const db = getDb();
+    const row = await db.query.captures.findFirst({
+        where: and(
+            eq(captures.accountId, scope.accountId),
+            eq(captures.id, captureId),
+        ),
+        columns: { id: true },
+    });
+
+    if (!row) {
+        throw new Error("Capture not found");
+    }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+    return (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code: string }).code === "23505"
+    );
+}
+
 export async function persistCaptureBundle(
     scope: AccountScope,
     bundle: CapturePersistBundle,
@@ -195,111 +222,128 @@ export async function persistCaptureBundle(
     const accountId = scope.accountId;
     const now = new Date();
 
-    await db.transaction(async (tx) => {
-        await tx.insert(captures).values({
-            id: bundle.capture.id,
-            accountId,
-            type: bundle.capture.type,
-            status: bundle.capture.status,
-            title: bundle.capture.title,
-            aspectIds: bundle.capture.aspectIds,
-            veritieJobId: bundle.capture.veritieJobId,
-            createdAt: parseDate(bundle.capture.createdAt),
-            updatedAt: parseDate(bundle.capture.updatedAt),
-        });
+    try {
+        await db.transaction(async (tx) => {
+            await tx.insert(captures).values({
+                id: bundle.capture.id,
+                accountId,
+                type: bundle.capture.type,
+                status: bundle.capture.status,
+                title: bundle.capture.title,
+                aspectIds: bundle.capture.aspectIds,
+                veritieJobId: bundle.capture.veritieJobId,
+                createdAt: parseDate(bundle.capture.createdAt),
+                updatedAt: parseDate(bundle.capture.updatedAt),
+            });
 
-        await tx.insert(voiceLogs).values({
-            id: bundle.voiceLog.id,
-            accountId,
-            captureId: bundle.capture.id,
-            transcriptText: bundle.voiceLog.transcriptText,
-            language: bundle.voiceLog.language,
-            durationMs: bundle.voiceLog.durationMs,
-            audioUri: bundle.voiceLog.audioUri,
-            createdAt: parseDate(bundle.voiceLog.createdAt),
-            updatedAt: parseDate(bundle.voiceLog.updatedAt),
-        });
-
-        if (bundle.segments.length > 0) {
-            await tx.insert(transcriptSegments).values(
-                bundle.segments.map((segment) => ({
-                    id: segment.id,
-                    accountId,
-                    voiceLogId: segment.voiceLogId,
-                    index: segment.index,
-                    startMs: segment.startMs,
-                    endMs: segment.endMs,
-                    text: segment.text,
-                    speakerLabel: segment.speakerLabel,
-                    confidence: segment.confidence,
-                })),
-            );
-        }
-
-        if (bundle.extractedValues.length > 0) {
-            const extractionRunId = bundle.extractedValues[0]?.extractionRunId ??
-                `extraction_${bundle.capture.id}`;
-
-            await tx.insert(extractionRuns).values({
-                id: extractionRunId,
+            await tx.insert(voiceLogs).values({
+                id: bundle.voiceLog.id,
                 accountId,
                 captureId: bundle.capture.id,
-                status: "completed",
-                schemaVersion: "1",
-                startedAt: now,
-                completedAt: now,
-                createdAt: now,
+                transcriptText: bundle.voiceLog.transcriptText,
+                language: bundle.voiceLog.language,
+                durationMs: bundle.voiceLog.durationMs,
+                audioUri: bundle.voiceLog.audioUri,
+                createdAt: parseDate(bundle.voiceLog.createdAt),
+                updatedAt: parseDate(bundle.voiceLog.updatedAt),
             });
 
-            await tx.insert(extractedValues).values(
-                bundle.extractedValues.map((value) => ({
-                    id: value.id,
+            if (bundle.segments.length > 0) {
+                await tx.insert(transcriptSegments).values(
+                    bundle.segments.map((segment) => ({
+                        id: segment.id,
+                        accountId,
+                        voiceLogId: segment.voiceLogId,
+                        index: segment.index,
+                        startMs: segment.startMs,
+                        endMs: segment.endMs,
+                        text: segment.text,
+                        speakerLabel: segment.speakerLabel,
+                        confidence: segment.confidence,
+                    })),
+                );
+            }
+
+            if (bundle.extractedValues.length > 0) {
+                const extractionRunId =
+                    bundle.extractedValues[0]?.extractionRunId ??
+                    `extraction_${bundle.capture.id}`;
+
+                await tx.insert(extractionRuns).values({
+                    id: extractionRunId,
                     accountId,
-                    extractionRunId: value.extractionRunId,
-                    captureId: value.captureId,
-                    objectType: value.objectType,
-                    aspect: value.aspect,
-                    title: value.title,
-                    fields: value.fields,
-                    confidence: value.confidence,
-                    reviewState: value.reviewState,
-                    createdAt: parseDate(value.createdAt),
-                    updatedAt: parseDate(value.updatedAt),
-                })),
-            );
-        }
+                    captureId: bundle.capture.id,
+                    status: "completed",
+                    schemaVersion: "1",
+                    startedAt: now,
+                    completedAt: now,
+                    createdAt: now,
+                });
 
-        if (bundle.timelineEvents.length > 0) {
-            await tx.insert(timelineEvents).values(
-                bundle.timelineEvents.map((event) => ({
-                    id: event.id,
+                await tx.insert(extractedValues).values(
+                    bundle.extractedValues.map((value) => ({
+                        id: value.id,
+                        accountId,
+                        extractionRunId: value.extractionRunId,
+                        captureId: value.captureId,
+                        objectType: value.objectType,
+                        aspect: value.aspect,
+                        title: value.title,
+                        fields: value.fields,
+                        confidence: value.confidence,
+                        reviewState: value.reviewState,
+                        createdAt: parseDate(value.createdAt),
+                        updatedAt: parseDate(value.updatedAt),
+                    })),
+                );
+            }
+
+            if (bundle.timelineEvents.length > 0) {
+                await tx.insert(timelineEvents).values(
+                    bundle.timelineEvents.map((event) => ({
+                        id: event.id,
+                        accountId,
+                        type: event.type,
+                        title: event.title,
+                        summary: event.summary,
+                        aspect: event.aspect,
+                        occurredAt: parseDate(event.occurredAt),
+                        captureId: event.captureId,
+                        extractedValueId: event.extractedValueId,
+                        extractedObjectType: event.extractedObjectType,
+                        reviewState: event.reviewState,
+                        confidence: event.confidence,
+                        createdAt: parseDate(event.createdAt),
+                    })),
+                );
+            }
+
+            if (bundle.capture.veritieJobId) {
+                await tx.insert(usageEvents).values({
                     accountId,
-                    type: event.type,
-                    title: event.title,
-                    summary: event.summary,
-                    aspect: event.aspect,
-                    occurredAt: parseDate(event.occurredAt),
-                    captureId: event.captureId,
-                    extractedValueId: event.extractedValueId,
-                    extractedObjectType: event.extractedObjectType,
-                    reviewState: event.reviewState,
-                    confidence: event.confidence,
-                    createdAt: parseDate(event.createdAt),
-                })),
+                    usageType: "voice_log",
+                    quantity: 1,
+                    jobId: bundle.capture.veritieJobId,
+                });
+            }
+        });
+    } catch (error) {
+        if (
+            isUniqueViolation(error) &&
+            bundle.capture.veritieJobId
+        ) {
+            const existing = await findCaptureByVeritieJobId(
+                scope,
+                bundle.capture.veritieJobId,
             );
+            if (existing) {
+                return { capture: existing, duplicate: true };
+            }
         }
+        throw error;
+    }
 
-        if (bundle.capture.veritieJobId) {
-            await tx.insert(usageEvents).values({
-                accountId,
-                usageType: "voice_log",
-                quantity: 1,
-                jobId: bundle.capture.veritieJobId,
-            });
-        }
-    });
-
-    return bundle.capture;
+    return { capture: bundle.capture };
 }
 
 export async function mergeCaptureEnrichment(
@@ -314,6 +358,8 @@ export async function mergeCaptureEnrichment(
     const db = getDb();
     const accountId = scope.accountId;
     const now = new Date();
+
+    await assertCaptureInAccount(scope, input.captureId);
 
     await db.transaction(async (tx) => {
         if (input.status) {
