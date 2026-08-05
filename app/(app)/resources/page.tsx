@@ -42,7 +42,7 @@ export default async function ResourcesPage({ searchParams }: ResourcesPageProps
     const requestedPage = parsePageParam(resolvedSearchParams.page);
 
     const resourcesIndex = applyResourcesIndexQuery(
-        dataSource.resources.getResourcesIndex().items,
+        (await dataSource.resources.getResourcesIndex()).items,
         {
             filters: {
                 search: query || undefined,

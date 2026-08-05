@@ -6,11 +6,13 @@ import {
 import { stubDataSourceAdapters } from "@/lib/data-source/stub-adapter";
 
 describe("resources route contract validation", () => {
-    it("accepts a valid resource detail contract shape", () => {
+    it("accepts a valid resource detail contract shape", async () => {
         const contract = buildResourcesRouteContract({
             scope: "resources_detail",
             lens: { scope: "all" },
-            resource: stubDataSourceAdapters.resources.getResourceDetail("resource_seed_3"),
+            resource: await stubDataSourceAdapters.resources.getResourceDetail(
+                "resource_seed_3",
+            ),
         });
 
         const result = validateResourcesRouteContractShape(contract);

@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth/require-user";
 import { getDataSourceAdapters } from "@/lib/data-source";
 import type { CreateResourceInput } from "@/lib/data-source";
 
 export async function POST(request: Request) {
+    try {
+        await requireUser();
+    } catch {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const input = (await request.json()) as CreateResourceInput;
 
     if (!input.name?.trim()) {
@@ -19,6 +26,6 @@ export async function POST(request: Request) {
         );
     }
 
-    const result = getDataSourceAdapters().resources.createResource(input);
+    const result = await getDataSourceAdapters().resources.createResource(input);
     return NextResponse.json(result, { status: 201 });
 }
