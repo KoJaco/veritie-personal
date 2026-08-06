@@ -10,7 +10,7 @@ import {
     type ReactNode,
 } from "react";
 import { useVeritie, type useVeritie as UseVeritieHook } from "@veritie/sdk";
-import type { PipelineHandle } from "@veritie/sdk";
+import type { CaptureJobMetadata, PipelineHandle } from "@veritie/sdk";
 import { browserFetch } from "@/lib/veritie/browser-fetch";
 import { captureFlowLog } from "@/lib/capture/capture-flow-logger";
 
@@ -21,8 +21,10 @@ type VeritieCaptureLeaseContextValue = {
     captureHandle: PipelineHandle | null;
     leasePhase: CaptureLeasePhase;
     leaseError: string | null;
-    prepareLease: () => Promise<void>;
-    renewLease: () => Promise<void>;
+    prepareLeaseForRecording: (
+        metadata: CaptureJobMetadata,
+    ) => Promise<PipelineHandle>;
+    renewLease: () => void;
     releaseLease: () => void;
 };
 
@@ -56,50 +58,63 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
         setLeaseError(null);
     }, [captureHandle, veritie]);
 
-    const prepareLease = useCallback(async () => {
-        const generation = prepareGenerationRef.current + 1;
-        prepareGenerationRef.current = generation;
-        setLeasePhase("preparing");
-        setLeaseError(null);
+    const prepareLeaseForRecording = useCallback(
+        async (metadata: CaptureJobMetadata): Promise<PipelineHandle> => {
+            const generation = prepareGenerationRef.current + 1;
+            prepareGenerationRef.current = generation;
+            setLeasePhase("preparing");
+            setLeaseError(null);
 
-        captureHandle?.close();
-        veritie.clearPreparedHandle();
-        setCaptureHandle(null);
+            captureHandle?.close();
+            veritie.clearPreparedHandle();
+            setCaptureHandle(null);
 
-        try {
-            captureFlowLog.info("lease.prepare.start");
-            const handle = await veritie.prepareCapture(
-                { audio_content_type: "audio/webm" },
-                { transportPolicy: "live_only" },
-            );
+            try {
+                captureFlowLog.info("lease.prepare.start", {
+                    captured_at: metadata.captured_at,
+                    timezone: metadata.timezone,
+                    locale: metadata.locale,
+                    has_location_label: Boolean(metadata.location_label),
+                });
+                const handle = await veritie.prepareCapture(
+                    {
+                        audio_content_type: "audio/webm",
+                        metadata,
+                    },
+                    { transportPolicy: "live_only" },
+                );
 
-            if (prepareGenerationRef.current !== generation) {
-                handle.close();
-                return;
+                if (prepareGenerationRef.current !== generation) {
+                    handle.close();
+                    throw new Error("Capture lease preparation was superseded");
+                }
+
+                setCaptureHandle(handle);
+                setLeasePhase("ready");
+                captureFlowLog.info("lease.prepare.ready", {
+                    jobId: handle.snapshot.jobId,
+                    sessionId: handle.snapshot.bootstrap.stream_ingest?.session_id,
+                });
+                return handle;
+            } catch (error) {
+                if (prepareGenerationRef.current !== generation) {
+                    throw new Error("Capture lease preparation was superseded");
+                }
+
+                const message =
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to prepare Veritie capture lease";
+                setLeaseError(message);
+                setLeasePhase("error");
+                captureFlowLog.error("lease.prepare.failed", { error: message });
+                throw error instanceof Error ? error : new Error(message);
             }
+        },
+        [captureHandle, veritie],
+    );
 
-            setCaptureHandle(handle);
-            setLeasePhase("ready");
-            captureFlowLog.info("lease.prepare.ready", {
-                jobId: handle.snapshot.jobId,
-                sessionId: handle.snapshot.bootstrap.stream_ingest?.session_id,
-            });
-        } catch (error) {
-            if (prepareGenerationRef.current !== generation) {
-                return;
-            }
-
-            const message =
-                error instanceof Error
-                    ? error.message
-                    : "Failed to prepare Veritie capture lease";
-            setLeaseError(message);
-            setLeasePhase("error");
-            captureFlowLog.error("lease.prepare.failed", { error: message });
-        }
-    }, [captureHandle, veritie]);
-
-    const renewLease = useCallback(async () => {
+    const renewLease = useCallback(() => {
         captureFlowLog.info("lease.renew", {
             jobId: captureHandle?.snapshot.jobId,
         });
@@ -107,8 +122,8 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
         veritie.clearPreparedHandle();
         setCaptureHandle(null);
         setLeasePhase("idle");
-        await prepareLease();
-    }, [captureHandle, prepareLease, veritie]);
+        setLeaseError(null);
+    }, [captureHandle, veritie]);
 
     const value = useMemo(
         () => ({
@@ -116,7 +131,7 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
             captureHandle,
             leasePhase,
             leaseError,
-            prepareLease,
+            prepareLeaseForRecording,
             renewLease,
             releaseLease,
         }),
@@ -125,7 +140,7 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
             captureHandle,
             leasePhase,
             leaseError,
-            prepareLease,
+            prepareLeaseForRecording,
             renewLease,
             releaseLease,
         ],

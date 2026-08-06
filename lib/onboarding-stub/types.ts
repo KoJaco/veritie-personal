@@ -10,6 +10,7 @@ export interface StubOnboardingProfile {
     capturePreference: OnboardingCapturePreference;
     aiMode: OnboardingAiMode;
     saveVoiceLogAudio?: boolean;
+    captureLocationLabel?: string;
 }
 
 export type StubBootstrapSummary = StubOnboardingProfile;

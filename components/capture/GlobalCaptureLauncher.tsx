@@ -28,7 +28,7 @@ import { LAYER_CLASS } from "@/lib/ui/layering";
 import { cn } from "@/lib/utils";
 import { isCaptureJobInFlight } from "@/lib/capture/capture-background-pipeline";
 import { captureJobCoordinator } from "@/lib/capture/capture-job-coordinator";
-import { getVoiceLogPreferences } from "@/lib/capture/capture-audio-client";
+import { getCapturePreferences } from "@/lib/capture/capture-audio-client";
 
 const LAUNCHER_BACKDROP_Z = LAYER_CLASS.launcherBackdrop;
 const LAUNCHER_CHROME_Z = LAYER_CLASS.launcherChrome;
@@ -71,8 +71,9 @@ function GlobalCaptureLauncherInner() {
     const suppressTriggerClickRef = useRef(false);
     const openedAtRef = useRef(0);
 
-    const { prepareLease, releaseLease, captureHandle } = useVeritieCaptureLease();
+    const { releaseLease, captureHandle } = useVeritieCaptureLease();
     const [saveVoiceLogAudio, setSaveVoiceLogAudio] = useState(false);
+    const [captureLocationLabel, setCaptureLocationLabel] = useState("");
     const pendingReleaseJobIdRef = useRef<string | null>(null);
 
     const resetTransientState = useCallback(() => {
@@ -103,11 +104,11 @@ function GlobalCaptureLauncherInner() {
         openedAtRef.current = Date.now();
         setOpen(true);
         resetTransientState();
-        void prepareLease();
-        void getVoiceLogPreferences().then((prefs) => {
+        void getCapturePreferences().then((prefs) => {
             setSaveVoiceLogAudio(prefs.saveVoiceLogAudio);
+            setCaptureLocationLabel(prefs.captureLocationLabel ?? "");
         });
-    }, [prepareLease, resetTransientState]);
+    }, [resetTransientState]);
 
     useEffect(() => {
         return captureJobCoordinator.subscribe((event) => {
@@ -388,6 +389,7 @@ function GlobalCaptureLauncherInner() {
                             onBack={returnToOptions}
                             onComplete={close}
                             saveVoiceLogAudio={saveVoiceLogAudio}
+                            captureLocationLabel={captureLocationLabel}
                         />
                     </motion.div>
                 )}

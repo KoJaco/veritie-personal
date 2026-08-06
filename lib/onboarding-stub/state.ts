@@ -5,6 +5,7 @@ import type {
     StubOnboardingProfile,
     StubServerBootstrap,
 } from "./types";
+import { captureLocationLabelSchema } from "@/lib/capture/capture-context-schema";
 
 export const STUB_ONBOARDING_COMPLETED_COOKIE = "stub_onboarding_completed";
 export const STUB_BOOTSTRAP_COOKIE = "stub_bootstrap";
@@ -26,6 +27,7 @@ const bootstrapSummarySchema = z
         capturePreference: capturePreferenceSchema,
         aiMode: aiModeSchema,
         saveVoiceLogAudio: z.boolean().optional(),
+        captureLocationLabel: captureLocationLabelSchema,
     })
     .strict();
 
@@ -63,6 +65,8 @@ export function buildBootstrapSummary(
         enabledAspects: [...profile.enabledAspects],
         capturePreference: profile.capturePreference,
         aiMode: profile.aiMode,
+        saveVoiceLogAudio: profile.saveVoiceLogAudio,
+        captureLocationLabel: profile.captureLocationLabel,
     };
 }
 

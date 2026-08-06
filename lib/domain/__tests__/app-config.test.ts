@@ -11,6 +11,7 @@ describe("app-config", () => {
             enabledAspects: ["work", "finance"],
             capturePreference: "balanced",
             aiMode: "lean",
+            captureLocationLabel: "North Manly",
         });
 
         expect(config).toEqual({
@@ -19,6 +20,7 @@ describe("app-config", () => {
             capturePreference: "balanced",
             aiMode: "lean",
             saveVoiceLogAudio: false,
+            captureLocationLabel: "North Manly",
         });
     });
 

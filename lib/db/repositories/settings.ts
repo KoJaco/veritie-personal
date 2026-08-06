@@ -49,6 +49,10 @@ export async function getSettings(scope: AccountScope): Promise<SettingsStub> {
                 parseAppConfigFromSettings(
                     account?.settings as Record<string, unknown> | null,
                 )?.saveVoiceLogAudio ?? false,
+            captureLocationLabel:
+                parseAppConfigFromSettings(
+                    account?.settings as Record<string, unknown> | null,
+                )?.captureLocationLabel ?? "",
         },
         team: [],
         capabilities: [],
@@ -157,7 +161,7 @@ export async function softDeleteAccount(scope: AccountScope): Promise<boolean> {
 
 export async function updateAccountAppConfig(
     scope: AccountScope,
-    patch: Partial<Pick<AppConfig, "saveVoiceLogAudio">>,
+    patch: Partial<Pick<AppConfig, "saveVoiceLogAudio" | "captureLocationLabel">>,
 ): Promise<boolean> {
     const db = getDb();
     const account = await db.query.accounts.findFirst({

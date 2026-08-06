@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { DEFAULT_ONBOARDING_PROFILE } from "@/lib/onboarding-stub/state";
+import { captureLocationLabelSchema } from "@/lib/capture/capture-context-schema";
 
 export const aspectKeySchema = z.enum([
     "finance",
@@ -25,6 +26,7 @@ export const onboardingProfileSchema = z
         capturePreference: capturePreferenceSchema,
         aiMode: aiModeSchema,
         saveVoiceLogAudio: z.boolean().optional(),
+        captureLocationLabel: captureLocationLabelSchema,
     })
     .strict();
 
@@ -37,6 +39,7 @@ export const appConfigSchema = z
         capturePreference: capturePreferenceSchema,
         aiMode: aiModeSchema,
         saveVoiceLogAudio: z.boolean().optional().default(false),
+        captureLocationLabel: captureLocationLabelSchema,
     })
     .strict();
 
@@ -58,6 +61,7 @@ export function buildAppConfigFromOnboarding(
         capturePreference: profile.capturePreference,
         aiMode: profile.aiMode,
         saveVoiceLogAudio: profile.saveVoiceLogAudio ?? false,
+        captureLocationLabel: profile.captureLocationLabel,
     });
 }
 
@@ -84,6 +88,9 @@ export function resolveAppConfig(
                 profile.saveVoiceLogAudio ??
                 DEFAULT_ONBOARDING_PROFILE.saveVoiceLogAudio ??
                 false,
+            captureLocationLabel:
+                profile.captureLocationLabel ??
+                DEFAULT_ONBOARDING_PROFILE.captureLocationLabel,
         }),
         onboardingCompleted,
     );

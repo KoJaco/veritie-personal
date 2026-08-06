@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SURFACE_CLASS } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
 import type { SettingsStub } from "@/lib/stubs";
+import { CaptureContextForm } from "./CaptureContextForm";
 import { DeleteAccountDialog } from "./DeleteAccountDialog";
 import { ProfileEditForm } from "./ProfileEditForm";
 import { VoiceLogBehaviorForm } from "./VoiceLogBehaviorForm";
@@ -64,6 +65,13 @@ export function SettingsPageContent({
 
             <VoiceLogBehaviorForm
                 saveVoiceLogAudio={settings.voiceLog?.saveAudio ?? false}
+                mutationsEnabled={mutationsEnabled}
+            />
+
+            <CaptureContextForm
+                captureLocationLabel={
+                    settings.voiceLog?.captureLocationLabel ?? ""
+                }
                 mutationsEnabled={mutationsEnabled}
             />
 

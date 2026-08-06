@@ -146,7 +146,7 @@ export function OnboardingWizard() {
                                         SURFACE_CLASS_NESTED,
                                         "w-full rounded-xl px-4 py-3 text-left",
                                         state.profile.capturePreference ===
-                                            option.value && "ring-2 ring-primary",
+                                        option.value && "ring-2 ring-primary",
                                     )}
                                     onClick={() =>
                                         setState((current) => ({
@@ -167,6 +167,32 @@ export function OnboardingWizard() {
                             ))}
                         </section>
                         <section className="space-y-3">
+                            <p className="text-sm font-medium">
+                                Default location label
+                            </p>
+                            <input
+                                type="text"
+                                className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm"
+                                placeholder="e.g. Sydney"
+                                maxLength={120}
+                                value={state.profile.captureLocationLabel ?? ""}
+                                onChange={(event) =>
+                                    setState((current) => ({
+                                        ...current,
+                                        profile: {
+                                            ...current.profile,
+                                            captureLocationLabel:
+                                                event.target.value,
+                                        },
+                                    }))
+                                }
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Optional context sent with voice captures. Leave
+                                blank to omit.
+                            </p>
+                        </section>
+                        <section className="space-y-3">
                             <p className="text-sm font-medium">Voice log audio</p>
                             <button
                                 type="button"
@@ -174,7 +200,7 @@ export function OnboardingWizard() {
                                     SURFACE_CLASS_NESTED,
                                     "w-full rounded-xl px-4 py-3 text-left",
                                     state.profile.saveVoiceLogAudio &&
-                                        "ring-2 ring-primary",
+                                    "ring-2 ring-primary",
                                 )}
                                 onClick={() =>
                                     setState((current) => ({
@@ -206,7 +232,7 @@ export function OnboardingWizard() {
                                         SURFACE_CLASS_NESTED,
                                         "w-full rounded-xl px-4 py-3 text-left",
                                         state.profile.aiMode === option.value &&
-                                            "ring-2 ring-primary",
+                                        "ring-2 ring-primary",
                                     )}
                                     onClick={() =>
                                         setState((current) => ({
@@ -245,6 +271,14 @@ export function OnboardingWizard() {
                         <div>
                             <dt className="text-muted-foreground">Assistant</dt>
                             <dd className="font-medium">{state.profile.aiMode}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-muted-foreground">Location</dt>
+                            <dd className="font-medium">
+                                {state.profile.captureLocationLabel?.trim()
+                                    ? state.profile.captureLocationLabel
+                                    : "Not set"}
+                            </dd>
                         </div>
                         <div>
                             <dt className="text-muted-foreground">Save audio</dt>
