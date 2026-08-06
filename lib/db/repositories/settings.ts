@@ -4,6 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import { accounts, userProfiles, users } from "@/db/schema/identity";
 import { getDb } from "@/lib/db";
+import { parseAppConfigFromSettings, type AppConfig } from "@/lib/domain/app-config";
 import type { SettingsStub } from "@/lib/stubs/types";
 
 import type { AccountScope } from "./context";
@@ -42,6 +43,12 @@ export async function getSettings(scope: AccountScope): Promise<SettingsStub> {
                 ? user.lastLoginAt.toISOString()
                 : new Date().toISOString(),
             workspaceName: account?.name ?? "",
+        },
+        voiceLog: {
+            saveAudio:
+                parseAppConfigFromSettings(
+                    account?.settings as Record<string, unknown> | null,
+                )?.saveVoiceLogAudio ?? false,
         },
         team: [],
         capabilities: [],
@@ -148,3 +155,45 @@ export async function softDeleteAccount(scope: AccountScope): Promise<boolean> {
     return updatedAccounts.length > 0;
 }
 
+export async function updateAccountAppConfig(
+    scope: AccountScope,
+    patch: Partial<Pick<AppConfig, "saveVoiceLogAudio">>,
+): Promise<boolean> {
+    const db = getDb();
+    const account = await db.query.accounts.findFirst({
+        where: eq(accounts.id, scope.accountId),
+    });
+    if (!account) {
+        return false;
+    }
+
+    const currentSettings =
+        (account.settings as Record<string, unknown> | null) ?? {};
+    const currentAppConfig =
+        parseAppConfigFromSettings(currentSettings) ?? {
+            onboardingCompleted: true,
+            enabledAspects: ["personal"],
+            capturePreference: "voice_first",
+            aiMode: "guided",
+            saveVoiceLogAudio: false,
+        };
+
+    const nextAppConfig = {
+        ...currentAppConfig,
+        ...patch,
+    };
+
+    const updated = await db
+        .update(accounts)
+        .set({
+            settings: {
+                ...currentSettings,
+                appConfig: nextAppConfig,
+            },
+            updatedAt: new Date(),
+        })
+        .where(eq(accounts.id, scope.accountId))
+        .returning({ id: accounts.id });
+
+    return updated.length > 0;
+}

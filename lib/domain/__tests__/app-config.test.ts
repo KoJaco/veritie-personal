@@ -18,6 +18,7 @@ describe("app-config", () => {
             enabledAspects: ["work", "finance"],
             capturePreference: "balanced",
             aiMode: "lean",
+            saveVoiceLogAudio: false,
         });
     });
 

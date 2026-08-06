@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { SettingsStub } from "@/lib/stubs";
 import { DeleteAccountDialog } from "./DeleteAccountDialog";
 import { ProfileEditForm } from "./ProfileEditForm";
+import { VoiceLogBehaviorForm } from "./VoiceLogBehaviorForm";
 
 export function SettingsPageContent({
     settings,
@@ -58,6 +59,11 @@ export function SettingsPageContent({
                 email={settings.profile.email}
                 workspaceName={settings.profile.workspaceName ?? ""}
                 isOwner={isOwner}
+                mutationsEnabled={mutationsEnabled}
+            />
+
+            <VoiceLogBehaviorForm
+                saveVoiceLogAudio={settings.voiceLog?.saveAudio ?? false}
                 mutationsEnabled={mutationsEnabled}
             />
 

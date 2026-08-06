@@ -7,6 +7,7 @@ import { getDataSourceKind } from "@/lib/data-source/registry";
 import { requireAccountScope } from "@/lib/db/repositories/context";
 import {
     softDeleteAccount,
+    updateAccountAppConfig,
     updateAccountName,
     updateUserProfileFullName,
 } from "@/lib/db/repositories/settings";
@@ -55,6 +56,30 @@ export async function updateProfileAction(input: {
         if (!accountUpdated) {
             return { ok: false, error: "Could not update workspace name" };
         }
+    }
+
+    return { ok: true };
+}
+
+export async function updateVoiceLogBehaviorAction(input: {
+    saveVoiceLogAudio: boolean;
+}): Promise<SettingsActionResult> {
+    await requireUser();
+
+    if (getDataSourceKind() !== "backend") {
+        return {
+            ok: false,
+            error: "Voice log settings require database-backed mode",
+        };
+    }
+
+    const scope = await requireAccountScope();
+    const updated = await updateAccountAppConfig(scope, {
+        saveVoiceLogAudio: input.saveVoiceLogAudio,
+    });
+
+    if (!updated) {
+        return { ok: false, error: "Could not update voice log settings" };
     }
 
     return { ok: true };

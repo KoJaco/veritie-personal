@@ -24,6 +24,7 @@ export const onboardingProfileSchema = z
         enabledAspects: z.array(aspectKeySchema).min(1),
         capturePreference: capturePreferenceSchema,
         aiMode: aiModeSchema,
+        saveVoiceLogAudio: z.boolean().optional(),
     })
     .strict();
 
@@ -35,6 +36,7 @@ export const appConfigSchema = z
         enabledAspects: z.array(aspectKeySchema).min(1),
         capturePreference: capturePreferenceSchema,
         aiMode: aiModeSchema,
+        saveVoiceLogAudio: z.boolean().optional().default(false),
     })
     .strict();
 
@@ -43,6 +45,7 @@ export type AppConfig = z.infer<typeof appConfigSchema>;
 export const DEFAULT_APP_CONFIG: AppConfig = {
     onboardingCompleted: false,
     ...DEFAULT_ONBOARDING_PROFILE,
+    saveVoiceLogAudio: false,
 };
 
 export function buildAppConfigFromOnboarding(
@@ -54,6 +57,7 @@ export function buildAppConfigFromOnboarding(
         enabledAspects: [...profile.enabledAspects],
         capturePreference: profile.capturePreference,
         aiMode: profile.aiMode,
+        saveVoiceLogAudio: profile.saveVoiceLogAudio ?? false,
     });
 }
 
@@ -76,6 +80,10 @@ export function resolveAppConfig(
                 profile.capturePreference ??
                 DEFAULT_ONBOARDING_PROFILE.capturePreference,
             aiMode: profile.aiMode ?? DEFAULT_ONBOARDING_PROFILE.aiMode,
+            saveVoiceLogAudio:
+                profile.saveVoiceLogAudio ??
+                DEFAULT_ONBOARDING_PROFILE.saveVoiceLogAudio ??
+                false,
         }),
         onboardingCompleted,
     );

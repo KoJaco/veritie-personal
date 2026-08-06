@@ -292,6 +292,9 @@ export interface SettingsStub {
     team: TeamMemberStub[];
     capabilities: RoleCapabilityStub[];
     scopeMapping: ScopeMappingConfigStub;
+    voiceLog?: {
+        saveAudio: boolean;
+    };
     /** @deprecated Use scopeMapping */
     frameworkConfiguration: {
         soc2: ScopeMappingConfigStub;

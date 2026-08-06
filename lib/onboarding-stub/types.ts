@@ -9,6 +9,7 @@ export interface StubOnboardingProfile {
     enabledAspects: PersonalFocusAspect[];
     capturePreference: OnboardingCapturePreference;
     aiMode: OnboardingAiMode;
+    saveVoiceLogAudio?: boolean;
 }
 
 export type StubBootstrapSummary = StubOnboardingProfile;
