@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { formatLocaleDateTime, isDateLike } from "@/lib/format/iso-datetime";
+
 export type PrimitiveArtifactValue = string | number | boolean | null;
 
 export function isPrimitiveArtifactValue(
@@ -56,6 +58,10 @@ export function formatPrimitiveValue(value: PrimitiveArtifactValue): string {
 
     if (typeof value === "boolean") {
         return value ? "Yes" : "No";
+    }
+
+    if (typeof value === "string" && isDateLike(value)) {
+        return formatLocaleDateTime(value);
     }
 
     return String(value);

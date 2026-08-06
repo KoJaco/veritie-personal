@@ -17,6 +17,7 @@ import { updateExtractedValueAction } from "@/lib/actions/stub-data-mutations";
 import { formatArtifactKey } from "@/lib/artifact-display";
 import { flattenExtractedValueAttributes } from "@/lib/capture/flatten-extracted-value";
 import { ASPECT_DEFINITIONS } from "@/lib/domain/aspect";
+import { formatLocaleDateTime, isDateLike } from "@/lib/format/iso-datetime";
 import type { ExtractedValueStub } from "@/lib/stubs/capture-stubs";
 
 function inferInputType(key: string, value: unknown): "text" | "number" | "checkbox" {
@@ -25,6 +26,9 @@ function inferInputType(key: string, value: unknown): "text" | "number" | "check
     }
     if (typeof value === "number") {
         return "number";
+    }
+    if (typeof value === "string" && isDateLike(value)) {
+        return "text";
     }
     if (key.endsWith("_at")) {
         return "text";
@@ -243,6 +247,11 @@ export function ExtractedValueEditorSheet({
                                         }))
                                     }
                                 />
+                                {isDateLike(formValues[key]) && (
+                                    <p className="text-xs text-muted-foreground">
+                                        {formatLocaleDateTime(formValues[key] ?? "")}
+                                    </p>
+                                )}
                             </div>
                         );
                     })}
