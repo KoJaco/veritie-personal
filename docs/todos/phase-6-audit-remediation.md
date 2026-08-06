@@ -16,10 +16,11 @@ Tracks closure of the independent security audit on `feat/db-auth-persistence`. 
 | 8 | Low | Secret-aware log serialization | [x] Key-name redaction in `safe-serialize.ts` |
 | 9 | High | `users_update` / `users_insert` JWT escalation | [x] Dropped in `04_policies_privilege.sql` |
 | 10 | Medium | Proxy JSON 401 for `/api/*` | [x] `proxy.ts` returns 401 JSON; pages still redirect |
+| 11 | Medium | `usage_metrics` JWT writes | [x] SELECT-only in `04_policies_privilege.sql`; verified in `05_verify_privilege.sql` |
 
 ## Manual follow-ups
 
-- [ ] Apply or re-apply `db/rls/04_policies_privilege.sql` on target Supabase project (includes `users_update` / `users_insert` drops) — **deploy step**; verify with [`05_verify_privilege.sql`](../../db/rls/05_verify_privilege.sql)
+- [ ] Apply or re-apply `db/rls/04_policies_privilege.sql` on target Supabase project (idempotent; includes `usage_metrics` and `users_update` / `users_insert` drops) — **deploy step**; verify with [`05_verify_privilege.sql`](../../db/rls/05_verify_privilege.sql)
 - [ ] RLS spot-check: JWT `INSERT` on `audit_logs` / `roles` fails; tenant `SELECT` works — **merge approver**
 - [ ] Per-user rate limiting on chat/veritie proxy (deferred)
 

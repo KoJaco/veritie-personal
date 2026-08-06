@@ -10,7 +10,7 @@ Run in the Supabase SQL editor (or `psql` against your project) in this order:
 2. [`01_enable_rls.sql`](./01_enable_rls.sql) — enable RLS on tenant tables
 3. [`02_policies_identity.sql`](./02_policies_identity.sql) — identity / RBAC / billing
 4. [`03_policies_domain.sql`](./03_policies_domain.sql) — captures, timeline, objects
-5. [`04_policies_privilege.sql`](./04_policies_privilege.sql) — deny direct JWT writes on RBAC/billing/audit tables
+5. [`04_policies_privilege.sql`](./04_policies_privilege.sql) — deny direct JWT writes on RBAC/billing/audit/usage tables (**idempotent; safe to re-apply**)
 6. [`05_verify_privilege.sql`](./05_verify_privilege.sql) — post-apply JWT verification (manual)
 
 ## Tables without RLS
@@ -51,6 +51,9 @@ INSERT INTO audit_logs (account_id, action) VALUES (public.current_account_id(),
 UPDATE roles SET name = name WHERE account_id = public.current_account_id();
 UPDATE users SET role = 'owner' WHERE id = auth.uid();
 INSERT INTO users (id, email, provider, account_id) VALUES (auth.uid(), 'x@y.com', 'google', public.current_account_id());
+INSERT INTO usage_counters (account_id, period_start, period_end, source)
+VALUES (public.current_account_id(), now(), now() + interval '1 day', 'test');
+INSERT INTO usage_metrics (user_id, metric_type) VALUES (auth.uid(), 'test');
 -- SELECT should still work for own tenant
 SELECT id FROM roles WHERE account_id = public.current_account_id() LIMIT 1;
 SELECT id, role FROM users WHERE id = auth.uid();
