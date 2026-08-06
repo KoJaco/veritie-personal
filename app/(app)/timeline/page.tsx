@@ -39,6 +39,8 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
         reviewStates: reviewState ? [reviewState] : undefined,
     });
 
+    const glossaryLabels = await dataSource.pipeline.getExtractionGlossaryLabels();
+
     const contract = buildTimelineRouteContract({
         lens: scopeLens,
         timelineIndex,
@@ -103,7 +105,10 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
                 }
             >
                 <div className="space-y-6 py-4">
-                    <TimelineClientView items={timelineIndex.items} />
+                    <TimelineClientView
+                        items={timelineIndex.items}
+                        glossaryLabels={glossaryLabels}
+                    />
                 </div>
             </PageFrame>
         </>

@@ -6,13 +6,16 @@ import {
     boundedBodyErrorResponse,
     readBoundedJson,
 } from "@/lib/api/read-bounded-body";
-import { EXTRACTED_VALUE_REVIEW_MAX_BODY_BYTES } from "@/lib/api/body-limits";
-import { extractedValueReviewRequestSchema } from "@/lib/capture/extracted-value-review-schema";
+import { EXTRACTED_VALUE_UPDATE_MAX_BODY_BYTES } from "@/lib/api/body-limits";
+import {
+    extractedValueUpdateAttributesSchema,
+    extractedValueUpdateRequestSchema,
+} from "@/lib/capture/extracted-value-update-schema";
 import { getDataSourceAdapters } from "@/lib/data-source";
 import { logger } from "@/lib/logging/server-logger";
 
 /**
- * Programmatic review-state endpoint. In-app UI uses `updateExtractedValueReviewAction`.
+ * Programmatic extracted-value update endpoint. In-app UI uses `updateExtractedValueAction`.
  */
 export async function POST(request: NextRequest) {
     const denied = await requireProgrammaticApiAccess(request);
@@ -23,9 +26,9 @@ export async function POST(request: NextRequest) {
     try {
         const body = await readBoundedJson(
             request,
-            EXTRACTED_VALUE_REVIEW_MAX_BODY_BYTES,
+            EXTRACTED_VALUE_UPDATE_MAX_BODY_BYTES,
         );
-        const parsed = extractedValueReviewRequestSchema.safeParse(body);
+        const parsed = extractedValueUpdateRequestSchema.safeParse(body);
 
         if (!parsed.success) {
             return NextResponse.json(
@@ -34,9 +37,19 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const updated = await getDataSourceAdapters().extractedValues.updateExtractedValueReviewState(
+        const attributesResult = extractedValueUpdateAttributesSchema.safeParse(
+            parsed.data.attributes,
+        );
+        if (!attributesResult.success) {
+            return NextResponse.json(
+                { error: "Invalid attributes", details: attributesResult.error.flatten() },
+                { status: 400 },
+            );
+        }
+
+        const updated = await getDataSourceAdapters().extractedValues.updateExtractedValueAttributes(
             parsed.data.extractedValueId,
-            parsed.data.reviewState,
+            attributesResult.data,
         );
         if (!updated) {
             return NextResponse.json(
@@ -50,7 +63,7 @@ export async function POST(request: NextRequest) {
         if (error instanceof BoundedBodyError) {
             return boundedBodyErrorResponse(error);
         }
-        logger.error("[extracted-values] review_failed", {
+        logger.error("[extracted-values] update_failed", {
             error: error instanceof Error ? error : String(error),
         });
         return NextResponse.json({ error: "Failed to update" }, { status: 500 });

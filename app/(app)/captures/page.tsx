@@ -16,6 +16,7 @@ import {
     parseCapturesView,
     parseSortDir,
 } from "@/lib/route/search-params";
+import { formatExtractedCountLabel } from "@/lib/capture/extraction-summary";
 import {
     buildCapturesRouteContract,
     canOpenAssistantFromCapturesContract,
@@ -62,7 +63,10 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
         .map((item) => ({
             id: item.id,
             title: item.title,
-            summary: `${item.type} · ${item.status} · ${item.extractedCount} extracted`,
+            summary: `${item.type} · ${item.status} · ${formatExtractedCountLabel(
+                item.extractedCount,
+                item.extractedSummary,
+            )}`,
             searchTerms: [item.type, item.status],
         }));
 

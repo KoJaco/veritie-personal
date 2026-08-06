@@ -100,6 +100,13 @@ function createAdapterMock(
             getCapturesIndex: jest.fn(),
             getCaptureDetail: jest.fn(),
         },
+        pipeline: {
+            getExtractionGlossaryLabels: jest.fn(async () => ({})),
+        },
+        extractedValues: {
+            updateExtractedValueReviewState: jest.fn(),
+            updateExtractedValueAttributes: jest.fn(),
+        },
     };
 }
 
