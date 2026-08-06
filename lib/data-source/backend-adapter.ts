@@ -3,6 +3,8 @@ import type { ObjectsIndexQuery, ObjectsIndexReadModel } from "./objects-read-mo
 import { applyObjectsIndexQuery } from "./objects-read-model";
 import type { ObjectStub } from "@/lib/stubs";
 import { backendCapturesAdapter } from "./backend/captures-adapter";
+import { backendExtractedValuesAdapter } from "./backend/extracted-values-adapter";
+import { backendPipelineAdapter } from "./backend/pipeline-adapter";
 import {
     deferredUploadAttachmentVersion,
     emptyAggregatedChecksReadModel,
@@ -67,4 +69,6 @@ export const backendDataSourceAdapters: DataSourceAdapters = {
     settings: backendSettingsAdapter,
     timeline: backendTimelineAdapter,
     captures: backendCapturesAdapter,
+    pipeline: backendPipelineAdapter,
+    extractedValues: backendExtractedValuesAdapter,
 };

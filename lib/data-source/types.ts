@@ -146,6 +146,21 @@ export interface CapturesReadAdapter {
     >;
 }
 
+export interface PipelineReadAdapter {
+    getExtractionGlossaryLabels(): Promise<Record<string, string>>;
+}
+
+export interface ExtractedValuesAdapter {
+    updateExtractedValueReviewState(
+        extractedValueId: string,
+        reviewState: string,
+    ): Promise<boolean>;
+    updateExtractedValueAttributes(
+        extractedValueId: string,
+        attributes: Record<string, unknown>,
+    ): Promise<boolean>;
+}
+
 export interface DataSourceAdapters {
     dashboard: DashboardReadAdapter;
     tasks: TasksReadAdapter;
@@ -157,6 +172,8 @@ export interface DataSourceAdapters {
     settings: SettingsReadAdapter;
     timeline: TimelineReadAdapter;
     captures: CapturesReadAdapter;
+    pipeline: PipelineReadAdapter;
+    extractedValues: ExtractedValuesAdapter;
 }
 
 export type ResourceIndexItem = ResourceStub;

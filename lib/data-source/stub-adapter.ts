@@ -58,6 +58,9 @@ import {
     getCapturesIndex,
     getCaptureDetail,
 } from "./captures-read-model";
+import { registerCaptureDetailExtractionKeys } from "./register-capture-detail-keys";
+import { stubExtractedValuesAdapter } from "./stub/extracted-values-adapter";
+import { stubPipelineAdapter } from "./stub/pipeline-adapter";
 import {
     getTimelineIndex,
     getTimelineEventDetail,
@@ -230,8 +233,11 @@ export const stubDataSourceAdapters: DataSourceAdapters = {
     },
     captures: {
         getCapturesIndex: async (query) => getCapturesIndex(query),
-        getCaptureDetail: async (id) => getCaptureDetail(id),
+        getCaptureDetail: async (id) =>
+            registerCaptureDetailExtractionKeys(getCaptureDetail(id)),
     },
+    pipeline: stubPipelineAdapter,
+    extractedValues: stubExtractedValuesAdapter,
 };
 
 function getCheckObjects(scope: CheckScope, count: number) {
