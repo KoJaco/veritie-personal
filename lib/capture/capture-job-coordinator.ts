@@ -22,6 +22,11 @@ export type CaptureJobEvent =
           timelineEventCount: number;
       }
     | {
+          type: "capture:audio-uploaded";
+          jobId: string;
+          captureId: string;
+      }
+    | {
           type: "capture:enriched";
           jobId: string;
           captureId: string;
@@ -65,6 +70,9 @@ export type CaptureJobCoordinatorInput = {
     }) => void;
     onPersistError?: (error: unknown) => void;
     onEnrichError?: (error: unknown) => void;
+    /** Job-scoped staging upload completed (or failed) before persist. */
+    audioStagedForJob?: boolean;
+    audioStagingPromise?: Promise<void>;
     uploadAudioFn?: (
         captureId: string,
         audioBlob: Blob,
@@ -152,6 +160,8 @@ class CaptureJobCoordinatorImpl {
             onEnriched,
             onPersistError,
             onEnrichError,
+            audioStagedForJob,
+            audioStagingPromise,
             uploadAudioFn,
             audioBlob,
         } = input;
@@ -173,25 +183,6 @@ class CaptureJobCoordinatorImpl {
                 captureId: persistResult.captureId,
                 timelineEventCount: persistResult.timelineEventCount,
             });
-
-            if (uploadAudioFn && audioBlob && audioBlob.size > 0) {
-                try {
-                    await uploadAudioFn(persistResult.captureId, audioBlob);
-                    captureFlowLog.info("coordinator.audio.uploaded", {
-                        jobId,
-                        captureId: persistResult.captureId,
-                    });
-                } catch (audioError) {
-                    captureFlowLog.error("coordinator.audio.failed", {
-                        jobId,
-                        captureId: persistResult.captureId,
-                        error:
-                            audioError instanceof Error
-                                ? audioError.message
-                                : String(audioError),
-                    });
-                }
-            }
         } catch (error) {
             captureFlowLog.error("coordinator.persist.failed", {
                 jobId,
@@ -211,109 +202,169 @@ class CaptureJobCoordinatorImpl {
             return;
         }
 
-        try {
-            captureFlowLog.info("coordinator.enrich.poll.start", { jobId });
-            let job = await veritie.getJob(jobId);
-            let polls = 0;
+        const resolvedCaptureId = captureId!;
 
-            const notifyJobUpdate = (updatedJob: JobDetailResponse) => {
-                onJobUpdate?.(updatedJob);
-                this.emit({
-                    type: "capture:job-update",
-                    jobId,
-                    job: updatedJob,
-                });
-            };
-
-            notifyJobUpdate(job);
-
-            while (isEnrichmentPending(job) && polls < MAX_ENRICHMENT_POLLS) {
-                await sleep(ENRICHMENT_POLL_INTERVAL_MS);
-                job = await veritie.getJob(jobId);
-                polls += 1;
-                notifyJobUpdate(job);
-            }
-
-            if (isEnrichmentPending(job)) {
-                captureFlowLog.warn("coordinator.enrich.poll.timeout", {
-                    jobId,
-                    polls,
-                    status: job.status,
-                });
-            }
-
-            let enrichResult: {
-                captureId: string;
-                timelineEventCount: number;
-                extractedValueCount: number;
-            } | null = null;
-
-            for (let attempt = 1; attempt <= ENRICH_MAX_RETRIES; attempt += 1) {
-                try {
-                    captureFlowLog.info("coordinator.enrich.start", {
-                        jobId,
-                        attempt,
-                    });
-                    enrichResult = await enrichCaptureFn(jobId);
-                    break;
-                } catch (enrichError) {
-                    if (attempt >= ENRICH_MAX_RETRIES) {
-                        throw enrichError;
+        const runAudioUpload = async (): Promise<void> => {
+            if (audioStagedForJob) {
+                if (audioStagingPromise) {
+                    try {
+                        await audioStagingPromise;
+                    } catch (audioError) {
+                        captureFlowLog.error("coordinator.audio.staging_failed", {
+                            jobId,
+                            captureId: resolvedCaptureId,
+                            error:
+                                audioError instanceof Error
+                                    ? audioError.message
+                                    : String(audioError),
+                        });
+                        return;
                     }
-                    captureFlowLog.warn("coordinator.enrich.retry", {
+                }
+                captureFlowLog.info("coordinator.audio.staged", {
+                    jobId,
+                    captureId: resolvedCaptureId,
+                });
+                this.emit({
+                    type: "capture:audio-uploaded",
+                    jobId,
+                    captureId: resolvedCaptureId,
+                });
+                return;
+            }
+
+            if (uploadAudioFn && audioBlob && audioBlob.size > 0) {
+                try {
+                    await uploadAudioFn(resolvedCaptureId, audioBlob);
+                    captureFlowLog.info("coordinator.audio.uploaded", {
                         jobId,
-                        attempt,
-                        error:
-                            enrichError instanceof Error
-                                ? enrichError.message
-                                : String(enrichError),
+                        captureId: resolvedCaptureId,
                     });
-                    await sleep(ENRICH_RETRY_DELAY_MS * attempt);
-                    job = await veritie.getJob(jobId);
-                    notifyJobUpdate(job);
+                    this.emit({
+                        type: "capture:audio-uploaded",
+                        jobId,
+                        captureId: resolvedCaptureId,
+                    });
+                } catch (audioError) {
+                    captureFlowLog.error("coordinator.audio.failed", {
+                        jobId,
+                        captureId: resolvedCaptureId,
+                        error:
+                            audioError instanceof Error
+                                ? audioError.message
+                                : String(audioError),
+                    });
                 }
             }
+        };
 
-            if (!enrichResult) {
-                throw new Error("Enrichment did not complete");
+        const runEnrichment = async (): Promise<void> => {
+            try {
+                captureFlowLog.info("coordinator.enrich.poll.start", { jobId });
+                let job = await veritie.getJob(jobId);
+                let polls = 0;
+
+                const notifyJobUpdate = (updatedJob: JobDetailResponse) => {
+                    onJobUpdate?.(updatedJob);
+                    this.emit({
+                        type: "capture:job-update",
+                        jobId,
+                        job: updatedJob,
+                    });
+                };
+
+                notifyJobUpdate(job);
+
+                while (isEnrichmentPending(job) && polls < MAX_ENRICHMENT_POLLS) {
+                    await sleep(ENRICHMENT_POLL_INTERVAL_MS);
+                    job = await veritie.getJob(jobId);
+                    polls += 1;
+                    notifyJobUpdate(job);
+                }
+
+                if (isEnrichmentPending(job)) {
+                    captureFlowLog.warn("coordinator.enrich.poll.timeout", {
+                        jobId,
+                        polls,
+                        status: job.status,
+                    });
+                }
+
+                let enrichResult: {
+                    captureId: string;
+                    timelineEventCount: number;
+                    extractedValueCount: number;
+                } | null = null;
+
+                for (let attempt = 1; attempt <= ENRICH_MAX_RETRIES; attempt += 1) {
+                    try {
+                        captureFlowLog.info("coordinator.enrich.start", {
+                            jobId,
+                            attempt,
+                        });
+                        enrichResult = await enrichCaptureFn(jobId);
+                        break;
+                    } catch (enrichError) {
+                        if (attempt >= ENRICH_MAX_RETRIES) {
+                            throw enrichError;
+                        }
+                        captureFlowLog.warn("coordinator.enrich.retry", {
+                            jobId,
+                            attempt,
+                            error:
+                                enrichError instanceof Error
+                                    ? enrichError.message
+                                    : String(enrichError),
+                        });
+                        await sleep(ENRICH_RETRY_DELAY_MS * attempt);
+                        job = await veritie.getJob(jobId);
+                        notifyJobUpdate(job);
+                    }
+                }
+
+                if (!enrichResult) {
+                    throw new Error("Enrichment did not complete");
+                }
+
+                captureFlowLog.info("coordinator.enrich.success", {
+                    jobId,
+                    captureId: enrichResult.captureId,
+                    extractedValueCount: enrichResult.extractedValueCount,
+                });
+                onEnriched?.(enrichResult);
+                this.emit({
+                    type: "capture:enriched",
+                    jobId,
+                    captureId: enrichResult.captureId,
+                    timelineEventCount: enrichResult.timelineEventCount,
+                    extractedValueCount: enrichResult.extractedValueCount,
+                });
+            } catch (error) {
+                captureFlowLog.error("coordinator.enrich.failed", {
+                    jobId,
+                    captureId: resolvedCaptureId,
+                    error: error instanceof Error ? error.message : String(error),
+                });
+                onEnrichError?.(error);
+                this.emit({
+                    type: "capture:failed",
+                    jobId,
+                    stage: "enrich",
+                    error:
+                        error instanceof Error
+                            ? error.message
+                            : "Extraction could not be synced",
+                });
+                toast.error("Capture saved partially", {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : "Extraction could not be synced",
+                });
             }
+        };
 
-            captureFlowLog.info("coordinator.enrich.success", {
-                jobId,
-                captureId: enrichResult.captureId,
-                extractedValueCount: enrichResult.extractedValueCount,
-            });
-            onEnriched?.(enrichResult);
-            this.emit({
-                type: "capture:enriched",
-                jobId,
-                captureId: enrichResult.captureId,
-                timelineEventCount: enrichResult.timelineEventCount,
-                extractedValueCount: enrichResult.extractedValueCount,
-            });
-        } catch (error) {
-            captureFlowLog.error("coordinator.enrich.failed", {
-                jobId,
-                captureId,
-                error: error instanceof Error ? error.message : String(error),
-            });
-            onEnrichError?.(error);
-            this.emit({
-                type: "capture:failed",
-                jobId,
-                stage: "enrich",
-                error:
-                    error instanceof Error
-                        ? error.message
-                        : "Extraction could not be synced",
-            });
-            toast.error("Capture saved partially", {
-                description:
-                    error instanceof Error
-                        ? error.message
-                        : "Extraction could not be synced",
-            });
-        }
+        await Promise.all([runAudioUpload(), runEnrichment()]);
     }
 
     /** Test helper */

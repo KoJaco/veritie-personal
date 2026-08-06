@@ -13,13 +13,9 @@ import { voiceLogs } from "@/db/schema/capture";
 import { and, eq } from "drizzle-orm";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-function buildAudioStoragePath(
-    accountId: string,
-    userId: string,
-    captureId: string,
-): string {
-    return `${accountId}/${userId}/${captureId}.webm`;
-}
+import {
+    buildCaptureAudioStoragePath,
+} from "@/lib/capture/capture-audio-paths";
 
 export async function GET(
     _request: NextRequest,
@@ -98,7 +94,7 @@ export async function POST(
         return NextResponse.json({ error: "Missing audio payload" }, { status: 400 });
     }
 
-    const storagePath = buildAudioStoragePath(
+    const storagePath = buildCaptureAudioStoragePath(
         scope.accountId,
         scope.userId,
         captureId,
