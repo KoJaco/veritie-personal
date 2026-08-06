@@ -30,6 +30,10 @@ export function resolveCaptureLocale(): string {
     return "en";
 }
 
+/**
+ * Builds Veritie capture job metadata. `captured_at` reflects launcher-open time
+ * when the lease is prepared early, not necessarily the moment recording starts.
+ */
 export function buildCaptureJobMetadata(
     input: BuildCaptureJobMetadataInput,
 ): CaptureJobMetadata {

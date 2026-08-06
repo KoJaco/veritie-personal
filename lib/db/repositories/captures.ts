@@ -14,6 +14,7 @@ import {
 import { usageEvents } from "@/db/schema/identity";
 import { getDb } from "@/lib/db";
 import type { CapturesIndexQuery } from "@/lib/data-source/captures-read-model";
+import { buildExtractedSummary } from "@/lib/capture/extraction-summary";
 import { aspectIdsMatchLens } from "@/lib/aspect-lens";
 
 import type { AccountScope } from "./context";
@@ -58,11 +59,13 @@ export async function getCapturesIndex(
 
     const captureIds = rows.map((row) => row.id);
     const extractedCounts = new Map<string, number>();
+    const objectTypeCountsByCapture = new Map<string, Map<string, number>>();
 
     if (captureIds.length > 0) {
         const valueRows = await db
             .select({
                 captureId: extractedValues.captureId,
+                objectType: extractedValues.objectType,
             })
             .from(extractedValues)
             .where(
@@ -77,6 +80,14 @@ export async function getCapturesIndex(
                 row.captureId,
                 (extractedCounts.get(row.captureId) ?? 0) + 1,
             );
+            const captureCounts =
+                objectTypeCountsByCapture.get(row.captureId) ??
+                new Map<string, number>();
+            captureCounts.set(
+                row.objectType,
+                (captureCounts.get(row.objectType) ?? 0) + 1,
+            );
+            objectTypeCountsByCapture.set(row.captureId, captureCounts);
         }
     }
 
@@ -84,6 +95,9 @@ export async function getCapturesIndex(
         mapCaptureToIndexItem(
             mapCaptureRowToStub(row),
             extractedCounts.get(row.id) ?? 0,
+            buildExtractedSummary(
+                objectTypeCountsByCapture.get(row.id) ?? new Map(),
+            ),
         ),
     );
 
@@ -293,7 +307,8 @@ export async function persistCaptureBundle(
                     accountId,
                     captureId: bundle.capture.id,
                     status: "completed",
-                    schemaVersion: "1",
+                    schemaVersion:
+                        bundle.extractionSchemaVersion?.trim() || "1",
                     startedAt: now,
                     completedAt: now,
                     createdAt: now,
@@ -370,6 +385,8 @@ export async function mergeCaptureEnrichment(
     input: {
         captureId: string;
         status?: CapturePersistBundle["capture"]["status"];
+        title?: string;
+        aspectIds?: CapturePersistBundle["capture"]["aspectIds"];
         extractedValues: CapturePersistBundle["extractedValues"];
         timelineEvents: CapturePersistBundle["timelineEvents"];
         voiceLogArtifacts?: {
@@ -385,13 +402,31 @@ export async function mergeCaptureEnrichment(
     await assertCaptureInAccount(scope, input.captureId);
 
     await db.transaction(async (tx) => {
+        const captureUpdate: {
+            status?: CapturePersistBundle["capture"]["status"];
+            title?: string;
+            aspectIds?: CapturePersistBundle["capture"]["aspectIds"];
+            updatedAt: Date;
+        } = { updatedAt: now };
+
         if (input.status) {
+            captureUpdate.status = input.status;
+        }
+        if (input.title) {
+            captureUpdate.title = input.title;
+        }
+        if (input.aspectIds && input.aspectIds.length > 0) {
+            captureUpdate.aspectIds = input.aspectIds;
+        }
+
+        if (
+            input.status ||
+            input.title ||
+            (input.aspectIds && input.aspectIds.length > 0)
+        ) {
             await tx
                 .update(captures)
-                .set({
-                    status: input.status,
-                    updatedAt: now,
-                })
+                .set(captureUpdate)
                 .where(
                     and(
                         eq(captures.accountId, accountId),
@@ -407,13 +442,38 @@ export async function mergeCaptureEnrichment(
                     eq(extractedValues.captureId, input.captureId),
                 ),
             });
-            const existingIds = new Set(existingValues.map((row) => row.id));
-            const newValues = input.extractedValues.filter(
-                (value) => !existingIds.has(value.id),
+            const existingById = new Map(
+                existingValues.map((row) => [row.id, row]),
             );
 
-            if (newValues.length > 0) {
-                let extractionRunId = existingValues[0]?.extractionRunId;
+            let extractionRunId = existingValues[0]?.extractionRunId;
+            const valuesToInsert: CapturePersistBundle["extractedValues"] = [];
+
+            for (const value of input.extractedValues) {
+                const existing = existingById.get(value.id);
+                if (existing) {
+                    await tx
+                        .update(extractedValues)
+                        .set({
+                            objectType: value.objectType,
+                            aspect: value.aspect,
+                            title: value.title,
+                            fields: value.fields,
+                            confidence: value.confidence,
+                            updatedAt: now,
+                        })
+                        .where(
+                            and(
+                                eq(extractedValues.accountId, accountId),
+                                eq(extractedValues.id, value.id),
+                            ),
+                        );
+                } else {
+                    valuesToInsert.push(value);
+                }
+            }
+
+            if (valuesToInsert.length > 0) {
                 if (!extractionRunId) {
                     extractionRunId = `extraction_${input.captureId}`;
                     await tx.insert(extractionRuns).values({
@@ -429,7 +489,7 @@ export async function mergeCaptureEnrichment(
                 }
 
                 await tx.insert(extractedValues).values(
-                    newValues.map((value) => ({
+                    valuesToInsert.map((value) => ({
                         id: value.id,
                         accountId,
                         extractionRunId: value.extractionRunId ?? extractionRunId!,
@@ -454,14 +514,40 @@ export async function mergeCaptureEnrichment(
                     eq(timelineEvents.captureId, input.captureId),
                 ),
             });
-            const existingEventIds = new Set(existingEvents.map((row) => row.id));
-            const newEvents = input.timelineEvents.filter(
-                (event) => !existingEventIds.has(event.id),
+            const existingEventById = new Map(
+                existingEvents.map((row) => [row.id, row]),
             );
+            const eventsToInsert: CapturePersistBundle["timelineEvents"] = [];
 
-            if (newEvents.length > 0) {
+            for (const event of input.timelineEvents) {
+                const existing = existingEventById.get(event.id);
+                if (existing) {
+                    await tx
+                        .update(timelineEvents)
+                        .set({
+                            type: event.type,
+                            title: event.title,
+                            summary: event.summary,
+                            aspect: event.aspect,
+                            occurredAt: parseDate(event.occurredAt),
+                            extractedValueId: event.extractedValueId,
+                            extractedObjectType: event.extractedObjectType,
+                            confidence: event.confidence,
+                        })
+                        .where(
+                            and(
+                                eq(timelineEvents.accountId, accountId),
+                                eq(timelineEvents.id, event.id),
+                            ),
+                        );
+                } else {
+                    eventsToInsert.push(event);
+                }
+            }
+
+            if (eventsToInsert.length > 0) {
                 await tx.insert(timelineEvents).values(
-                    newEvents.map((event) => ({
+                    eventsToInsert.map((event) => ({
                         id: event.id,
                         accountId,
                         type: event.type,

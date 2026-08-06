@@ -1,6 +1,17 @@
-import type { AspectKey } from "@/lib/domain/aspect";
 import type { ValidatedVeritieJob } from "@/lib/capture/captures-persist-schema";
 import { buildCaptureSegmentId } from "@/lib/capture/capture-segment-ids";
+import {
+    deriveCaptureAspectIds,
+    deriveCaptureTitle,
+    getExtractionListCandidates,
+    normalizeExtractionAspect,
+    resolveExtractionCandidateTitle,
+    splitExtractionCandidateFields,
+} from "@/lib/capture/extraction-aspect";
+import {
+    resolvePipelineExtractionConfig,
+    type PipelineExtractionConfig,
+} from "@/lib/capture/pipeline-config";
 import type { TimelineEventStub } from "@/lib/stubs/timeline-stubs";
 import type {
     CaptureStub,
@@ -9,38 +20,32 @@ import type {
     VoiceLogStub,
 } from "@/lib/stubs/capture-stubs";
 
-const KNOWN_ASPECTS = new Set<AspectKey>([
-    "finance",
-    "fitness",
-    "work",
-    "personal",
-    "admin",
-]);
-
-function normalizeAspect(value: string | undefined): AspectKey {
-    if (value && KNOWN_ASPECTS.has(value as AspectKey)) {
-        return value as AspectKey;
-    }
-    return "personal";
-}
-
 export function mapVeritieJobToCaptureBundle(
     job: ValidatedVeritieJob,
     captureId: string,
+    extractionConfig: PipelineExtractionConfig = resolvePipelineExtractionConfig(null),
 ): {
     capture: CaptureStub;
     voiceLog: VoiceLogStub;
     segments: TranscriptSegmentStub[];
     extractedValues: ExtractedValueStub[];
     timelineEvents: TimelineEventStub[];
+    extractionSchemaVersion: string | null;
 } {
     const now = new Date().toISOString();
+    const payload = (job.extraction?.payload ?? {}) as Record<string, unknown>;
+    const aspectIds = deriveCaptureAspectIds(
+        payload,
+        extractionConfig.extractionListKeys,
+    );
+    const captureTitle = deriveCaptureTitle(payload) ?? "Voice log";
+
     const capture: CaptureStub = {
         id: captureId,
         type: "voice",
         status: job.status === "completed" ? "completed" : "processing",
-        title: "Voice log",
-        aspectIds: ["personal"],
+        title: captureTitle,
+        aspectIds,
         veritieJobId: job.job_id,
         createdAt: now,
         updatedAt: now,
@@ -74,36 +79,42 @@ export function mapVeritieJobToCaptureBundle(
     const extractedValues: ExtractedValueStub[] = [];
     const timelineEvents: TimelineEventStub[] = [];
 
-    const payload = job.extraction?.payload ?? {};
-    const lists: Array<{
-        key: keyof typeof payload;
-        objectType: ExtractedValueStub["objectType"];
-        eventType: TimelineEventStub["type"];
-    }> = [
-        { key: "tasks", objectType: "task", eventType: "task_detected" },
-        { key: "reminders", objectType: "reminder", eventType: "reminder_detected" },
-        { key: "goals", objectType: "goal", eventType: "goal_detected" },
-        { key: "goal_progress", objectType: "goal_progress", eventType: "goal_progress_detected" },
-        { key: "expenses", objectType: "money_entry", eventType: "expense_detected" },
-        { key: "records", objectType: "record", eventType: "record_detected" },
-        { key: "resources", objectType: "resource", eventType: "resource_detected" },
-    ];
+    for (const listKey of extractionConfig.extractionListKeys) {
+        const objectType = extractionConfig.objectTypesByKey[listKey];
+        const eventType = extractionConfig.eventTypesByKey[listKey];
+        if (!objectType || !eventType) {
+            continue;
+        }
 
-    for (const list of lists) {
-        const candidates = payload[list.key] ?? [];
+        const candidates = getExtractionListCandidates(payload, listKey);
         for (const [index, candidate] of candidates.entries()) {
-            const extractedId = `extracted_${captureId}_${list.key}_${index}`;
-            const aspect = normalizeAspect(candidate.aspect);
-            const title = String(candidate.title ?? list.key);
-            const confidence = Math.min(1, Math.max(0, candidate.confidence ?? 0.5));
+            if (!candidate || typeof candidate !== "object") {
+                continue;
+            }
+
+            const record = candidate as Record<string, unknown>;
+            const extractedId = `extracted_${captureId}_${listKey}_${index}`;
+            const aspect = normalizeExtractionAspect(
+                typeof record.aspect === "string" ? record.aspect : undefined,
+            );
+            const title = resolveExtractionCandidateTitle(listKey, record);
+            const confidence = Math.min(
+                1,
+                Math.max(
+                    0,
+                    typeof record.confidence === "number" ? record.confidence : 0.5,
+                ),
+            );
+            const fields = splitExtractionCandidateFields(record);
+
             extractedValues.push({
                 id: extractedId,
                 extractionRunId: `extraction_${captureId}`,
                 captureId,
-                objectType: list.objectType,
+                objectType,
                 aspect,
                 title,
-                fields: candidate.fields ?? {},
+                fields,
                 confidence,
                 reviewState: "pending",
                 createdAt: now,
@@ -111,13 +122,13 @@ export function mapVeritieJobToCaptureBundle(
             });
             timelineEvents.push({
                 id: `timeline_${extractedId}`,
-                type: list.eventType,
+                type: eventType as TimelineEventStub["type"],
                 title,
                 aspect,
                 occurredAt: now,
                 captureId,
                 extractedValueId: extractedId,
-                extractedObjectType: list.objectType,
+                extractedObjectType: objectType,
                 reviewState: "pending",
                 confidence,
                 createdAt: now,
@@ -131,5 +142,6 @@ export function mapVeritieJobToCaptureBundle(
         segments,
         extractedValues,
         timelineEvents,
+        extractionSchemaVersion: extractionConfig.schemaVersionId,
     };
 }

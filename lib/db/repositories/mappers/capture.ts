@@ -95,6 +95,7 @@ export function mapExtractedValueRowToStub(row: ExtractedValueRow): ExtractedVal
 export function mapCaptureToIndexItem(
     capture: CaptureStub,
     extractedCount: number,
+    extractedSummary: string | null = null,
 ): CaptureIndexItem {
     return {
         id: capture.id,
@@ -104,6 +105,7 @@ export function mapCaptureToIndexItem(
         aspectIds: capture.aspectIds,
         createdAt: capture.createdAt,
         extractedCount,
+        extractedSummary,
     };
 }
 
@@ -160,4 +162,5 @@ export interface CapturePersistBundle {
     segments: TranscriptSegmentStub[];
     extractedValues: ExtractedValueStub[];
     timelineEvents: import("@/lib/stubs/timeline-stubs").TimelineEventStub[];
+    extractionSchemaVersion?: string | null;
 }

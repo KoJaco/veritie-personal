@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+    VOICE_LOG_EXTRACTION_LIST_KEYS,
+    type VoiceLogExtractionListKey,
+} from "@/lib/capture/voice-log-extraction-schema";
+
 const JOB_STATUSES = [
     "awaiting_upload",
     "queued",
@@ -8,16 +13,6 @@ const JOB_STATUSES = [
     "partial_success",
     "failed",
     "cancelled",
-] as const;
-
-const EXTRACTION_LIST_KEYS = [
-    "tasks",
-    "reminders",
-    "goals",
-    "goal_progress",
-    "expenses",
-    "records",
-    "resources",
 ] as const;
 
 export const CAPTURES_PERSIST_MAX_BODY_BYTES = 256 * 1024;
@@ -35,30 +30,55 @@ const transcriptSegmentSchema = z.object({
     confidence: z.number().min(0).max(1).optional(),
 });
 
-const extractionCandidateSchema = z.object({
-    aspect: z.string().max(64).optional(),
-    title: z.string().max(500).optional(),
-    confidence: z.number().min(0).max(1).optional(),
-    fields: z
-        .record(z.string().max(128), z.unknown())
-        .refine(
-            (fields) => Object.keys(fields).length <= MAX_EXTRACTION_FIELD_KEYS,
-            { message: "Too many extraction fields" },
-        )
-        .optional(),
-});
+const extractionWarningSchema = z
+    .object({
+        reason: z.string().max(2000),
+    })
+    .passthrough();
 
-const extractionPayloadSchema = z
-    .object(
-        Object.fromEntries(
-            EXTRACTION_LIST_KEYS.map((key) => [
-                key,
-                z.array(extractionCandidateSchema).max(MAX_EXTRACTION_ITEMS_PER_LIST).optional(),
-            ]),
-        ),
-    )
+const extractionCandidateSchema = z
+    .object({
+        aspect: z.string().max(64).optional(),
+        secondary_aspect: z.string().max(64).optional(),
+        title: z.string().max(500).optional(),
+        name: z.string().max(500).optional(),
+        description: z.string().max(2000).optional(),
+        source_quote: z.string().max(10_000).optional(),
+        confidence: z.number().min(0).max(1).optional(),
+    })
     .passthrough()
-    .optional();
+    .refine(
+        (candidate) => Object.keys(candidate).length <= MAX_EXTRACTION_FIELD_KEYS + 8,
+        { message: "Too many extraction fields" },
+    );
+
+export function buildExtractionPayloadSchema(
+    extractionListKeys: readonly string[] = VOICE_LOG_EXTRACTION_LIST_KEYS,
+) {
+    return z
+        .object({
+            capture_summary: z.string().max(2000).optional(),
+            extraction_warnings: z
+                .array(extractionWarningSchema)
+                .max(50)
+                .optional(),
+            ...Object.fromEntries(
+                extractionListKeys.map((key) => [
+                    key,
+                    z
+                        .array(extractionCandidateSchema)
+                        .max(MAX_EXTRACTION_ITEMS_PER_LIST)
+                        .optional(),
+                ]),
+            ),
+        })
+        .passthrough()
+        .optional();
+}
+
+const defaultExtractionPayloadSchema = buildExtractionPayloadSchema(
+    VOICE_LOG_EXTRACTION_LIST_KEYS,
+);
 
 const evidenceIndexEntrySchema = z.object({
     path: z.string().max(512),
@@ -79,33 +99,43 @@ const evidenceIndexArtifactSchema = z.object({
     error_class: z.string().max(128).optional(),
 });
 
+export function buildVeritieJobPersistSchema(
+    extractionListKeys: readonly string[] = VOICE_LOG_EXTRACTION_LIST_KEYS,
+) {
+    return z.object({
+        job_id: z.string().trim().min(1).max(128),
+        status: z.enum(JOB_STATUSES),
+        transcript: z
+            .object({
+                text: z.string().max(MAX_TRANSCRIPT_TEXT_LENGTH).optional(),
+                language: z.string().max(32).optional(),
+                duration_ms: z.number().nonnegative().optional(),
+                segments: z
+                    .array(transcriptSegmentSchema)
+                    .max(MAX_TRANSCRIPT_SEGMENTS)
+                    .optional(),
+            })
+            .optional(),
+        extraction: z
+            .object({
+                payload: buildExtractionPayloadSchema(extractionListKeys),
+            })
+            .optional(),
+        index: evidenceIndexArtifactSchema.optional(),
+    });
+}
+
 export const capturesPersistRequestSchema = z
     .object({
         jobId: z.string().trim().min(1).max(128),
     })
     .strict();
 
-export const veritieJobPersistSchema = z.object({
-    job_id: z.string().trim().min(1).max(128),
-    status: z.enum(JOB_STATUSES),
-    transcript: z
-        .object({
-            text: z.string().max(MAX_TRANSCRIPT_TEXT_LENGTH).optional(),
-            language: z.string().max(32).optional(),
-            duration_ms: z.number().nonnegative().optional(),
-            segments: z
-                .array(transcriptSegmentSchema)
-                .max(MAX_TRANSCRIPT_SEGMENTS)
-                .optional(),
-        })
-        .optional(),
-    extraction: z
-        .object({
-            payload: extractionPayloadSchema,
-        })
-        .optional(),
-    index: evidenceIndexArtifactSchema.optional(),
-});
+export const veritieJobPersistSchema = buildVeritieJobPersistSchema(
+    VOICE_LOG_EXTRACTION_LIST_KEYS,
+);
 
 export type CapturesPersistRequest = z.infer<typeof capturesPersistRequestSchema>;
 export type ValidatedVeritieJob = z.infer<typeof veritieJobPersistSchema>;
+
+export type VoiceLogExtractionListKeys = VoiceLogExtractionListKey[];

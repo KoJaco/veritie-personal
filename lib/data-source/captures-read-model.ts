@@ -1,9 +1,19 @@
 import { envServer } from "@/lib/config/env.server";
 import type { AspectKey } from "@/lib/domain/aspect";
 import type { ReviewState } from "@/lib/domain/extraction";
+import {
+    applyAttributesToExtractionPayload,
+    applyIndexQuoteUpdates,
+    collectIndexQuoteUpdates,
+    deriveExtractedValueFromCandidate,
+    deriveTimelineEventSummary,
+} from "@/lib/capture/update-extracted-value-artifacts";
+import { parseExtractedValueId } from "@/lib/capture/extracted-value-path";
+import { getExtractionListCandidates } from "@/lib/capture/extraction-aspect";
 import type { TimelineEventType } from "@/lib/domain/timeline";
 import type { ScopeLens } from "@/lib/lens";
 import { aspectIdsMatchLens } from "@/lib/aspect-lens";
+import { buildExtractedSummary } from "@/lib/capture/extraction-summary";
 import {
     CAPTURE_SEEDS,
     EXTRACTED_VALUE_SEEDS,
@@ -26,6 +36,7 @@ export type CaptureIndexItem = {
     aspectIds: AspectKey[];
     createdAt: string;
     extractedCount: number;
+    extractedSummary: string | null;
 };
 
 export type CapturesIndexReadModel = {
@@ -53,17 +64,27 @@ export type CapturesIndexQuery = {
 export function getCapturesIndex(
     query?: CapturesIndexQuery,
 ): CapturesIndexReadModel {
-    let items = CAPTURE_SEEDS.map((capture) => ({
-        id: capture.id,
-        title: capture.title ?? "Untitled capture",
-        type: capture.type,
-        status: capture.status,
-        aspectIds: capture.aspectIds,
-        createdAt: capture.createdAt,
-        extractedCount: EXTRACTED_VALUE_SEEDS.filter(
+    let items = CAPTURE_SEEDS.map((capture) => {
+        const values = EXTRACTED_VALUE_SEEDS.filter(
             (v) => v.captureId === capture.id,
-        ).length,
-    }));
+        );
+        const objectTypeCounts: Record<string, number> = {};
+        for (const value of values) {
+            objectTypeCounts[value.objectType] =
+                (objectTypeCounts[value.objectType] ?? 0) + 1;
+        }
+
+        return {
+            id: capture.id,
+            title: capture.title ?? "Untitled capture",
+            type: capture.type,
+            status: capture.status,
+            aspectIds: capture.aspectIds,
+            createdAt: capture.createdAt,
+            extractedCount: values.length,
+            extractedSummary: buildExtractedSummary(objectTypeCounts),
+        };
+    });
 
     if (query?.lens) {
         items = items.filter((item) =>
@@ -154,6 +175,8 @@ export function appendCaptureFromJob(input: {
 export function mergeCaptureEnrichment(input: {
     captureId: string;
     status?: CaptureStub["status"];
+    title?: string;
+    aspectIds?: CaptureStub["aspectIds"];
     extractedValues: ExtractedValueStub[];
     timelineEvents: TimelineEventStub[];
     voiceLogArtifacts?: {
@@ -175,19 +198,51 @@ export function mergeCaptureEnrichment(input: {
         capture.updatedAt = new Date().toISOString();
     }
 
-    const existingValueIds = new Set(EXTRACTED_VALUE_SEEDS.map((value) => value.id));
+    if (input.title) {
+        capture.title = input.title;
+        capture.updatedAt = new Date().toISOString();
+    }
+
+    if (input.aspectIds && input.aspectIds.length > 0) {
+        capture.aspectIds = input.aspectIds;
+        capture.updatedAt = new Date().toISOString();
+    }
+
+    const existingValueById = new Map(
+        EXTRACTED_VALUE_SEEDS.map((value) => [value.id, value]),
+    );
     for (const value of input.extractedValues) {
-        if (!existingValueIds.has(value.id)) {
+        const existing = existingValueById.get(value.id);
+        if (existing) {
+            existing.objectType = value.objectType;
+            existing.aspect = value.aspect;
+            existing.title = value.title;
+            existing.fields = value.fields;
+            existing.confidence = value.confidence;
+            existing.updatedAt = value.updatedAt;
+        } else {
             EXTRACTED_VALUE_SEEDS.push(value);
-            existingValueIds.add(value.id);
+            existingValueById.set(value.id, value);
         }
     }
 
-    const existingEventIds = new Set(TIMELINE_EVENT_SEEDS.map((event) => event.id));
+    const existingEventById = new Map(
+        TIMELINE_EVENT_SEEDS.map((event) => [event.id, event]),
+    );
     for (const event of input.timelineEvents) {
-        if (!existingEventIds.has(event.id)) {
+        const existing = existingEventById.get(event.id);
+        if (existing) {
+            existing.type = event.type;
+            existing.title = event.title;
+            existing.summary = event.summary;
+            existing.aspect = event.aspect;
+            existing.occurredAt = event.occurredAt;
+            existing.extractedValueId = event.extractedValueId;
+            existing.extractedObjectType = event.extractedObjectType;
+            existing.confidence = event.confidence;
+        } else {
             TIMELINE_EVENT_SEEDS.push(event);
-            existingEventIds.add(event.id);
+            existingEventById.set(event.id, event);
         }
     }
 
@@ -206,4 +261,81 @@ export function mergeCaptureEnrichment(input: {
             voiceLog.updatedAt = new Date().toISOString();
         }
     }
+}
+
+export function updateExtractedValueAttributes(
+    extractedValueId: string,
+    attributes: Record<string, unknown>,
+): boolean {
+    if (!envServer.allowStubCaptureMutations) {
+        throw new Error("Stub capture mutations are disabled");
+    }
+
+    const parsedId = parseExtractedValueId(extractedValueId);
+    if (!parsedId) {
+        return false;
+    }
+
+    const value = EXTRACTED_VALUE_SEEDS.find((item) => item.id === extractedValueId);
+    if (!value) {
+        return false;
+    }
+
+    const voiceLog = VOICE_LOG_SEEDS.find(
+        (item) => item.captureId === parsedId.captureId,
+    );
+
+    const nextPayload = applyAttributesToExtractionPayload(
+        voiceLog?.extractionPayload ?? null,
+        parsedId.listKey,
+        parsedId.index,
+        attributes,
+    );
+
+    const candidates = getExtractionListCandidates(nextPayload, parsedId.listKey);
+    const candidate =
+        candidates[parsedId.index] &&
+        typeof candidates[parsedId.index] === "object"
+            ? (candidates[parsedId.index] as Record<string, unknown>)
+            : attributes;
+
+    const derived = deriveExtractedValueFromCandidate(
+        parsedId.listKey,
+        candidate,
+    );
+    const summary = deriveTimelineEventSummary(candidate);
+    const quoteUpdates = collectIndexQuoteUpdates(
+        parsedId.listKey,
+        parsedId.index,
+        attributes,
+    );
+
+    value.title = derived.title;
+    value.aspect = derived.aspect;
+    value.fields = derived.fields;
+    value.reviewState = "edited";
+    value.updatedAt = new Date().toISOString();
+
+    const event = TIMELINE_EVENT_SEEDS.find(
+        (item) => item.extractedValueId === extractedValueId,
+    );
+    if (event) {
+        event.title = derived.title;
+        event.aspect = derived.aspect;
+        event.summary = summary;
+        event.reviewState = "edited";
+    }
+
+    if (voiceLog) {
+        voiceLog.extractionPayload = nextPayload;
+        if (quoteUpdates.length > 0) {
+            voiceLog.indexArtifact = applyIndexQuoteUpdates(
+                voiceLog.indexArtifact,
+                quoteUpdates,
+            );
+        }
+        voiceLog.updatedAt = new Date().toISOString();
+    }
+
+    return true;
 }
