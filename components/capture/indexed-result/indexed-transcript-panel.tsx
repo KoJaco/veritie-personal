@@ -154,17 +154,17 @@ export function IndexedTranscriptPanel({
   timingsExpanded?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [segmentsOpen, setSegmentsOpen] = useState(timingsExpanded);
+  const [userSegmentsOpen, setUserSegmentsOpen] = useState(false);
   const segments = useMemo(
     () => transcript?.segments ?? [],
     [transcript?.segments],
   );
 
-  useEffect(() => {
-    if (timingsExpanded) {
-      setSegmentsOpen(true);
-    }
-  }, [timingsExpanded]);
+  const segmentsOpen = timingsExpanded || userSegmentsOpen;
+
+  const toggleSegmentsOpen = () => {
+    setUserSegmentsOpen((open) => !open);
+  };
 
   const highlights = useMemo(() => {
     if (!activeEntry) {
@@ -301,7 +301,7 @@ export function IndexedTranscriptPanel({
                     className={cn(
                       "flex w-full items-center justify-between gap-1.5 text-left text-sm font-medium transition-colors",
                     )}
-                    onClick={() => setSegmentsOpen((open) => !open)}
+                    onClick={toggleSegmentsOpen}
                     aria-expanded={segmentsOpen}
                   >
                     <span>
@@ -320,31 +320,31 @@ export function IndexedTranscriptPanel({
                   </button>
                   {segmentsOpen ? (
                     <div className="mt-2 grid gap-2">
-                    {segments.map((segment, index) => {
-                      const highlight = highlightByIndex.get(index);
-                      const isActive = highlightByIndex.has(index);
-                      const segmentKey = `segment-${index}`;
+                      {segments.map((segment, index) => {
+                        const highlight = highlightByIndex.get(index);
+                        const isActive = highlightByIndex.has(index);
+                        const segmentKey = `segment-${index}`;
 
-                      return (
-                        <SegmentRow
-                          key={segment.id ?? segmentKey}
-                          segmentKey={segmentKey}
-                          startMs={segment.start_ms}
-                          endMs={segment.end_ms}
-                          text={segment.text ?? ""}
-                          highlightRange={highlight?.highlightRange ?? null}
-                          highlightWholeSegment={
-                            highlight?.highlightWholeSegment ?? false
-                          }
-                          isActive={isActive}
-                          ariaLabel={
-                            isActive && activeEntry?.quote
-                              ? `Evidence for ${activePath}: ${activeEntry.quote}`
-                              : undefined
-                          }
-                        />
-                      );
-                    })}
+                        return (
+                          <SegmentRow
+                            key={segment.id ?? segmentKey}
+                            segmentKey={segmentKey}
+                            startMs={segment.start_ms}
+                            endMs={segment.end_ms}
+                            text={segment.text ?? ""}
+                            highlightRange={highlight?.highlightRange ?? null}
+                            highlightWholeSegment={
+                              highlight?.highlightWholeSegment ?? false
+                            }
+                            isActive={isActive}
+                            ariaLabel={
+                              isActive && activeEntry?.quote
+                                ? `Evidence for ${activePath}: ${activeEntry.quote}`
+                                : undefined
+                            }
+                          />
+                        );
+                      })}
                     </div>
                   ) : null}
                 </div>
@@ -377,7 +377,7 @@ export function IndexedTranscriptPanel({
             className={cn(
               "flex w-full items-center justify-between gap-1.5 text-left text-sm font-medium transition-colors",
             )}
-            onClick={() => setSegmentsOpen((open) => !open)}
+            onClick={toggleSegmentsOpen}
             aria-expanded={segmentsOpen}
           >
             <span>
@@ -396,31 +396,31 @@ export function IndexedTranscriptPanel({
           </button>
           {segmentsOpen ? (
             <div className="mt-2 grid gap-2">
-            {segments.map((segment, index) => {
-              const highlight = highlightByIndex.get(index);
-              const isActive = highlightByIndex.has(index);
-              const segmentKey = `segment-${index}`;
+              {segments.map((segment, index) => {
+                const highlight = highlightByIndex.get(index);
+                const isActive = highlightByIndex.has(index);
+                const segmentKey = `segment-${index}`;
 
-              return (
-                <SegmentRow
-                  key={segment.id ?? segmentKey}
-                  segmentKey={segmentKey}
-                  startMs={segment.start_ms}
-                  endMs={segment.end_ms}
-                  text={segment.text ?? ""}
-                  highlightRange={highlight?.highlightRange ?? null}
-                  highlightWholeSegment={
-                    highlight?.highlightWholeSegment ?? false
-                  }
-                  isActive={isActive}
-                  ariaLabel={
-                    isActive && activeEntry?.quote
-                      ? `Evidence for ${activePath}: ${activeEntry.quote}`
-                      : undefined
-                  }
-                />
-              );
-            })}
+                return (
+                  <SegmentRow
+                    key={segment.id ?? segmentKey}
+                    segmentKey={segmentKey}
+                    startMs={segment.start_ms}
+                    endMs={segment.end_ms}
+                    text={segment.text ?? ""}
+                    highlightRange={highlight?.highlightRange ?? null}
+                    highlightWholeSegment={
+                      highlight?.highlightWholeSegment ?? false
+                    }
+                    isActive={isActive}
+                    ariaLabel={
+                      isActive && activeEntry?.quote
+                        ? `Evidence for ${activePath}: ${activeEntry.quote}`
+                        : undefined
+                    }
+                  />
+                );
+              })}
             </div>
           ) : null}
         </div>

@@ -60,13 +60,13 @@ export function useEntranceAnimationEnabled(
   enabled: boolean,
   ready: boolean,
 ): boolean {
-  const playedRef = useRef(false);
+  const playedRef = useRef<boolean>(false);
 
-  if (!enabled || !ready || playedRef.current) {
+  if (!enabled || !ready || !playedRef) {
     return false;
   }
 
-  playedRef.current = true;
+  playedRef && (playedRef.current = true);
   return true;
 }
 
