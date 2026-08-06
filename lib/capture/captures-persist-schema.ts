@@ -60,6 +60,25 @@ const extractionPayloadSchema = z
     .passthrough()
     .optional();
 
+const evidenceIndexEntrySchema = z.object({
+    path: z.string().max(512),
+    status: z.string().max(64),
+    quote: z.string().max(10_000).optional(),
+    segment_ids: z.array(z.string().max(128)).max(50),
+    start_ms: z.number().nonnegative().optional(),
+    end_ms: z.number().nonnegative().optional(),
+    match_method: z.string().max(64).optional(),
+    confidence: z.number().min(0).max(1).optional(),
+    unresolved_reason: z.string().max(256).optional(),
+});
+
+const evidenceIndexArtifactSchema = z.object({
+    status: z.enum(["completed", "failed"]),
+    builder_version: z.string().max(64),
+    entries: z.array(evidenceIndexEntrySchema).max(2000),
+    error_class: z.string().max(128).optional(),
+});
+
 export const capturesPersistRequestSchema = z
     .object({
         jobId: z.string().trim().min(1).max(128),
@@ -85,6 +104,7 @@ export const veritieJobPersistSchema = z.object({
             payload: extractionPayloadSchema,
         })
         .optional(),
+    index: evidenceIndexArtifactSchema.optional(),
 });
 
 export type CapturesPersistRequest = z.infer<typeof capturesPersistRequestSchema>;

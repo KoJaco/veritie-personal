@@ -156,6 +156,10 @@ export function mergeCaptureEnrichment(input: {
     status?: CaptureStub["status"];
     extractedValues: ExtractedValueStub[];
     timelineEvents: TimelineEventStub[];
+    voiceLogArtifacts?: {
+        indexArtifact?: Record<string, unknown> | null;
+        extractionPayload?: Record<string, unknown> | null;
+    };
 }): void {
     if (!envServer.allowStubCaptureMutations) {
         throw new Error("Stub capture mutations are disabled");
@@ -184,6 +188,22 @@ export function mergeCaptureEnrichment(input: {
         if (!existingEventIds.has(event.id)) {
             TIMELINE_EVENT_SEEDS.push(event);
             existingEventIds.add(event.id);
+        }
+    }
+
+    if (input.voiceLogArtifacts) {
+        const voiceLog = VOICE_LOG_SEEDS.find(
+            (item) => item.captureId === input.captureId,
+        );
+        if (voiceLog) {
+            if (input.voiceLogArtifacts.indexArtifact !== undefined) {
+                voiceLog.indexArtifact = input.voiceLogArtifacts.indexArtifact;
+            }
+            if (input.voiceLogArtifacts.extractionPayload !== undefined) {
+                voiceLog.extractionPayload =
+                    input.voiceLogArtifacts.extractionPayload;
+            }
+            voiceLog.updatedAt = new Date().toISOString();
         }
     }
 }

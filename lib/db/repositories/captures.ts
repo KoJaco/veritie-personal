@@ -236,31 +236,50 @@ export async function persistCaptureBundle(
                 updatedAt: parseDate(bundle.capture.updatedAt),
             });
 
-            await tx.insert(voiceLogs).values({
+            const voiceLogValues: typeof voiceLogs.$inferInsert = {
                 id: bundle.voiceLog.id,
                 accountId,
                 captureId: bundle.capture.id,
                 transcriptText: bundle.voiceLog.transcriptText,
                 language: bundle.voiceLog.language,
                 durationMs: bundle.voiceLog.durationMs,
-                audioUri: bundle.voiceLog.audioUri,
                 createdAt: parseDate(bundle.voiceLog.createdAt),
                 updatedAt: parseDate(bundle.voiceLog.updatedAt),
-            });
+            };
+
+            if (bundle.voiceLog.audioUri) {
+                voiceLogValues.audioUri = bundle.voiceLog.audioUri;
+            }
+            if (bundle.voiceLog.indexArtifact != null) {
+                voiceLogValues.indexArtifact = bundle.voiceLog.indexArtifact;
+            }
+            if (bundle.voiceLog.extractionPayload != null) {
+                voiceLogValues.extractionPayload =
+                    bundle.voiceLog.extractionPayload;
+            }
+
+            await tx.insert(voiceLogs).values(voiceLogValues);
 
             if (bundle.segments.length > 0) {
                 await tx.insert(transcriptSegments).values(
-                    bundle.segments.map((segment) => ({
-                        id: segment.id,
-                        accountId,
-                        voiceLogId: segment.voiceLogId,
-                        index: segment.index,
-                        startMs: segment.startMs,
-                        endMs: segment.endMs,
-                        text: segment.text,
-                        speakerLabel: segment.speakerLabel,
-                        confidence: segment.confidence,
-                    })),
+                    bundle.segments.map((segment) => {
+                        const row: typeof transcriptSegments.$inferInsert = {
+                            id: segment.id,
+                            accountId,
+                            voiceLogId: segment.voiceLogId,
+                            index: segment.index,
+                            startMs: segment.startMs,
+                            endMs: segment.endMs,
+                            text: segment.text,
+                        };
+                        if (segment.speakerLabel) {
+                            row.speakerLabel = segment.speakerLabel;
+                        }
+                        if (segment.confidence != null) {
+                            row.confidence = segment.confidence;
+                        }
+                        return row;
+                    }),
                 );
             }
 
@@ -353,6 +372,10 @@ export async function mergeCaptureEnrichment(
         status?: CapturePersistBundle["capture"]["status"];
         extractedValues: CapturePersistBundle["extractedValues"];
         timelineEvents: CapturePersistBundle["timelineEvents"];
+        voiceLogArtifacts?: {
+            indexArtifact?: Record<string, unknown> | null;
+            extractionPayload?: Record<string, unknown> | null;
+        };
     },
 ) {
     const db = getDb();
@@ -455,6 +478,35 @@ export async function mergeCaptureEnrichment(
                     })),
                 );
             }
+        }
+
+        if (input.voiceLogArtifacts) {
+            const voiceLogUpdate: {
+                indexArtifact?: Record<string, unknown> | null;
+                extractionPayload?: Record<string, unknown> | null;
+                updatedAt: Date;
+            } = {
+                updatedAt: now,
+            };
+
+            if (input.voiceLogArtifacts.indexArtifact !== undefined) {
+                voiceLogUpdate.indexArtifact =
+                    input.voiceLogArtifacts.indexArtifact;
+            }
+            if (input.voiceLogArtifacts.extractionPayload !== undefined) {
+                voiceLogUpdate.extractionPayload =
+                    input.voiceLogArtifacts.extractionPayload;
+            }
+
+            await tx
+                .update(voiceLogs)
+                .set(voiceLogUpdate)
+                .where(
+                    and(
+                        eq(voiceLogs.accountId, accountId),
+                        eq(voiceLogs.captureId, input.captureId),
+                    ),
+                );
         }
     });
 }

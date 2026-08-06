@@ -1,5 +1,6 @@
 import type { AspectKey } from "@/lib/domain/aspect";
 import type { ValidatedVeritieJob } from "@/lib/capture/captures-persist-schema";
+import { buildCaptureSegmentId } from "@/lib/capture/capture-segment-ids";
 import type { TimelineEventStub } from "@/lib/stubs/timeline-stubs";
 import type {
     CaptureStub,
@@ -56,16 +57,19 @@ export function mapVeritieJobToCaptureBundle(
     };
 
     const segments: TranscriptSegmentStub[] =
-        job.transcript?.segments?.map((segment, index) => ({
-            id: `segment_${captureId}_${index}`,
-            voiceLogId: voiceLog.id,
-            index: segment.index ?? index,
-            startMs: segment.start_ms ?? 0,
-            endMs: segment.end_ms ?? 0,
-            text: segment.text ?? "",
-            speakerLabel: segment.speaker_label,
-            confidence: segment.confidence,
-        })) ?? [];
+        job.transcript?.segments?.map((segment, index) => {
+            const segmentIndex = segment.index ?? index;
+            return {
+                id: buildCaptureSegmentId(captureId, segmentIndex),
+                voiceLogId: voiceLog.id,
+                index: segmentIndex,
+                startMs: segment.start_ms ?? 0,
+                endMs: segment.end_ms ?? 0,
+                text: segment.text ?? "",
+                speakerLabel: segment.speaker_label,
+                confidence: segment.confidence,
+            };
+        }) ?? [];
 
     const extractedValues: ExtractedValueStub[] = [];
     const timelineEvents: TimelineEventStub[] = [];
