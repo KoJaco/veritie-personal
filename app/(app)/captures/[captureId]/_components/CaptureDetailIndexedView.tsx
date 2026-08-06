@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { IndexedResultSurface } from "@/components/capture/indexed-result";
@@ -11,22 +12,25 @@ import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-mod
 
 export function CaptureDetailIndexedView({
     detail,
+    glossaryLabels,
 }: {
     detail: CaptureDetailReadModel;
+    glossaryLabels?: Record<string, string>;
 }) {
-    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const router = useRouter();
     const hasAudioUri = Boolean(detail.voiceLog?.audioUri);
+    const [fetchedAudioUrl, setFetchedAudioUrl] = useState<string | null>(null);
+    const audioUrl = hasAudioUri ? fetchedAudioUrl : null;
 
     useEffect(() => {
         if (!hasAudioUri) {
-            setAudioUrl(null);
             return;
         }
 
         let cancelled = false;
         void fetchCaptureAudioPlaybackUrl(detail.capture.id).then((url) => {
             if (!cancelled) {
-                setAudioUrl(url);
+                setFetchedAudioUrl(url);
             }
         });
 
@@ -43,6 +47,10 @@ export function CaptureDetailIndexedView({
             layout="default"
             expectAudio={hasAudioUri}
             showIndexingBanner={false}
+            glossaryLabels={glossaryLabels}
+            captureId={detail.capture.id}
+            extractedValues={detail.extractedValues}
+            onExtractedValueSaved={() => router.refresh()}
         />
     );
 }

@@ -9,6 +9,8 @@ import {
     CaptureTranscriptPreview,
     ExtractedValueReviewActions,
 } from "@/components/indexed-result";
+import { ExtractedValueFieldsList } from "@/components/extraction/ExtractedValueFieldsList";
+import { parseExtractedValueId } from "@/lib/capture/extracted-value-path";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -32,9 +34,13 @@ import { cn } from "@/lib/utils";
 function TimelineDetailBody({
     detail,
     captureDetail,
+    glossaryLabels,
+    onDetailUpdated,
 }: {
     detail: TimelineEventDetailReadModel;
     captureDetail?: CaptureDetailReadModel | null;
+    glossaryLabels?: Record<string, string>;
+    onDetailUpdated?: () => void;
 }) {
     const captureHref = detail.event.captureId
         ? detail.event.extractedValueId
@@ -53,12 +59,24 @@ function TimelineDetailBody({
             {detail.extractedValue && (
                 <section className="space-y-2">
                     <h3 className="text-sm font-medium">Extracted fields</h3>
-                    <pre className="max-h-48 overflow-auto rounded-lg bg-background p-3 text-xs">
-                        {JSON.stringify(detail.extractedValue.fields, null, 2)}
-                    </pre>
+                    <ExtractedValueFieldsList
+                        extractedValue={detail.extractedValue}
+                        glossaryLabels={glossaryLabels}
+                    />
                     <ExtractedValueReviewActions
                         extractedValueId={detail.extractedValue.id}
                         reviewState={detail.extractedValue.reviewState}
+                        extractedValue={detail.extractedValue}
+                        listKey={
+                            parseExtractedValueId(detail.extractedValue.id)
+                                ?.listKey
+                        }
+                        index={
+                            parseExtractedValueId(detail.extractedValue.id)
+                                ?.index
+                        }
+                        glossaryLabels={glossaryLabels}
+                        onUpdated={() => onDetailUpdated?.()}
                     />
                 </section>
             )}
@@ -95,10 +113,14 @@ function TimelineDetailBody({
 export function TimelineDetailPanel({
     detail,
     captureDetail,
+    glossaryLabels,
+    onDetailUpdated,
     onClose,
 }: {
     detail: TimelineEventDetailReadModel | null;
     captureDetail?: CaptureDetailReadModel | null;
+    glossaryLabels?: Record<string, string>;
+    onDetailUpdated?: () => void;
     onClose: () => void;
 }) {
     const isMobile = useIsMobileViewport();
@@ -149,6 +171,8 @@ export function TimelineDetailPanel({
                         <TimelineDetailBody
                             detail={detail}
                             captureDetail={captureDetail}
+                            glossaryLabels={glossaryLabels}
+                            onDetailUpdated={onDetailUpdated}
                         />
                     </div>
                 </DrawerContent>
@@ -193,6 +217,8 @@ export function TimelineDetailPanel({
                     <TimelineDetailBody
                         detail={detail}
                         captureDetail={captureDetail}
+                        glossaryLabels={glossaryLabels}
+                        onDetailUpdated={onDetailUpdated}
                     />
                 </div>
             </DialogContent>

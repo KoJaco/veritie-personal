@@ -52,6 +52,10 @@ export function IndexedResultSurface({
   showIndexingBanner = false,
   showExtraction = true,
   layout = "default",
+  glossaryLabels,
+  captureId,
+  extractedValues,
+  onExtractedValueSaved,
 }: IndexedExtractionProps & {
   indexingState?: string | null;
   className?: string;
@@ -59,6 +63,10 @@ export function IndexedResultSurface({
   showIndexingBanner?: boolean;
   showExtraction?: boolean;
   layout?: "default" | "embedded";
+  glossaryLabels?: Record<string, string>;
+  captureId?: string;
+  extractedValues?: import("@/lib/stubs/capture-stubs").ExtractedValueStub[];
+  onExtractedValueSaved?: () => void;
 }) {
   const isEmbedded = layout === "embedded";
   const [extractionViewMode, setExtractionViewMode] = useState<
@@ -317,6 +325,10 @@ export function IndexedResultSurface({
                     hoverPath={interaction.hoverPath}
                     activeEntryIndex={interaction.activeEntryIndex}
                     entryIndexByPath={entryIndexByPath}
+                    glossaryLabels={glossaryLabels}
+                    captureId={captureId}
+                    extractedValues={extractedValues}
+                    onExtractedValueSaved={onExtractedValueSaved}
                     onFocusPath={handleFocusPath}
                     onHoverPath={handleHoverPath}
                     onActivatePath={handleActivatePath}

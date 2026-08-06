@@ -6,6 +6,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 
 import type { CaptureIndexItem } from "@/lib/data-source/captures-read-model";
+import { formatExtractedCountLabel } from "@/lib/capture/extraction-summary";
 import { Badge } from "@/components/ui/badge";
 import {
     Table,
@@ -153,7 +154,10 @@ export function CapturesClientView({
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {item.extractedCount}
+                                        {formatExtractedCountLabel(
+                                            item.extractedCount,
+                                            item.extractedSummary,
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
                                         {new Date(item.createdAt).toLocaleString()}
@@ -208,7 +212,10 @@ export function CapturesClientView({
                                             </div>
                                             <p className="mt-1 text-sm text-muted-foreground">
                                                 {item.type} ·{" "}
-                                                {item.extractedCount} extracted
+                                                {formatExtractedCountLabel(
+                                                    item.extractedCount,
+                                                    item.extractedSummary,
+                                                )}
                                                 ·{" "}
                                                 {new Date(
                                                     item.createdAt,

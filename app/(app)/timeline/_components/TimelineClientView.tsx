@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getTimelineEventDetailAction } from "@/lib/actions/stub-data-mutations";
 import type { TimelineIndexItem } from "@/lib/data-source/timeline-read-model";
 import type { TimelineEventDetailReadModel } from "@/lib/data-source/timeline-read-model";
@@ -21,9 +22,12 @@ function groupByDate(items: TimelineIndexItem[]) {
 
 export function TimelineClientView({
     items,
+    glossaryLabels,
 }: {
     items: TimelineIndexItem[];
+    glossaryLabels?: Record<string, string>;
 }) {
+    const router = useRouter();
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [selectedDetail, setSelectedDetail] =
         useState<TimelineEventDetailReadModel | null>(null);
@@ -33,31 +37,43 @@ export function TimelineClientView({
     const [detailLoading, setDetailLoading] = useState(false);
     const groups = useMemo(() => groupByDate(items), [items]);
 
-    const loadDetail = useCallback(async (eventId: string, signal: AbortSignal) => {
+    const loadDetail = useCallback(
+        async (eventId: string, signal?: AbortSignal) => {
         setDetailLoading(true);
         setDetailError(null);
 
         try {
             const body = await getTimelineEventDetailAction(eventId);
-            if (signal.aborted) return;
+            if (signal?.aborted) return;
             if (!body) {
                 throw new Error("Could not load event detail");
             }
             setSelectedDetail(body.detail);
             setSelectedCapture(body.captureDetail);
         } catch (error) {
-            if (signal.aborted) return;
+            if (signal?.aborted) return;
             setSelectedDetail(null);
             setSelectedCapture(null);
             setDetailError(
                 error instanceof Error ? error.message : "Could not load event detail",
             );
         } finally {
-            if (!signal.aborted) {
+            if (!signal?.aborted) {
                 setDetailLoading(false);
             }
         }
-    }, []);
+    },
+    [],
+    );
+
+    const refreshDetail = useCallback(() => {
+        if (!selectedId) {
+            return;
+        }
+        void loadDetail(selectedId).then(() => {
+            router.refresh();
+        });
+    }, [loadDetail, router, selectedId]);
 
     useEffect(() => {
         if (!selectedId) {
@@ -115,6 +131,8 @@ export function TimelineClientView({
             <TimelineDetailPanel
                 detail={detailLoading ? null : selectedDetail}
                 captureDetail={selectedCapture}
+                glossaryLabels={glossaryLabels}
+                onDetailUpdated={refreshDetail}
                 onClose={() => setSelectedId(null)}
             />
         </div>
