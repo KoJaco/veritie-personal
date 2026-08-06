@@ -46,6 +46,7 @@ sequenceDiagram
 | --- | --- |
 | `POST/GET /api/veritie/v1/*` | `requireUser()` → 401; same-origin defense-in-depth |
 | `POST /jobs` | Registers `veritie_job_leases` row for `(jobId, accountId, userId)` |
+| `GET /pipeline/config` | Session required; no job lease (pipeline display bundle) |
 | `GET /jobs/:id`, `POST /jobs/:id/upload-finalize` | 403 unless lease exists for current account |
 | `persistCaptureAction` / `POST /api/captures` | Session required; lease ownership before `getJob` |
 | Duplicate persist | Partial unique index on `(account_id, veritie_job_id)` |
@@ -64,6 +65,7 @@ sequenceDiagram
 | Server Veritie client | `lib/veritie/server-client.ts` |
 | Persist | `lib/capture/persist-capture-from-job.ts` |
 | Job → stub mapping | `lib/capture/map-veritie-job.ts` |
+| Extraction schema + aspect derivation | `docs/contracts/voice-log-extraction-schema.md`, `lib/capture/extraction-aspect.ts` |
 | Script persist API | `app/api/captures/route.ts` |
 
 ## Out of scope (follow-up)

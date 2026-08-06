@@ -58,28 +58,28 @@ export function VoiceCapturePanel({
     captureHandle,
     leasePhase,
     leaseError = null,
-    prepareLeaseForRecording,
+    prepareLease,
     renewLease,
     embedded = true,
     onBack,
     onComplete,
     saveVoiceLogAudio = false,
     captureLocationLabel = "",
+    glossaryLabels,
     persistCaptureFn = persistCaptureForVoiceFlow,
 }: {
     veritie: VeritieHook;
     captureHandle: PipelineHandle | null;
     leasePhase: CaptureLeasePhase;
     leaseError?: string | null;
-    prepareLeaseForRecording: (
-        metadata: CaptureJobMetadata,
-    ) => Promise<PipelineHandle>;
+    prepareLease: (metadata: CaptureJobMetadata) => Promise<PipelineHandle>;
     renewLease: () => void;
     embedded?: boolean;
     onBack: () => void;
     onComplete: () => void;
     saveVoiceLogAudio?: boolean;
     captureLocationLabel?: string;
+    glossaryLabels?: Record<string, string>;
     persistCaptureFn?: (jobId: string) => Promise<PersistCaptureResult>;
 }) {
     const [phase, setPhase] = useState<VoicePhase>("ready");
@@ -231,7 +231,7 @@ export function VoiceCapturePanel({
     }, [activeJobId]);
 
     const startCapture = useCallback(async () => {
-        if (leasePhase === "preparing") {
+        if (leasePhase === "preparing" || !captureHandle) {
             return;
         }
 
@@ -249,23 +249,14 @@ export function VoiceCapturePanel({
         openAbortRef.current = openController;
         const { signal: openSignal } = openController;
 
+        const handle = captureHandle;
+        activeCaptureHandleRef.current = handle;
+
         try {
             if (!navigator.mediaDevices?.getUserMedia) {
                 throw new Error("Microphone not available in this browser.");
             }
 
-            setStatusLine("Preparing capture session…");
-            const metadata = buildCaptureJobMetadata({
-                capturedAt: new Date().toISOString(),
-                locationLabel: captureLocationLabelRef.current,
-            });
-            const handle = await prepareLeaseForRecording(metadata);
-            if (!mountedRef.current || openSignal.aborted) {
-                handle.close();
-                return;
-            }
-
-            activeCaptureHandleRef.current = handle;
             resetDiagnostics({
                 jobId: handle.snapshot.jobId,
                 leasePhase,
@@ -273,7 +264,6 @@ export function VoiceCapturePanel({
             captureFlowLog.info("capture.start", {
                 jobId: handle.snapshot.jobId,
                 leasePhase,
-                captured_at: metadata.captured_at,
             });
 
             setStatusLine("Opening live session…");
@@ -438,13 +428,23 @@ export function VoiceCapturePanel({
         }
     }, [
         abortInFlightWork,
+        captureHandle,
         closeLiveSession,
         leasePhase,
-        prepareLeaseForRecording,
         renewLease,
         stopLocalRecording,
         resetDiagnostics,
     ]);
+
+    const retryLease = useCallback(() => {
+        const metadata = buildCaptureJobMetadata({
+            capturedAt: new Date().toISOString(),
+            locationLabel: captureLocationLabelRef.current,
+        });
+        void prepareLease(metadata).catch(() => {
+            // Errors surface via leaseError.
+        });
+    }, [prepareLease]);
 
     const finishCapture = useCallback(async () => {
         const recorder = recorderRef.current;
@@ -648,7 +648,9 @@ export function VoiceCapturePanel({
 
     const isRecording = phase === "recording";
     const canStart =
-        (phase === "ready" || phase === "failed") && leasePhase !== "preparing";
+        (phase === "ready" || phase === "failed") &&
+        leasePhase === "ready" &&
+        captureHandle !== null;
     const isPreparingLease = leasePhase === "preparing";
 
     const recordingMinutes = Math.floor(recordingElapsedMs / 60_000);
@@ -711,6 +713,17 @@ export function VoiceCapturePanel({
                 <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     <p className="font-medium">Voice log unavailable</p>
                     <p className="mt-1 text-destructive/90">{error ?? leaseError}</p>
+                    {leaseError && !error ? (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="mt-2"
+                            onClick={retryLease}
+                        >
+                            Retry lease
+                        </Button>
+                    ) : null}
                 </div>
             )}
 
@@ -738,6 +751,7 @@ export function VoiceCapturePanel({
                         expectAudio={saveVoiceLogAudio}
                         showIndexingBanner
                         indexingState={indexedJob?.indexing_state ?? null}
+                        glossaryLabels={glossaryLabels}
                     />
                     {indexingPending ? (
                         <p className="mt-2 text-xs text-muted-foreground">

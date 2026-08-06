@@ -8,7 +8,7 @@ const mockToastError = jest.fn();
 const mockPersistCaptureFn = jest.fn();
 const mockHandleClose = jest.fn();
 const mockRenewLease = jest.fn();
-const mockPrepareLeaseForRecording = jest.fn();
+const mockPrepareLease = jest.fn();
 const mockEnqueueBackgroundPipeline = jest.fn();
 
 jest.mock("sonner", () => ({
@@ -124,7 +124,7 @@ function renderPanel(
         persistCaptureFn: typeof mockPersistCaptureFn;
         leasePhase: "idle" | "preparing" | "ready" | "error";
         captureHandle: typeof captureHandleMock | null;
-        prepareLeaseForRecording: typeof mockPrepareLeaseForRecording;
+        prepareLease: typeof mockPrepareLease;
         captureLocationLabel?: string;
     }> = {},
 ) {
@@ -136,11 +136,8 @@ function renderPanel(
                     ? captureHandleMock
                     : overrides.captureHandle) as never
             }
-            leasePhase={overrides.leasePhase ?? "idle"}
-            prepareLeaseForRecording={
-                overrides.prepareLeaseForRecording ??
-                mockPrepareLeaseForRecording
-            }
+            leasePhase={overrides.leasePhase ?? "ready"}
+            prepareLease={overrides.prepareLease ?? mockPrepareLease}
             renewLease={mockRenewLease}
             onBack={overrides.onBack ?? jest.fn()}
             onComplete={overrides.onComplete ?? jest.fn()}
@@ -155,7 +152,7 @@ describe("VoiceCapturePanel", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockPrepareLeaseForRecording.mockResolvedValue(captureHandleMock);
+        mockPrepareLease.mockResolvedValue(captureHandleMock);
         mockRenewLease.mockImplementation(() => undefined);
         mockStartCapture.mockImplementation(async (options?: { signal?: AbortSignal }) => {
             if (options?.signal?.aborted) {
@@ -295,21 +292,16 @@ describe("VoiceCapturePanel", () => {
         expect(mockEnqueueBackgroundPipeline).toHaveBeenCalledTimes(1);
     });
 
-    it("passes capture metadata when starting recording", async () => {
-        renderPanel({ captureLocationLabel: "North Manly" });
+    it("does not prepare lease when starting recording", async () => {
+        renderPanel();
 
         fireEvent.click(screen.getByRole("button", { name: /start recording/i }));
 
         await waitFor(() => {
-            expect(mockPrepareLeaseForRecording).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    captured_at: expect.any(String),
-                    timezone: expect.any(String),
-                    locale: expect.any(String),
-                    location_label: "North Manly",
-                }),
-            );
+            expect(mockStartCapture).toHaveBeenCalled();
         });
+
+        expect(mockPrepareLease).not.toHaveBeenCalled();
     });
 
     it("disables start while lease preparation is in flight", () => {

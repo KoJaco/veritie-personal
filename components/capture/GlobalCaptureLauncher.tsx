@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { isCaptureJobInFlight } from "@/lib/capture/capture-background-pipeline";
 import { captureJobCoordinator } from "@/lib/capture/capture-job-coordinator";
 import { getCapturePreferences } from "@/lib/capture/capture-audio-client";
+import { buildCaptureJobMetadata } from "@/lib/capture/build-capture-job-metadata";
 
 const LAUNCHER_BACKDROP_Z = LAYER_CLASS.launcherBackdrop;
 const LAUNCHER_CHROME_Z = LAYER_CLASS.launcherChrome;
@@ -70,8 +71,9 @@ function GlobalCaptureLauncherInner() {
     } | null>(null);
     const suppressTriggerClickRef = useRef(false);
     const openedAtRef = useRef(0);
+    const openGenerationRef = useRef(0);
 
-    const { releaseLease, captureHandle } = useVeritieCaptureLease();
+    const { releaseLease, captureHandle, prepareLease } = useVeritieCaptureLease();
     const [saveVoiceLogAudio, setSaveVoiceLogAudio] = useState(false);
     const [captureLocationLabel, setCaptureLocationLabel] = useState("");
     const pendingReleaseJobIdRef = useRef<string | null>(null);
@@ -91,6 +93,7 @@ function GlobalCaptureLauncherInner() {
     }, [captureHandle, releaseLease]);
 
     const closeUi = useCallback(() => {
+        openGenerationRef.current += 1;
         setOpen(false);
         resetTransientState();
         tryReleaseLease();
@@ -101,14 +104,28 @@ function GlobalCaptureLauncherInner() {
     }, [closeUi]);
 
     const openLauncher = useCallback(() => {
+        const generation = openGenerationRef.current + 1;
+        openGenerationRef.current = generation;
         openedAtRef.current = Date.now();
         setOpen(true);
         resetTransientState();
         void getCapturePreferences().then((prefs) => {
+            if (openGenerationRef.current !== generation) {
+                return;
+            }
+
+            const locationLabel = prefs.captureLocationLabel ?? "";
             setSaveVoiceLogAudio(prefs.saveVoiceLogAudio);
-            setCaptureLocationLabel(prefs.captureLocationLabel ?? "");
+            setCaptureLocationLabel(locationLabel);
+            const metadata = buildCaptureJobMetadata({
+                capturedAt: new Date().toISOString(),
+                locationLabel,
+            });
+            void prepareLease(metadata).catch(() => {
+                // Lease errors surface via leasePhase/leaseError in the voice panel.
+            });
         });
-    }, [resetTransientState]);
+    }, [prepareLease, resetTransientState]);
 
     useEffect(() => {
         return captureJobCoordinator.subscribe((event) => {
