@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import {
   motion,
   useReducedMotion,
@@ -60,14 +59,7 @@ export function useEntranceAnimationEnabled(
   enabled: boolean,
   ready: boolean,
 ): boolean {
-  const playedRef = useRef<boolean>(false);
-
-  if (!enabled || !ready || !playedRef) {
-    return false;
-  }
-
-  playedRef && (playedRef.current = true);
-  return true;
+  return enabled && ready;
 }
 
 export function IndexedResultStagger({
