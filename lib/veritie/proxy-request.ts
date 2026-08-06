@@ -68,6 +68,15 @@ export function isAllowedVeritieProxyPath(
     if (
         method === "GET" &&
         pathSegments.length === 2 &&
+        pathSegments[0] === "pipeline" &&
+        pathSegments[1] === "config"
+    ) {
+        return true;
+    }
+
+    if (
+        method === "GET" &&
+        pathSegments.length === 2 &&
         pathSegments[0] === "jobs" &&
         JOB_ID_PATTERN.test(pathSegments[1])
     ) {

@@ -97,6 +97,7 @@ describe("lib/veritie/proxy-request", () => {
 
     it("allows only SDK job paths", () => {
         expect(isAllowedVeritieProxyPath("POST", ["jobs"])).toBe(true);
+        expect(isAllowedVeritieProxyPath("GET", ["pipeline", "config"])).toBe(true);
         expect(isAllowedVeritieProxyPath("GET", ["jobs", "job_1"])).toBe(true);
         expect(
             isAllowedVeritieProxyPath("POST", ["jobs", "job_1", "upload-finalize"]),
