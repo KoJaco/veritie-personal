@@ -458,3 +458,26 @@ export async function mergeCaptureEnrichment(
         }
     });
 }
+
+export async function updateVoiceLogAudioUri(
+    scope: AccountScope,
+    captureId: string,
+    audioUri: string,
+): Promise<boolean> {
+    const db = getDb();
+    const updated = await db
+        .update(voiceLogs)
+        .set({
+            audioUri,
+            updatedAt: new Date(),
+        })
+        .where(
+            and(
+                eq(voiceLogs.accountId, scope.accountId),
+                eq(voiceLogs.captureId, captureId),
+            ),
+        )
+        .returning({ id: voiceLogs.id });
+
+    return updated.length > 0;
+}

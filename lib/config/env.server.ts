@@ -57,4 +57,6 @@ export const envServer = {
     // OpenAI (assistant chat API)
     openaiApiKey: getEnvVarOptional("OPENAI_API_KEY"),
     openaiModel: getEnvVarOptional("OPENAI_MODEL") ?? "gpt-4o-mini",
+
+    supabaseAudioBucket: getEnvVarOptional("SUPABASE_AUDIO_BUCKET") ?? "audio",
 } as const;
