@@ -35,7 +35,15 @@ export function isStructuredArtifactValue(value: unknown): boolean {
     return Array.isArray(value) || (typeof value === "object" && value !== null);
 }
 
-export function formatArtifactKey(key: string): string {
+export function formatArtifactKey(
+    key: string,
+    glossaryLabels?: Record<string, string>,
+): string {
+    const glossaryLabel = glossaryLabels?.[key]?.trim();
+    if (glossaryLabel) {
+        return glossaryLabel;
+    }
+
     return key
         .replace(/_/g, " ")
         .replace(/\b\w/g, (character) => character.toUpperCase());

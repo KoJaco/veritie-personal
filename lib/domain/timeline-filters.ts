@@ -12,6 +12,7 @@ export const TIMELINE_SIGNAL_EVENT_TYPES: TimelineEventType[] = [
     "goal_detected",
     "goal_progress_detected",
     "expense_detected",
+    "event_detected",
     "record_detected",
     "resource_detected",
 ];
