@@ -25,6 +25,7 @@ const bootstrapSummarySchema = z
         enabledAspects: z.array(aspectKeySchema).min(1),
         capturePreference: capturePreferenceSchema,
         aiMode: aiModeSchema,
+        saveVoiceLogAudio: z.boolean().optional(),
     })
     .strict();
 
@@ -42,6 +43,7 @@ export const DEFAULT_ONBOARDING_PROFILE: StubOnboardingProfile = {
     enabledAspects: ["personal", "admin", "finance"],
     capturePreference: "voice_first",
     aiMode: "guided",
+    saveVoiceLogAudio: false,
 };
 
 export const DEFAULT_CLIENT_STATE: StubOnboardingClientState = {

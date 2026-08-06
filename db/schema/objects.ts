@@ -1,6 +1,6 @@
 /**
  * Drizzle schema — projected domain objects (tasks, reminders, goals, money, records, resources).
- * Target: PostgreSQL on Supabase. Not used at runtime until persistence phase.
+ * Target: PostgreSQL on Supabase.
  */
 import {
     pgTable,
@@ -13,10 +13,13 @@ import {
     index,
 } from "drizzle-orm/pg-core";
 
+import { accountIdColumn } from "./tenancy";
+
 export const tasks = pgTable(
     "tasks",
     {
         id: text("id").primaryKey(),
+        accountId: accountIdColumn(),
         title: text("title").notNull(),
         notes: text("notes"),
         aspect: text("aspect").notNull(),
@@ -48,11 +51,15 @@ export const tasks = pgTable(
         createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
         updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
     },
-    (table) => [index("tasks_status_idx").on(table.status)],
+    (table) => [
+        index("tasks_status_idx").on(table.status),
+        index("tasks_account_id_idx").on(table.accountId),
+    ],
 );
 
 export const reminders = pgTable("reminders", {
     id: text("id").primaryKey(),
+    accountId: accountIdColumn(),
     title: text("title").notNull(),
     remindAt: timestamp("remind_at", { withTimezone: true }).notNull(),
     recurrence: text("recurrence"),
@@ -74,6 +81,7 @@ export const reminders = pgTable("reminders", {
 
 export const goals = pgTable("goals", {
     id: text("id").primaryKey(),
+    accountId: accountIdColumn(),
     title: text("title").notNull(),
     aspect: text("aspect").notNull(),
     status: text("status").notNull(),
@@ -90,6 +98,7 @@ export const goals = pgTable("goals", {
 
 export const goalProgressEntries = pgTable("goal_progress_entries", {
     id: text("id").primaryKey(),
+    accountId: accountIdColumn(),
     goalId: text("goal_id")
         .notNull()
         .references(() => goals.id),
@@ -111,6 +120,7 @@ export const goalProgressEntries = pgTable("goal_progress_entries", {
 
 export const moneyEntries = pgTable("money_entries", {
     id: text("id").primaryKey(),
+    accountId: accountIdColumn(),
     type: text("type").notNull(),
     amount: doublePrecision("amount").notNull(),
     currency: text("currency").notNull(),
@@ -136,6 +146,7 @@ export const moneyEntries = pgTable("money_entries", {
 
 export const records = pgTable("records", {
     id: text("id").primaryKey(),
+    accountId: accountIdColumn(),
     title: text("title").notNull(),
     kind: text("kind").notNull(),
     aspect: text("aspect").notNull(),
@@ -171,6 +182,7 @@ export const records = pgTable("records", {
 
 export const resources = pgTable("resources", {
     id: text("id").primaryKey(),
+    accountId: accountIdColumn(),
     name: text("name").notNull(),
     category: text("category").notNull(),
     summary: text("summary"),

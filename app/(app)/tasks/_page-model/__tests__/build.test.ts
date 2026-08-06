@@ -3,11 +3,11 @@ import { enforceTasksRouteContract } from "../validate";
 import { stubDataSourceAdapters } from "@/lib/data-source/stub-adapter";
 
 describe("buildTasksRouteContract", () => {
-    it("builds a valid tasks index contract", () => {
+    it("builds a valid tasks index contract", async () => {
         const contract = buildTasksRouteContract({
             scope: "tasks_index",
             lens: { scope: "all" },
-            tasksIndex: stubDataSourceAdapters.tasks.getTasksIndex(),
+            tasksIndex: await stubDataSourceAdapters.tasks.getTasksIndex(),
         });
 
         const enforced = enforceTasksRouteContract(contract);
@@ -16,8 +16,8 @@ describe("buildTasksRouteContract", () => {
         expect(enforced.payload?.scope.type).toBe("task_index");
     });
 
-    it("builds a valid task detail contract", () => {
-        const detail = stubDataSourceAdapters.tasks.getTaskDetail(
+    it("builds a valid task detail contract", async () => {
+        const detail = await stubDataSourceAdapters.tasks.getTaskDetail(
             "task-ac-policy-review",
         );
         const contract = buildTasksRouteContract({

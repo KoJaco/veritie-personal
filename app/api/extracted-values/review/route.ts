@@ -1,23 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireInternalStubApiAccess } from "@/lib/api/require-internal-stub-api-access";
+
+import { requireProgrammaticApiAccess } from "@/lib/api/require-programmatic-api-access";
+import {
+    BoundedBodyError,
+    boundedBodyErrorResponse,
+    readBoundedJson,
+} from "@/lib/api/read-bounded-body";
+import { EXTRACTED_VALUE_REVIEW_MAX_BODY_BYTES } from "@/lib/api/body-limits";
 import { extractedValueReviewRequestSchema } from "@/lib/capture/extracted-value-review-schema";
-import { updateExtractedValueReviewState } from "@/lib/data-source/timeline-read-model";
+import { getDataSourceKind } from "@/lib/data-source/registry";
+import { updateExtractedValueReviewState as updateStubExtractedValueReviewState } from "@/lib/data-source/timeline-read-model";
+import { requireAccountScope } from "@/lib/db/repositories/context";
+import { updateExtractedValueReviewState as updateDbExtractedValueReviewState } from "@/lib/db/repositories/timeline";
 import { logger } from "@/lib/logging/server-logger";
 
 /**
  * Programmatic review-state endpoint. In-app UI uses `updateExtractedValueReviewAction`.
  */
 export async function POST(request: NextRequest) {
-    const access = requireInternalStubApiAccess(request);
-    if (!access.allowed) {
-        return NextResponse.json(
-            { error: access.message },
-            { status: access.status },
-        );
+    const denied = await requireProgrammaticApiAccess(request);
+    if (denied) {
+        return denied;
     }
 
     try {
-        const body = await request.json();
+        const body = await readBoundedJson(
+            request,
+            EXTRACTED_VALUE_REVIEW_MAX_BODY_BYTES,
+        );
         const parsed = extractedValueReviewRequestSchema.safeParse(body);
 
         if (!parsed.success) {
@@ -27,12 +37,37 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        updateExtractedValueReviewState(
-            parsed.data.extractedValueId,
-            parsed.data.reviewState,
-        );
+        if (getDataSourceKind() === "backend") {
+            const scope = await requireAccountScope();
+            const updated = await updateDbExtractedValueReviewState(
+                scope,
+                parsed.data.extractedValueId,
+                parsed.data.reviewState,
+            );
+            if (!updated) {
+                return NextResponse.json(
+                    { error: "Extracted value not found" },
+                    { status: 404 },
+                );
+            }
+        } else {
+            const updated = updateStubExtractedValueReviewState(
+                parsed.data.extractedValueId,
+                parsed.data.reviewState,
+            );
+            if (!updated) {
+                return NextResponse.json(
+                    { error: "Extracted value not found" },
+                    { status: 404 },
+                );
+            }
+        }
+
         return NextResponse.json({ ok: true });
     } catch (error) {
+        if (error instanceof BoundedBodyError) {
+            return boundedBodyErrorResponse(error);
+        }
         logger.error("[extracted-values] review_failed", {
             error: error instanceof Error ? error : String(error),
         });

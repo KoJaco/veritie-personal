@@ -147,16 +147,21 @@ export function appendTimelineEvents(events: TimelineEventStub[]): void {
 export function updateExtractedValueReviewState(
     id: string,
     reviewState: ReviewState,
-): void {
+): boolean {
     const value = EXTRACTED_VALUE_SEEDS.find((v) => v.id === id);
-    if (value) {
-        value.reviewState = reviewState;
-        value.updatedAt = new Date().toISOString();
+    if (!value) {
+        return false;
     }
+
+    value.reviewState = reviewState;
+    value.updatedAt = new Date().toISOString();
+
     const event = TIMELINE_EVENT_SEEDS.find(
         (e) => e.extractedValueId === id,
     );
     if (event) {
         event.reviewState = reviewState;
     }
+
+    return true;
 }

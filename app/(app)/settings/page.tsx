@@ -1,7 +1,8 @@
-import { PageFrame } from "@/components/static/PageFrame";
 import { ContextPayloadSlot } from "@/components/context/ContextPayloadSlot";
+import { PageFrame } from "@/components/static/PageFrame";
 import { PageHeader } from "@/components/route";
 import { getDataSourceAdapters } from "@/lib/data-source";
+import { getDataSourceKind } from "@/lib/data-source/registry";
 import { getLensFromSearchParams, type SearchParamRecord } from "@/lib/lens";
 import { logger } from "@/lib/logging/server-logger";
 import { SettingsPageContent } from "./_components/SettingsPageContent";
@@ -16,7 +17,8 @@ export default async function SettingsPage({
     searchParams,
 }: SettingsPageProps) {
     const lens = getLensFromSearchParams(await searchParams);
-    const settings = getDataSourceAdapters().settings.getSettings();
+    const settings = await getDataSourceAdapters().settings.getSettings();
+    const mutationsEnabled = getDataSourceKind() === "backend";
     const contract = buildSettingsRouteContract({
         lens,
         settings,
@@ -50,7 +52,10 @@ export default async function SettingsPage({
             <PageFrame
                 header={<PageHeader title="Settings" separator={false} />}
             >
-                <SettingsPageContent settings={settings} />
+                <SettingsPageContent
+                    settings={settings}
+                    mutationsEnabled={mutationsEnabled}
+                />
             </PageFrame>
         </>
     );

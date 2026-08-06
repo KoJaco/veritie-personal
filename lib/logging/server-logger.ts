@@ -5,6 +5,8 @@
  * Server Components, Server Actions). Debug logs are only enabled in development.
  */
 
+import "server-only";
+
 import { envServer } from "@/lib/config/env.server";
 import { safeStringifyForLogging } from "./safe-serialize";
 

@@ -38,7 +38,7 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
     const view = parseCapturesView(getStringParam(resolved.view));
 
     const dataSource = getDataSourceAdapters();
-    const capturesIndex = dataSource.captures.getCapturesIndex({
+    const capturesIndex = await dataSource.captures.getCapturesIndex({
         lens: { scope: lens.aspect },
         search: search || undefined,
         status,
@@ -79,57 +79,57 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
         <>
             <ContextPayloadSlot payload={payload} />
             <PageFrame
-            header={
-                <PageHeader
-                    title="Captures"
-                    description="Voice logs and uploaded sources."
-                    separator={false}
-                    actions={
-                        <>
-                            <IndexSearchCommand
-                                route="/captures"
-                                search={search}
-                                baseParams={headerBaseParams}
-                                items={captureSearchItems}
-                                dialogTitle="Search captures"
-                                dialogDescription="Search captures by title, type, or status."
-                                placeholder="Search captures…"
-                                recentHeading="Recent captures"
-                                matchingHeading="Matching captures"
-                            />
-                            <CapturesFilterSheet
-                                aspect={lens.aspect}
-                                search={search}
-                                status={status}
-                                sortBy={sortBy}
-                                sortDir={sortDir}
-                                view={view}
-                            />
-                            <IndexViewToggle
-                                route="/captures"
-                                baseParams={headerBaseParams}
-                                view={view}
-                            />
-                            <PageAssistantAction
-                                canOpenAssistant={canOpenAssistantFromCapturesContract(
-                                    contract,
-                                )}
-                            />
-                        </>
-                    }
+                header={
+                    <PageHeader
+                        title="Captures"
+                        description="Voice logs and uploaded sources."
+                        separator={false}
+                        actions={
+                            <>
+                                <IndexViewToggle
+                                    route="/captures"
+                                    baseParams={headerBaseParams}
+                                    view={view}
+                                />
+                                <IndexSearchCommand
+                                    route="/captures"
+                                    search={search}
+                                    baseParams={headerBaseParams}
+                                    items={captureSearchItems}
+                                    dialogTitle="Search captures"
+                                    dialogDescription="Search captures by title, type, or status."
+                                    placeholder="Search captures…"
+                                    recentHeading="Recent captures"
+                                    matchingHeading="Matching captures"
+                                />
+                                <CapturesFilterSheet
+                                    aspect={lens.aspect}
+                                    search={search}
+                                    status={status}
+                                    sortBy={sortBy}
+                                    sortDir={sortDir}
+                                    view={view}
+                                />
+                                <PageAssistantAction
+                                    canOpenAssistant={canOpenAssistantFromCapturesContract(
+                                        contract,
+                                    )}
+                                />
+                            </>
+                        }
+                    />
+                }
+            >
+                <CapturesClientView
+                    items={capturesIndex.items}
+                    aspect={lens.aspect}
+                    search={search}
+                    status={status}
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    view={view}
                 />
-            }
-        >
-            <CapturesClientView
-                items={capturesIndex.items}
-                aspect={lens.aspect}
-                search={search}
-                status={status}
-                sortBy={sortBy}
-                sortDir={sortDir}
-                view={view}
-            />
-        </PageFrame>
+            </PageFrame>
         </>
     );
 }

@@ -1,5 +1,16 @@
 import { describe, expect, it, jest } from "@jest/globals";
 
+import { createTestJsonRequest } from "@/lib/api/test-json-request";
+
+jest.mock("@/lib/auth/require-user", () => ({
+    requireUser: jest.fn(async () => ({
+        id: "user_test",
+        accountId: "account_test",
+        email: "test@example.com",
+        role: "owner",
+    })),
+}));
+
 if (!("Request" in globalThis)) {
     class MockRequest {}
     (globalThis as { Request?: unknown }).Request = MockRequest;
@@ -34,17 +45,30 @@ jest.mock("next/server", () => ({
 }));
 
 describe("POST /api/resources", () => {
+    const originalEnv = { ...process.env };
+
+    beforeEach(() => {
+        jest.resetModules();
+        process.env = {
+            ...originalEnv,
+            PLATFORM_SHELL_FE_DATA_SOURCE: "stub",
+        };
+        delete process.env.DATABASE_URL;
+    });
+
+    afterEach(() => {
+        process.env = originalEnv;
+    });
+
     it("creates a resource and returns the backing identifier", async () => {
         const { POST } = await import("@/app/api/resources/route");
-        const request = {
-            json: async () => ({
-                name: "Identity Platform",
-                category: "service",
-                ownerName: "Jordan Smith",
-                criticality: "high",
-                sensitivity: "internal",
-            }),
-        } as never;
+        const request = createTestJsonRequest({
+            name: "Identity Platform",
+            category: "service",
+            ownerName: "Jordan Smith",
+            criticality: "high",
+            sensitivity: "internal",
+        });
 
         const response = await POST(request);
         const body = await response.json();
@@ -57,19 +81,18 @@ describe("POST /api/resources", () => {
 
     it("returns 400 for missing resource names", async () => {
         const { POST } = await import("@/app/api/resources/route");
-        const request = {
-            json: async () => ({
-                name: "",
-                ownerName: "Jordan Smith",
-            }),
-        } as never;
+        const request = createTestJsonRequest({
+            name: "",
+            ownerName: "Jordan Smith",
+        });
 
         const response = await POST(request);
         const body = await response.json();
 
         expect(response.status).toBe(400);
-        expect(body).toEqual({
-            error: "Resource name is required.",
-        });
+        expect(body.error).toBe("Invalid request body");
+        expect(body.details?.fieldErrors?.name).toEqual(
+            expect.arrayContaining([expect.stringMatching(/Too small/i)]),
+        );
     });
 });

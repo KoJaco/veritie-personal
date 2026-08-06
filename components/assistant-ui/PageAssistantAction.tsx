@@ -11,7 +11,7 @@ interface PageAssistantActionProps {
 
 export function PageAssistantAction({
     canOpenAssistant,
-    label = "Ask assistant",
+    label = "Ask Veritie",
 }: PageAssistantActionProps) {
     const { open, state } = useContextRail();
 
@@ -23,6 +23,7 @@ export function PageAssistantAction({
         <PageHeaderActionButton
             icon={Sparkles}
             label={label}
+            variant="default"
             onClick={() => open()}
             aria-expanded={state !== "CLOSED"}
         />

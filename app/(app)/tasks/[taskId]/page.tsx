@@ -1,8 +1,10 @@
+import { notFound } from "next/navigation";
 import { ContextPayloadSlot } from "@/components/context/ContextPayloadSlot";
 import { TaskAttachmentsSection } from "@/components/attachments/TaskAttachmentsSection";
 import { AttachmentUploadFlow } from "@/components/attachments/AttachmentUploadFlow";
 import { PageHeader } from "@/components/route";
 import { PageFrame } from "@/components/static/PageFrame";
+import { getDataSourceAdapters, getDataSourceKind } from "@/lib/data-source";
 import { getLensFromSearchParams, type SearchParamRecord } from "@/lib/lens";
 import { logger } from "@/lib/logging/server-logger";
 import { buildFreshTaskDetail } from "@/lib/onboarding-stub";
@@ -12,7 +14,10 @@ import { TaskResourcesSection } from "../_components/TaskResourcesSection";
 import { TaskDocumentsSection } from "../_components/TaskDocumentsSection";
 import { TaskHeaderActions } from "../_components/TaskHeader";
 import { TaskOverview } from "../_components/TaskOverview";
-import { buildFreshTasksRouteContract } from "../_page-model/build";
+import {
+    buildFreshTasksRouteContract,
+    buildTasksRouteContract,
+} from "../_page-model/build";
 import { enforceTasksRouteContract } from "../_page-model/validate";
 
 interface TaskPageProps {
@@ -24,17 +29,34 @@ export default async function TaskPage({
     params,
     searchParams,
 }: TaskPageProps) {
-    const bootstrap = await getStubServerBootstrap();
     const { taskId } = await params;
     const lens = getLensFromSearchParams(await searchParams);
-    const task = buildFreshTaskDetail(bootstrap.summary, taskId, lens);
+    const dataSourceKind = getDataSourceKind();
+    let task;
+    let contract;
 
-    const contract = buildFreshTasksRouteContract({
-        scope: "task_detail",
-        lens,
-        taskDetail: task,
-        summary: bootstrap.summary,
-    });
+    if (dataSourceKind === "stub") {
+        const bootstrap = await getStubServerBootstrap();
+        task = buildFreshTaskDetail(bootstrap.summary, taskId, lens);
+        contract = buildFreshTasksRouteContract({
+            scope: "task_detail",
+            lens,
+            taskDetail: task,
+            summary: bootstrap.summary,
+        });
+    } else {
+        try {
+            task = await getDataSourceAdapters().tasks.getTaskDetail(taskId);
+        } catch {
+            notFound();
+        }
+        contract = buildTasksRouteContract({
+            scope: "task_detail",
+            lens,
+            taskDetail: task,
+        });
+    }
+
     const { pageModelValidation, payload } =
         enforceTasksRouteContract(contract);
 

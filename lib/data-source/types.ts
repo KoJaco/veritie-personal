@@ -51,8 +51,8 @@ export interface DashboardReadAdapter {
 }
 
 export interface TasksReadAdapter {
-    getTasksIndex(query?: TasksIndexQuery): TasksIndexReadModel;
-    getTaskDetail(id: string): TaskDetailReadModel;
+    getTasksIndex(query?: TasksIndexQuery): Promise<TasksIndexReadModel>;
+    getTaskDetail(id: string): Promise<TaskDetailReadModel>;
 }
 
 export interface AttachmentsReadAdapter {
@@ -94,11 +94,11 @@ export interface ObjectsReadAdapter {
 }
 
 export interface ResourcesReadAdapter {
-    getResourcesIndex(): ResourceIndexReadModel;
-    getResourcesIndex(query: ResourceIndexQuery): ResourceIndexReadModel;
-    getResourcesIndex(count: number): ResourceStub[];
-    getResourceDetail(id: string): ResourceDetailStub;
-    createResource(input: CreateResourceInput): CreateResourceResult;
+    getResourcesIndex(): Promise<ResourceIndexReadModel>;
+    getResourcesIndex(query: ResourceIndexQuery): Promise<ResourceIndexReadModel>;
+    getResourcesIndex(count: number): Promise<ResourceStub[]>;
+    getResourceDetail(id: string): Promise<ResourceDetailStub>;
+    createResource(input: CreateResourceInput): Promise<CreateResourceResult>;
 }
 
 export interface ChecksReadAdapter {
@@ -121,17 +121,29 @@ export interface ConnectionsReadAdapter {
 }
 
 export interface SettingsReadAdapter {
-    getSettings(): SettingsStub;
+    getSettings(): Promise<SettingsStub>;
 }
 
 export interface TimelineReadAdapter {
-    getTimelineIndex(query?: import("./timeline-read-model").TimelineIndexQuery): import("./timeline-read-model").TimelineIndexReadModel;
-    getTimelineEventDetail(id: string): import("./timeline-read-model").TimelineEventDetailReadModel | null;
+    getTimelineIndex(
+        query?: import("./timeline-read-model").TimelineIndexQuery,
+    ): Promise<import("./timeline-read-model").TimelineIndexReadModel>;
+    getTimelineEventDetail(
+        id: string,
+    ): Promise<
+        import("./timeline-read-model").TimelineEventDetailReadModel | null
+    >;
 }
 
 export interface CapturesReadAdapter {
-    getCapturesIndex(query?: import("./captures-read-model").CapturesIndexQuery): import("./captures-read-model").CapturesIndexReadModel;
-    getCaptureDetail(id: string): import("./captures-read-model").CaptureDetailReadModel | null;
+    getCapturesIndex(
+        query?: import("./captures-read-model").CapturesIndexQuery,
+    ): Promise<import("./captures-read-model").CapturesIndexReadModel>;
+    getCaptureDetail(
+        id: string,
+    ): Promise<
+        import("./captures-read-model").CaptureDetailReadModel | null
+    >;
 }
 
 export interface DataSourceAdapters {

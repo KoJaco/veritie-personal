@@ -1,8 +1,11 @@
 "use server";
 
-import { getCaptureDetail } from "@/lib/data-source/captures-read-model";
-import { getTimelineEventDetail } from "@/lib/data-source/timeline-read-model";
-import { updateExtractedValueReviewState } from "@/lib/data-source/timeline-read-model";
+import { requireUser } from "@/lib/auth/require-user";
+import { getDataSourceAdapters } from "@/lib/data-source";
+import { getDataSourceKind } from "@/lib/data-source/registry";
+import { requireAccountScope } from "@/lib/db/repositories/context";
+import { updateExtractedValueReviewState as updateDbExtractedValueReviewState } from "@/lib/db/repositories/timeline";
+import { updateExtractedValueReviewState as updateStubExtractedValueReviewState } from "@/lib/data-source/timeline-read-model";
 import {
     persistCaptureFromVeritieJob,
     enrichCaptureFromVeritieJob,
@@ -16,12 +19,14 @@ import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-mod
 export async function persistCaptureAction(
     jobId: string,
 ): Promise<PersistCaptureFromJobResult> {
+    await requireUser();
     return persistCaptureFromVeritieJob(jobId);
 }
 
 export async function enrichCaptureAction(
     jobId: string,
 ): Promise<EnrichCaptureFromJobResult> {
+    await requireUser();
     return enrichCaptureFromVeritieJob(jobId);
 }
 
@@ -34,13 +39,16 @@ export async function getTimelineEventDetailAction(eventId: string): Promise<{
         return null;
     }
 
-    const detail = getTimelineEventDetail(trimmed);
+    const adapters = getDataSourceAdapters();
+    const detail = await adapters.timeline.getTimelineEventDetail(trimmed);
     if (!detail) {
         return null;
     }
 
     const captureId = detail.event.captureId;
-    const captureDetail = captureId ? getCaptureDetail(captureId) : null;
+    const captureDetail = captureId
+        ? await adapters.captures.getCaptureDetail(captureId)
+        : null;
 
     return { detail, captureDetail };
 }
@@ -49,6 +57,8 @@ export async function updateExtractedValueReviewAction(
     extractedValueId: string,
     reviewState: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+    await requireUser();
+
     const parsed = extractedValueReviewRequestSchema.safeParse({
         extractedValueId,
         reviewState,
@@ -58,10 +68,25 @@ export async function updateExtractedValueReviewAction(
         return { ok: false, error: "Invalid review payload" };
     }
 
-    updateExtractedValueReviewState(
-        parsed.data.extractedValueId,
-        parsed.data.reviewState,
-    );
+    if (getDataSourceKind() === "backend") {
+        const scope = await requireAccountScope();
+        const updated = await updateDbExtractedValueReviewState(
+            scope,
+            parsed.data.extractedValueId,
+            parsed.data.reviewState,
+        );
+        if (!updated) {
+            return { ok: false, error: "Extracted value not found" };
+        }
+    } else {
+        const updated = updateStubExtractedValueReviewState(
+            parsed.data.extractedValueId,
+            parsed.data.reviewState,
+        );
+        if (!updated) {
+            return { ok: false, error: "Extracted value not found" };
+        }
+    }
 
     return { ok: true };
 }

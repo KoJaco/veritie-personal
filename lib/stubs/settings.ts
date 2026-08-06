@@ -80,6 +80,7 @@ export function getProfileStub(): ProfileStub {
         email: currentUser.email,
         role: "Admin",
         lastLoginAt: randomDate(randomInt(-7, 0)),
+        workspaceName: "Jordan's Workspace",
     };
 }
 

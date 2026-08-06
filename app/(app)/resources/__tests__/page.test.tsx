@@ -77,6 +77,10 @@ jest.mock("@/lib/data-source", () => ({
     getDataSourceAdapters: jest.fn(),
 }));
 
+jest.mock("@/lib/data-source/registry", () => ({
+    getDataSourceKind: jest.fn(() => "stub"),
+}));
+
 jest.mock("@/lib/onboarding-stub/server", () => ({
     getStubServerBootstrap: jest.fn(),
 }));

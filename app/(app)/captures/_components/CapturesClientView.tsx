@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import {
-    ArrowDown,
-    ArrowUp,
-} from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+
 import type { CaptureIndexItem } from "@/lib/data-source/captures-read-model";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,9 +15,12 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { useCaptureLiveUpdates } from "@/components/captures/CapturesLiveProvider";
 import { buildIndexHref } from "@/lib/route/build-index-href";
 import { SURFACE_CLASS } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
+
+const MotionTableRow = motion.create(TableRow);
 
 type ViewMode = "cards" | "table";
 type SortBy = "createdAt" | "title" | "extractedCount";
@@ -52,6 +54,9 @@ export function CapturesClientView({
     sortDir: SortDir;
     view: ViewMode;
 }) {
+    const shouldReduceMotion = useReducedMotion();
+    const { pendingNewIds, lastEnrichedIds, clearAnimatedIds } =
+        useCaptureLiveUpdates();
     const groups = useMemo(() => groupByDate(items), [items]);
 
     const baseParams = {
@@ -63,8 +68,26 @@ export function CapturesClientView({
         view,
     };
 
+    const enterOffset =
+        sortDir === "asc" ? 12 : sortDir === "desc" ? -12 : 8;
+
+    const listItemMotion = {
+        hidden: shouldReduceMotion
+            ? { opacity: 1, y: 0 }
+            : { opacity: 0, y: enterOffset },
+        visible: { opacity: 1, y: 0 },
+    };
+
+    useEffect(() => {
+        for (const captureId of [...pendingNewIds, ...lastEnrichedIds]) {
+            if (items.some((item) => item.id === captureId)) {
+                clearAnimatedIds(captureId);
+            }
+        }
+    }, [items, pendingNewIds, lastEnrichedIds, clearAnimatedIds]);
+
     return (
-        <div className="space-y-6 py-4">
+        <div className="space-y-6">
             {view === "table" ? (
                 <section className={cn(SURFACE_CLASS, "p-0")}>
                     <Table>
@@ -103,7 +126,16 @@ export function CapturesClientView({
                         </TableHeader>
                         <TableBody>
                             {items.map((item) => (
-                                <TableRow key={item.id}>
+                                <MotionTableRow
+                                    key={item.id}
+                                    layout={!shouldReduceMotion}
+                                    initial="hidden"
+                                    animate="visible"
+                                    variants={listItemMotion}
+                                    transition={{
+                                        duration: shouldReduceMotion ? 0 : 0.25,
+                                    }}
+                                >
                                     <TableCell>
                                         <Link
                                             href={`/captures/${item.id}`}
@@ -126,7 +158,7 @@ export function CapturesClientView({
                                     <TableCell className="text-muted-foreground">
                                         {new Date(item.createdAt).toLocaleString()}
                                     </TableCell>
-                                </TableRow>
+                                </MotionTableRow>
                             ))}
                         </TableBody>
                     </Table>
@@ -144,36 +176,49 @@ export function CapturesClientView({
                             </h2>
                             <div className="space-y-2">
                                 {groupItems.map((item) => (
-                                    <Link
+                                    <motion.div
                                         key={item.id}
-                                        href={`/captures/${item.id}`}
-                                        className={cn(
-                                            SURFACE_CLASS,
-                                            "block px-4 py-3 transition-colors hover:bg-accent/40",
-                                        )}
+                                        layout={!shouldReduceMotion}
+                                        initial="hidden"
+                                        animate="visible"
+                                        variants={listItemMotion}
+                                        transition={{
+                                            duration: shouldReduceMotion
+                                                ? 0
+                                                : 0.25,
+                                        }}
                                     >
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <p className="font-medium">
-                                                {item.title}
+                                        <Link
+                                            href={`/captures/${item.id}`}
+                                            className={cn(
+                                                SURFACE_CLASS,
+                                                "block px-4 py-3 transition-colors hover:bg-accent/40",
+                                            )}
+                                        >
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="font-medium">
+                                                    {item.title}
+                                                </p>
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-[10px]"
+                                                >
+                                                    {item.status}
+                                                </Badge>
+                                            </div>
+                                            <p className="mt-1 text-sm text-muted-foreground">
+                                                {item.type} ·{" "}
+                                                {item.extractedCount} extracted
+                                                ·{" "}
+                                                {new Date(
+                                                    item.createdAt,
+                                                ).toLocaleTimeString(undefined, {
+                                                    hour: "numeric",
+                                                    minute: "2-digit",
+                                                })}
                                             </p>
-                                            <Badge
-                                                variant="outline"
-                                                className="text-[10px]"
-                                            >
-                                                {item.status}
-                                            </Badge>
-                                        </div>
-                                        <p className="mt-1 text-sm text-muted-foreground">
-                                            {item.type} · {item.extractedCount}{" "}
-                                            extracted ·{" "}
-                                            {new Date(
-                                                item.createdAt,
-                                            ).toLocaleTimeString(undefined, {
-                                                hour: "numeric",
-                                                minute: "2-digit",
-                                            })}
-                                        </p>
-                                    </Link>
+                                        </Link>
+                                    </motion.div>
                                 ))}
                             </div>
                         </section>
@@ -182,10 +227,17 @@ export function CapturesClientView({
             )}
 
             {items.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                    No captures match your filters. Use the capture launcher to
-                    add a voice log.
-                </p>
+                <div
+                    className={cn(
+                        SURFACE_CLASS,
+                        "p-4 min-h-96 flex items-center justify-center",
+                    )}
+                >
+                    <p className="text-sm text-muted-foreground max-w-sm text-center">
+                        No captures match your filters. Use the capture launcher
+                        to add a voice log.
+                    </p>
+                </div>
             )}
         </div>
     );

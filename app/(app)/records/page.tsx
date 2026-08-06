@@ -18,7 +18,6 @@ import type { ObjectsIndexItem } from "@/lib/data-source";
 import type { ObjectCoverageStatus } from "@/lib/stubs";
 import { paginateItems, parsePageParam } from "@/lib/pagination";
 import { logger } from "@/lib/logging/server-logger";
-import { getStubServerBootstrap } from "@/lib/onboarding-stub/server";
 import Link from "next/link";
 import { DocumentsIndexContent } from "./_components/DocumentsIndexContent";
 import { buildDocumentsRouteContract } from "./_page-model/build";
@@ -31,7 +30,6 @@ interface DocumentsPageProps {
 const PAGE_SIZE = 20;
 
 export default async function DocumentsPage({ searchParams }: DocumentsPageProps) {
-    const bootstrap = await getStubServerBootstrap();
     const dataSource = getDataSourceAdapters();
     const resolvedSearchParams = await searchParams;
     const lens = getLensFromSearchParams(resolvedSearchParams);
@@ -44,9 +42,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
 
     const lensScopedObjects = dataSource.objects
         .getObjectsIndex()
-        .items.filter((object) =>
-            scopeIdsMatchLens(object.scopeIds, lens),
-        );
+        .items.filter((object) => scopeIdsMatchLens(object.scopeIds, lens));
     const objectsIndex = applyObjectsIndexQuery(lensScopedObjects, {
         filters: {
             search: query || undefined,
@@ -62,19 +58,10 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
         requestedPage,
         PAGE_SIZE,
     );
-    const freshPagination = {
-        currentPage: 1,
-        totalPages: 1,
-        rangeStart: 0,
-        rangeEnd: 0,
-        totalItems: 0,
-    };
-    const displayedPageItems: typeof pageItems = [];
-    const displayedPagination = freshPagination;
     const contract = buildDocumentsRouteContract({
         scope: "documents_index",
         lens,
-        documents: displayedPageItems,
+        documents: pageItems,
     });
     const { pageModelValidation, payload } =
         enforceDocumentsRouteContract(contract);
@@ -123,8 +110,8 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
                         sortBy={sortBy}
                         sortDir={sortDir}
                         availableDomains={objectsIndex.availableDomains}
-                        pageItems={displayedPageItems}
-                        pagination={displayedPagination}
+                        pageItems={pageItems}
+                        pagination={pagination}
                         emptyState={
                             <SetupCollectionEmptyState
                                 title="No documents created yet"

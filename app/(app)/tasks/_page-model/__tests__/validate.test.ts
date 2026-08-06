@@ -15,11 +15,11 @@ describe("validateTasksRouteContractShape", () => {
         expect(result.ok).toBe(false);
     });
 
-    it("fails closed when the page model becomes invalid", () => {
+    it("fails closed when the page model becomes invalid", async () => {
         const contract = buildTasksRouteContract({
             scope: "tasks_index",
             lens: { scope: "all" },
-            tasksIndex: stubDataSourceAdapters.tasks.getTasksIndex(),
+            tasksIndex: await stubDataSourceAdapters.tasks.getTasksIndex(),
         });
 
         const enforced = enforceTasksRouteContract({

@@ -90,7 +90,7 @@ export function OnboardingWizard() {
     const finish = () => {
         const summary = buildBootstrapSummary(state.profile);
         persistOnboardingCompletion(summary);
-        router.push("/timeline");
+        router.push("/auth/signup");
     };
 
     return (
@@ -167,6 +167,36 @@ export function OnboardingWizard() {
                             ))}
                         </section>
                         <section className="space-y-3">
+                            <p className="text-sm font-medium">Voice log audio</p>
+                            <button
+                                type="button"
+                                className={cn(
+                                    SURFACE_CLASS_NESTED,
+                                    "w-full rounded-xl px-4 py-3 text-left",
+                                    state.profile.saveVoiceLogAudio &&
+                                        "ring-2 ring-primary",
+                                )}
+                                onClick={() =>
+                                    setState((current) => ({
+                                        ...current,
+                                        profile: {
+                                            ...current.profile,
+                                            saveVoiceLogAudio:
+                                                !current.profile.saveVoiceLogAudio,
+                                        },
+                                    }))
+                                }
+                            >
+                                <div className="font-medium">
+                                    Save voice log audio
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Store recordings in your private workspace
+                                    for playback inside captures.
+                                </p>
+                            </button>
+                        </section>
+                        <section className="space-y-3">
                             <p className="text-sm font-medium">Assistant mode</p>
                             {ONBOARDING_AI_MODE_OPTIONS.map((option) => (
                                 <button
@@ -216,6 +246,12 @@ export function OnboardingWizard() {
                             <dt className="text-muted-foreground">Assistant</dt>
                             <dd className="font-medium">{state.profile.aiMode}</dd>
                         </div>
+                        <div>
+                            <dt className="text-muted-foreground">Save audio</dt>
+                            <dd className="font-medium">
+                                {state.profile.saveVoiceLogAudio ? "Yes" : "No"}
+                            </dd>
+                        </div>
                     </dl>
                 )}
             </div>
@@ -252,7 +288,7 @@ export function OnboardingWizard() {
                 ) : (
                     <Button type="button" onClick={finish}>
                         <Check className="mr-2 h-4 w-4" />
-                        Open timeline
+                        Continue to sign up
                     </Button>
                 )}
             </div>

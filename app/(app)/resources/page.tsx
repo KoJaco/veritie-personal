@@ -10,6 +10,7 @@ import {
     type ResourceIndexSortKey,
     type ResourceStatus,
 } from "@/lib/data-source";
+import { getDataSourceKind } from "@/lib/data-source/registry";
 import { getLensFromSearchParams, type SearchParamRecord } from "@/lib/lens";
 import { parsePageParam, paginateItems } from "@/lib/pagination";
 import { logger } from "@/lib/logging/server-logger";
@@ -42,7 +43,7 @@ export default async function ResourcesPage({ searchParams }: ResourcesPageProps
     const requestedPage = parsePageParam(resolvedSearchParams.page);
 
     const resourcesIndex = applyResourcesIndexQuery(
-        dataSource.resources.getResourcesIndex().items,
+        (await dataSource.resources.getResourcesIndex()).items,
         {
             filters: {
                 search: query || undefined,
@@ -60,22 +61,26 @@ export default async function ResourcesPage({ searchParams }: ResourcesPageProps
         requestedPage,
         PAGE_SIZE,
     );
-    const freshSummary = {
+    const showInventoryData =
+        getDataSourceKind() === "backend" || bootstrap.onboardingCompleted;
+    const emptySummary = {
         totalResources: 0,
         servicesCount: 0,
         monitoredResources: 0,
         resourcesWithEvidenceGaps: 0,
     };
-    const freshPagination = {
+    const emptyPagination = {
         currentPage: 1,
         totalPages: 1,
         rangeStart: 0,
         rangeEnd: 0,
         totalItems: 0,
     };
-    const displayedSummary = freshSummary;
-    const displayedPageItems: typeof pageItems = [];
-    const displayedPagination = freshPagination;
+    const displayedSummary = showInventoryData
+        ? resourcesIndex.summary
+        : emptySummary;
+    const displayedPageItems = showInventoryData ? pageItems : [];
+    const displayedPagination = showInventoryData ? pagination : emptyPagination;
 
     const contract = buildResourcesRouteContract({
         scope: "resources_index",

@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals
 
 import { resetCaptureStubStoreForTests } from "@/lib/stubs/capture-stubs";
 import { resetTimelineStubStoreForTests } from "@/lib/stubs/timeline-stubs";
+import {
+    createTestJsonRequest,
+    createTestRequestWithContentLength,
+} from "@/lib/api/test-json-request";
 
 const mockGetJob = jest.fn<() => Promise<unknown>>();
 
@@ -38,11 +42,26 @@ jest.mock("next/server", () => ({
     },
 }));
 
+jest.mock("next/cache", () => ({
+    revalidatePath: jest.fn(),
+}));
+
 jest.mock("@/lib/veritie/server-client", () => ({
     getServerVeritieClient: () => ({
         getJob: mockGetJob,
     }),
     resetServerVeritieClientForTests: jest.fn(),
+}));
+
+jest.mock("@/lib/auth/require-user", () => ({
+    requireUser: jest.fn(async () => ({
+        id: "user_test",
+        accountId: "account_test",
+        email: "test@example.com",
+        role: "owner",
+        plan: "free",
+        appConfig: {},
+    })),
 }));
 
 const completedJob = {
@@ -75,19 +94,16 @@ function createRequest(
         contentLength?: string;
     } = {},
 ) {
-    const raw = JSON.stringify(body);
-    return {
-        headers: {
-            get: (name: string) => {
-                if (name === "authorization") return options.authorization ?? null;
-                if (name === "content-length")
-                    return options.contentLength ?? String(raw.length);
-                return null;
-            },
-        },
-        text: async () => raw,
-        json: async () => JSON.parse(raw),
-    } as never;
+    if (options.contentLength && !options.authorization) {
+        return createTestRequestWithContentLength(
+            Number.parseInt(options.contentLength, 10),
+        );
+    }
+
+    return createTestJsonRequest(body, {
+        authorization: options.authorization,
+        contentLength: options.contentLength,
+    });
 }
 
 describe("POST /api/captures", () => {
@@ -102,9 +118,11 @@ describe("POST /api/captures", () => {
             ...originalEnv,
             NODE_ENV: "test",
             ALLOW_STUB_CAPTURE_MUTATIONS: "true",
+            PLATFORM_SHELL_FE_DATA_SOURCE: "stub",
             VERITIE_API_URL: "http://localhost:3001",
             VERITIE_PIPELINE_ALIAS: "veritie-personal",
         };
+        delete process.env.DATABASE_URL;
         mockGetJob.mockResolvedValue(completedJob);
     });
 
@@ -121,6 +139,8 @@ describe("POST /api/captures", () => {
             VERITIE_PIPELINE_ALIAS: "veritie-personal",
         };
         delete process.env.CAPTURES_PERSIST_SECRET;
+        delete process.env.DATABASE_URL;
+        process.env.PLATFORM_SHELL_FE_DATA_SOURCE = "stub";
 
         const { POST } = await import("@/app/api/captures/route");
         const response = await POST(
@@ -138,9 +158,11 @@ describe("POST /api/captures", () => {
             NODE_ENV: "production",
             CAPTURES_PERSIST_SECRET: "test-secret",
             ALLOW_STUB_CAPTURE_MUTATIONS: "true",
+            PLATFORM_SHELL_FE_DATA_SOURCE: "stub",
             VERITIE_API_URL: "http://localhost:3001",
             VERITIE_PIPELINE_ALIAS: "veritie-personal",
         };
+        delete process.env.DATABASE_URL;
 
         const { POST } = await import("@/app/api/captures/route");
         const response = await POST(

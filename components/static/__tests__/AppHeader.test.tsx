@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { AppHeader } from "@/components/static/AppHeader";
@@ -78,5 +79,17 @@ describe("AppHeader", () => {
             screen.getByRole("button", { name: /scope lens/i }),
         ).toBeInTheDocument();
         expect(screen.getByText("fresh-task-1")).toBeInTheDocument();
+    });
+
+    it("renders sign out in the user menu", async () => {
+        mockUseSearchParams.mockReturnValue(new URLSearchParams());
+        const user = userEvent.setup();
+
+        render(<AppHeader />);
+
+        await user.click(screen.getByRole("button", { name: /user menu/i }));
+
+        const signOutLink = screen.getByRole("menuitem", { name: /sign out/i });
+        expect(signOutLink).toHaveAttribute("href", "/auth/logout");
     });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { Menu, Bell, User, HomeIcon } from "lucide-react";
+import { Menu, Bell, User, HomeIcon, LogOut } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -163,22 +163,27 @@ function AppHeaderInner() {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2 justify-self-end">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Notifications"
-                        title="Notifications"
-                    >
-                        <Bell className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="User menu"
-                        title="User Account"
-                    >
-                        <User className="h-4 w-4" />
-                    </Button>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label="User menu"
+                                title="User account"
+                            >
+                                <User className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                                <a href="/auth/logout" className="cursor-pointer">
+                                    <LogOut className="h-4 w-4" />
+                                    Sign out
+                                </a>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
         </header>

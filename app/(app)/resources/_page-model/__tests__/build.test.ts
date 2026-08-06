@@ -3,8 +3,9 @@ import { enforceResourcesRouteContract } from "../validate";
 import { stubDataSourceAdapters } from "@/lib/data-source/stub-adapter";
 
 describe("buildResourcesRouteContract", () => {
-    it("builds the resources index contract from the visible slice", () => {
-        const resourcesIndex = stubDataSourceAdapters.resources.getResourcesIndex();
+    it("builds the resources index contract from the visible slice", async () => {
+        const resourcesIndex =
+            await stubDataSourceAdapters.resources.getResourcesIndex();
         const visibleResources = resourcesIndex.items.slice(0, 3);
 
         const contract = buildResourcesRouteContract({

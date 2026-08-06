@@ -2,6 +2,7 @@
 
 import {
     useCallback,
+    useEffect,
     useRef,
     useState,
     type PointerEvent as ReactPointerEvent,
@@ -25,6 +26,9 @@ import { usePersistedCaptureLauncherTucked } from "@/lib/hooks/usePersistedCaptu
 import { useEscapeClose, useInitialFocus } from "@/lib/hooks/useEscapeClose";
 import { LAYER_CLASS } from "@/lib/ui/layering";
 import { cn } from "@/lib/utils";
+import { isCaptureJobInFlight } from "@/lib/capture/capture-background-pipeline";
+import { captureJobCoordinator } from "@/lib/capture/capture-job-coordinator";
+import { getVoiceLogPreferences } from "@/lib/capture/capture-audio-client";
 
 const LAUNCHER_BACKDROP_Z = LAYER_CLASS.launcherBackdrop;
 const LAUNCHER_CHROME_Z = LAYER_CLASS.launcherChrome;
@@ -67,24 +71,58 @@ function GlobalCaptureLauncherInner() {
     const suppressTriggerClickRef = useRef(false);
     const openedAtRef = useRef(0);
 
-    const { prepareLease, releaseLease } = useVeritieCaptureLease();
+    const { prepareLease, releaseLease, captureHandle } = useVeritieCaptureLease();
+    const [saveVoiceLogAudio, setSaveVoiceLogAudio] = useState(false);
+    const pendingReleaseJobIdRef = useRef<string | null>(null);
 
     const resetTransientState = useCallback(() => {
         setMode("options");
     }, []);
+
+    const tryReleaseLease = useCallback(() => {
+        const jobId = captureHandle?.snapshot.jobId;
+        if (jobId && isCaptureJobInFlight(jobId)) {
+            pendingReleaseJobIdRef.current = jobId;
+            return;
+        }
+        pendingReleaseJobIdRef.current = null;
+        releaseLease();
+    }, [captureHandle, releaseLease]);
+
+    const closeUi = useCallback(() => {
+        setOpen(false);
+        resetTransientState();
+        tryReleaseLease();
+    }, [resetTransientState, tryReleaseLease]);
+
+    const close = useCallback(() => {
+        closeUi();
+    }, [closeUi]);
 
     const openLauncher = useCallback(() => {
         openedAtRef.current = Date.now();
         setOpen(true);
         resetTransientState();
         void prepareLease();
+        void getVoiceLogPreferences().then((prefs) => {
+            setSaveVoiceLogAudio(prefs.saveVoiceLogAudio);
+        });
     }, [prepareLease, resetTransientState]);
 
-    const close = useCallback(() => {
-        setOpen(false);
-        resetTransientState();
-        releaseLease();
-    }, [releaseLease, resetTransientState]);
+    useEffect(() => {
+        return captureJobCoordinator.subscribe((event) => {
+            if (
+                event.type === "capture:enriched" ||
+                event.type === "capture:failed"
+            ) {
+                const pendingJobId = pendingReleaseJobIdRef.current;
+                if (pendingJobId && event.jobId === pendingJobId) {
+                    pendingReleaseJobIdRef.current = null;
+                    releaseLease();
+                }
+            }
+        });
+    }, [releaseLease]);
 
     const returnToOptions = useCallback(() => {
         resetTransientState();
@@ -349,6 +387,7 @@ function GlobalCaptureLauncherInner() {
                         <VoiceCaptureLauncherPanel
                             onBack={returnToOptions}
                             onComplete={close}
+                            saveVoiceLogAudio={saveVoiceLogAudio}
                         />
                     </motion.div>
                 )}

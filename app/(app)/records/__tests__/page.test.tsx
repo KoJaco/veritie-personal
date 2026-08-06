@@ -85,7 +85,20 @@ function createAdapterMock(): DataSourceAdapters {
         stubDataSourceAdapters: DataSourceAdapters;
     };
 
-    return actual.stubDataSourceAdapters;
+    return {
+        ...actual.stubDataSourceAdapters,
+        objects: {
+            getObjectsIndex: ((
+                countOrQuery?: number | import("@/lib/data-source/objects-read-model").ObjectsIndexQuery,
+            ) => {
+                if (typeof countOrQuery === "number") {
+                    return [];
+                }
+                return { items: [], availableDomains: [] };
+            }) as DataSourceAdapters["objects"]["getObjectsIndex"],
+            getObjectDetail: actual.stubDataSourceAdapters.objects.getObjectDetail,
+        },
+    };
 }
 
 describe("DocumentsPage", () => {

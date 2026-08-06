@@ -3,6 +3,7 @@
 import { type ReactNode } from "react";
 import { AppShell } from "./AppShell";
 import { ContextPayloadSlot } from "@/components/context/ContextPayloadSlot";
+import { CapturesLiveProvider } from "@/components/captures/CapturesLiveProvider";
 
 interface AppShellClientProps {
     children: ReactNode;
@@ -10,9 +11,11 @@ interface AppShellClientProps {
 
 export function AppShellClient({ children }: AppShellClientProps) {
     return (
-        <AppShell>
-            <ContextPayloadSlot payload={null} source="layout" />
-            {children}
-        </AppShell>
+        <CapturesLiveProvider>
+            <AppShell>
+                <ContextPayloadSlot payload={null} source="layout" />
+                {children}
+            </AppShell>
+        </CapturesLiveProvider>
     );
 }

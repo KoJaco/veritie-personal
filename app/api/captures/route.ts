@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireInternalStubApiAccess } from "@/lib/api/require-internal-stub-api-access";
+import { requireProgrammaticApiAccess } from "@/lib/api/require-programmatic-api-access";
 import {
-    CAPTURES_PERSIST_MAX_BODY_BYTES,
-    capturesPersistRequestSchema,
-} from "@/lib/capture/captures-persist-schema";
+    BoundedBodyError,
+    boundedBodyErrorResponse,
+    readBoundedText,
+} from "@/lib/api/read-bounded-body";
+import { CAPTURES_PERSIST_MAX_BODY_BYTES } from "@/lib/api/body-limits";
+import { capturesPersistRequestSchema } from "@/lib/capture/captures-persist-schema";
 import { persistCaptureFromVeritieJob } from "@/lib/capture/persist-capture-from-job";
+import { isVeritieJobAccessError } from "@/lib/db/repositories/veritie-job-leases";
 import { logger } from "@/lib/logging/server-logger";
 
 /**
@@ -12,27 +16,13 @@ import { logger } from "@/lib/logging/server-logger";
  * `persistCaptureAction` server action instead — no bearer secret in the client.
  */
 export async function POST(request: NextRequest) {
-    const access = requireInternalStubApiAccess(request);
-    if (!access.allowed) {
-        return NextResponse.json(
-            { error: access.message },
-            { status: access.status },
-        );
-    }
-
-    const contentLength = request.headers.get("content-length");
-    if (
-        contentLength &&
-        Number.parseInt(contentLength, 10) > CAPTURES_PERSIST_MAX_BODY_BYTES
-    ) {
-        return NextResponse.json({ error: "Request body too large" }, { status: 413 });
+    const denied = await requireProgrammaticApiAccess(request);
+    if (denied) {
+        return denied;
     }
 
     try {
-        const rawBody = await request.text();
-        if (rawBody.length > CAPTURES_PERSIST_MAX_BODY_BYTES) {
-            return NextResponse.json({ error: "Request body too large" }, { status: 413 });
-        }
+        const rawBody = await readBoundedText(request, CAPTURES_PERSIST_MAX_BODY_BYTES);
 
         let parsedBody: unknown;
         try {
@@ -52,12 +42,20 @@ export async function POST(request: NextRequest) {
         const result = await persistCaptureFromVeritieJob(requestResult.data.jobId);
         return NextResponse.json(result);
     } catch (error) {
+        if (error instanceof BoundedBodyError) {
+            return boundedBodyErrorResponse(error);
+        }
+
         logger.error("[captures] persist_failed", {
             error: error instanceof Error ? error : String(error),
         });
         const message =
             error instanceof Error ? error.message : "Failed to persist capture";
-        const status = message.includes("not available") ? 503 : 500;
+        const status = message.includes("not available")
+            ? 503
+            : isVeritieJobAccessError(error)
+              ? 403
+              : 500;
         return NextResponse.json({ error: message }, { status });
     }
 }

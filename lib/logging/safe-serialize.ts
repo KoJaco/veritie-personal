@@ -4,6 +4,17 @@
  * Provides safe serialization of objects that may contain circular references, functions, or other non-serializable values. Prevents errors when logging complex objects.
  */
 
+const SENSITIVE_KEY_PATTERN =
+    /^(password|secret|token|authorization|apikey|api_key|cookie|set-cookie|bearer|private_key|access_token|refresh_token|session_id|sessionid)$/i;
+
+function isSensitiveLogKey(key: string): boolean {
+    if (key.startsWith("_") && key.length > 1) {
+        return true;
+    }
+    const normalized = key.replace(/[-]/g, "_");
+    return SENSITIVE_KEY_PATTERN.test(key) || SENSITIVE_KEY_PATTERN.test(normalized);
+}
+
 /**
  * Safely serializes a value to JSON string
  *
@@ -89,8 +100,8 @@ export function safeStringify(value: unknown, space?: number | string): string {
                 // Handle plain objects
                 const result: Record<string, unknown> = {};
                 for (const [k, v] of Object.entries(val)) {
-                    // Skip private/sensitive fields
-                    if (k.startsWith("_") && k.length > 1) {
+                    if (isSensitiveLogKey(k)) {
+                        result[k] = "[REDACTED]";
                         continue;
                     }
                     result[k] = replacer(k, v);
@@ -229,8 +240,8 @@ export function safeStringifyForLogging(
                 const limited = entries.slice(0, maxLength);
                 const result: Record<string, unknown> = {};
                 for (const [k, v] of limited) {
-                    // Skip private/sensitive fields
-                    if (k.startsWith("_") && k.length > 1) {
+                    if (isSensitiveLogKey(k)) {
+                        result[k] = "[REDACTED]";
                         continue;
                     }
                     result[k] = replacer(k, v);

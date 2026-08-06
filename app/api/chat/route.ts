@@ -1,35 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-type MessageRole = "user" | "assistant";
+import { requireSessionApiAccess } from "@/lib/api/require-session-api-access";
+import {
+    BoundedBodyError,
+    boundedBodyErrorResponse,
+    readBoundedJson,
+} from "@/lib/api/read-bounded-body";
+import { envServer } from "@/lib/config/env.server";
+import {
+    CHAT_API_MAX_BODY_BYTES,
+    chatRequestSchema,
+} from "@/lib/chat/chat-request-schema";
+import { logger } from "@/lib/logging/server-logger";
 
-interface ChatRequest {
-    threadKey: string;
-    messages: Array<{ id: string; role: MessageRole; content: string }>;
-    context?: unknown;
-}
-
-const ALLOWED_ROLES = new Set<MessageRole>(["user", "assistant"]);
-
+/** In-app assistant chat. Requires session; OpenAI key configured server-side. */
 export async function POST(request: NextRequest) {
-    try {
-        const body: ChatRequest = await request.json();
-        const { messages, context, threadKey } = body;
+    const denied = await requireSessionApiAccess();
+    if (denied) {
+        return denied;
+    }
 
-        // Initialize OpenAI client
+    if (!envServer.openaiApiKey) {
+        return NextResponse.json(
+            { error: "Chat is not configured (missing OPENAI_API_KEY)" },
+            { status: 503 },
+        );
+    }
+
+    try {
+        const rawBody = await readBoundedJson(request, CHAT_API_MAX_BODY_BYTES);
+        const parsed = chatRequestSchema.safeParse(rawBody);
+
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Invalid chat payload", details: parsed.error.flatten() },
+                { status: 400 },
+            );
+        }
+
+        const { messages, context, threadKey } = parsed.data;
+
         const openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
+            apiKey: envServer.openaiApiKey,
         });
 
-        // Get model from env or use default
-        const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+        const model = envServer.openaiModel;
 
-        const safeMessages = messages
-            .filter((msg) => ALLOWED_ROLES.has(msg.role))
-            .map((msg) => ({
-                role: msg.role,
-                content: msg.content,
-            }));
+        const safeMessages = messages.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+        }));
 
         const systemContext =
             typeof context === "string"
@@ -38,7 +59,6 @@ export async function POST(request: NextRequest) {
                   ? JSON.stringify(context)
                   : "";
 
-        // Call OpenAI Chat Completions API (non-streaming for MVP)
         const completion = await openai.chat.completions.create({
             model,
             messages: [
@@ -55,7 +75,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ content: assistantMessage });
     } catch (error) {
-        console.error("Chat API error:", error);
+        if (error instanceof BoundedBodyError) {
+            return boundedBodyErrorResponse(error);
+        }
+
+        logger.error("[chat] request_failed", {
+            error: error instanceof Error ? error : String(error),
+        });
         return NextResponse.json(
             { error: "Failed to process chat request" },
             { status: 500 },

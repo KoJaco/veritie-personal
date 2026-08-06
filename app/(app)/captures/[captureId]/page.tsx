@@ -15,7 +15,7 @@ export default async function CaptureDetailPage({
 }: CaptureDetailPageProps) {
     const { captureId } = await params;
     const { anchor } = await searchParams;
-    const detail = getDataSourceAdapters().captures.getCaptureDetail(captureId);
+    const detail = await getDataSourceAdapters().captures.getCaptureDetail(captureId);
 
     if (!detail) {
         notFound();

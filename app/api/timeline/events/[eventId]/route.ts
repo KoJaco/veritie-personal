@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireInternalStubApiAccess } from "@/lib/api/require-internal-stub-api-access";
-import { getCaptureDetail } from "@/lib/data-source/captures-read-model";
-import { getTimelineEventDetail } from "@/lib/data-source/timeline-read-model";
+
+import { requireProgrammaticApiAccess } from "@/lib/api/require-programmatic-api-access";
+import { getDataSourceAdapters } from "@/lib/data-source";
 import { logger } from "@/lib/logging/server-logger";
 
 /**
@@ -11,23 +11,29 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ eventId: string }> },
 ) {
-    const access = requireInternalStubApiAccess(request);
-    if (!access.allowed) {
-        return NextResponse.json(
-            { error: access.message },
-            { status: access.status },
-        );
+    const denied = await requireProgrammaticApiAccess(request);
+    if (denied) {
+        return denied;
     }
 
     const { eventId } = await params;
-    const detail = getTimelineEventDetail(eventId);
+    const trimmed = eventId.trim();
+
+    if (!trimmed || trimmed.length > 128) {
+        return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
+    }
+
+    const adapters = getDataSourceAdapters();
+    const detail = await adapters.timeline.getTimelineEventDetail(trimmed);
 
     if (!detail) {
         return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
     const captureId = detail.event.captureId;
-    const captureDetail = captureId ? getCaptureDetail(captureId) : null;
+    const captureDetail = captureId
+        ? await adapters.captures.getCaptureDetail(captureId)
+        : null;
 
     return NextResponse.json({ detail, captureDetail });
 }

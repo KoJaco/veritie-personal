@@ -62,7 +62,7 @@ import {
     getTimelineIndex,
     getTimelineEventDetail,
 } from "./timeline-read-model";
-import type { DataSourceAdapters } from "./types";
+import type { DataSourceAdapters, ResourcesReadAdapter } from "./types";
 import type { ObjectsIndexQuery, ObjectsIndexReadModel } from "./objects-read-model";
 import type { ObjectStub } from "@/lib/stubs";
 import type { ResourceStub } from "@/lib/stubs";
@@ -141,8 +141,8 @@ export const stubDataSourceAdapters: DataSourceAdapters = {
         getTaskSummaries: (tasks, now) => getTaskSummariesStub(tasks, now),
     },
     tasks: {
-        getTasksIndex: (query) => getStubTasksIndex(query),
-        getTaskDetail: (id) => getStubTaskDetail(id),
+        getTasksIndex: async (query) => getStubTasksIndex(query),
+        getTaskDetail: async (id) => getStubTaskDetail(id),
     },
     attachments: {
         getAttachmentsIndex: getStubAttachmentIndexReadModel,
@@ -154,9 +154,17 @@ export const stubDataSourceAdapters: DataSourceAdapters = {
         getObjectDetail: (id) => getObjectDetailStub(id),
     },
     resources: {
-        getResourcesIndex: getStubResourcesIndexReadModel,
-        getResourceDetail: (id) => getStubResourceDetail(id),
-        createResource: (input) => createStubResource(input),
+        getResourcesIndex: (async (countOrQuery?: number | ResourceIndexQuery) => {
+            if (typeof countOrQuery === "number") {
+                return getStubResourcesIndexReadModel(countOrQuery);
+            }
+            if (countOrQuery !== undefined) {
+                return getStubResourcesIndexReadModel(countOrQuery);
+            }
+            return getStubResourcesIndexReadModel();
+        }) as ResourcesReadAdapter["getResourcesIndex"],
+        getResourceDetail: async (id) => getStubResourceDetail(id),
+        createResource: async (input) => createStubResource(input),
     },
     checks: {
         getAggregatedChecks: (query) => getAggregatedChecksReadModel(query),
@@ -214,15 +222,15 @@ export const stubDataSourceAdapters: DataSourceAdapters = {
         },
     },
     settings: {
-        getSettings: () => getSettingsStub(),
+        getSettings: async () => getSettingsStub(),
     },
     timeline: {
-        getTimelineIndex: (query) => getTimelineIndex(query),
-        getTimelineEventDetail: (id) => getTimelineEventDetail(id),
+        getTimelineIndex: async (query) => getTimelineIndex(query),
+        getTimelineEventDetail: async (id) => getTimelineEventDetail(id),
     },
     captures: {
-        getCapturesIndex: (query) => getCapturesIndex(query),
-        getCaptureDetail: (id) => getCaptureDetail(id),
+        getCapturesIndex: async (query) => getCapturesIndex(query),
+        getCaptureDetail: async (id) => getCaptureDetail(id),
     },
 };
 

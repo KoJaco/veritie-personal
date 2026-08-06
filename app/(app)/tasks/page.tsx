@@ -8,6 +8,9 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
     type TaskIndexSegment,
     type TaskUiStatus,
+    getDataSourceAdapters,
+    getDataSourceKind,
+    type TasksIndexQuery,
 } from "@/lib/data-source";
 import { getLensFromSearchParams, type SearchParamRecord } from "@/lib/lens";
 import { logger } from "@/lib/logging/server-logger";
@@ -20,6 +23,7 @@ import { TaskList } from "./_components/TaskList";
 import { TaskSummaryStrip } from "./_components/TaskSummaryStrip";
 import {
     buildFreshTasksRouteContract,
+    buildTasksRouteContract,
 } from "./_page-model/build";
 import { enforceTasksRouteContract } from "./_page-model/validate";
 import { cn } from "@/lib/utils";
@@ -40,7 +44,6 @@ type AppliedFilter = {
 };
 
 export default async function TasksPage({ searchParams }: TasksPageProps) {
-    const bootstrap = await getStubServerBootstrap();
     const resolvedSearchParams = await searchParams;
     const lens = getLensFromSearchParams(resolvedSearchParams);
     const segment = parseSegment(getStringValue(resolvedSearchParams.segment));
@@ -49,7 +52,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     const checkIds = getStringValues(resolvedSearchParams.check);
     const resourceIds = getStringValues(resolvedSearchParams.resource);
 
-    const query = {
+    const query: TasksIndexQuery = {
         segment,
         lens,
         statuses: statuses.length > 0 ? statuses : undefined,
@@ -57,7 +60,28 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         checkIds: checkIds.length > 0 ? checkIds : undefined,
         resourceIds: resourceIds.length > 0 ? resourceIds : undefined,
     };
-    const tasksIndex = buildFreshTasksIndex(bootstrap.summary, lens, query);
+
+    const dataSourceKind = getDataSourceKind();
+    let tasksIndex;
+    let contract;
+
+    if (dataSourceKind === "stub") {
+        const bootstrap = await getStubServerBootstrap();
+        tasksIndex = buildFreshTasksIndex(bootstrap.summary, lens, query);
+        contract = buildFreshTasksRouteContract({
+            scope: "tasks_index",
+            lens,
+            tasksIndex,
+            summary: bootstrap.summary,
+        });
+    } else {
+        tasksIndex = await getDataSourceAdapters().tasks.getTasksIndex(query);
+        contract = buildTasksRouteContract({
+            scope: "tasks_index",
+            lens,
+            tasksIndex,
+        });
+    }
 
     const ownerOptions = tasksIndex.availableOwners;
     const checkOptions = tasksIndex.availableChecks.map((check) => ({
@@ -77,12 +101,6 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         resources: resourceOptions,
     };
 
-    const contract = buildFreshTasksRouteContract({
-        scope: "tasks_index",
-        lens,
-        tasksIndex,
-        summary: bootstrap.summary,
-    });
     const { pageModelValidation, payload } =
         enforceTasksRouteContract(contract);
 

@@ -6,7 +6,7 @@ export type VeritieProxyAccessResult =
     | { allowed: false; status: 403; message: string };
 
 /**
- * Interim same-origin gate until session auth lands on capture routes.
+ * Defense-in-depth same-origin gate after session authentication.
  * Browser SDK calls should be same-origin; rejects cross-site fetches with cookies.
  */
 export function assertVeritieProxyAccess(

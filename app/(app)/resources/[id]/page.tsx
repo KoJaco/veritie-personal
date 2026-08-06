@@ -32,7 +32,7 @@ export default async function ResourceDetailPage({
 
     let resource;
     try {
-        resource = dataSource.resources.getResourceDetail(id);
+        resource = await dataSource.resources.getResourceDetail(id);
     } catch {
         notFound();
     }

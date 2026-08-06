@@ -56,6 +56,10 @@ jest.mock("@/lib/onboarding-stub/server", () => ({
     getStubServerBootstrap: jest.fn(),
 }));
 
+jest.mock("@/lib/data-source/registry", () => ({
+    getDataSourceKind: () => "stub",
+}));
+
 const mockedGetStubServerBootstrap = jest.mocked(getStubServerBootstrap);
 
 describe("TaskPage", () => {
