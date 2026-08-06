@@ -40,6 +40,7 @@
     "node_modules",
     "ui-suggestions",
     "app/(app)/work",
-    "auth-example"
+    "auth-example",
+    "indexed-result-example"
   ]
 }
