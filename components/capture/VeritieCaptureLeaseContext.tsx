@@ -4,15 +4,25 @@ import {
     createContext,
     useCallback,
     useContext,
+    useEffect,
     useMemo,
     useRef,
     useState,
     type ReactNode,
 } from "react";
 import { useVeritie, type useVeritie as UseVeritieHook } from "@veritie/sdk";
-import type { CaptureJobMetadata, PipelineHandle } from "@veritie/sdk";
+import type { CaptureJobMetadata, PipelineDisplayConfigV1, PipelineHandle } from "@veritie/sdk";
 import { browserFetch } from "@/lib/veritie/browser-fetch";
 import { captureFlowLog } from "@/lib/capture/capture-flow-logger";
+import {
+    buildPipelineCacheKey,
+    getCachedClientPipelineConfig,
+    getClientPipelineExtractionConfig,
+} from "@/lib/capture/client-pipeline-config";
+import {
+    resolvePipelineExtractionConfig,
+    type PipelineExtractionConfig,
+} from "@/lib/capture/pipeline-config";
 
 export type CaptureLeasePhase = "idle" | "preparing" | "ready" | "error";
 
@@ -21,9 +31,9 @@ type VeritieCaptureLeaseContextValue = {
     captureHandle: PipelineHandle | null;
     leasePhase: CaptureLeasePhase;
     leaseError: string | null;
-    prepareLeaseForRecording: (
-        metadata: CaptureJobMetadata,
-    ) => Promise<PipelineHandle>;
+    pipelineConfig: PipelineDisplayConfigV1 | null;
+    extractionConfig: PipelineExtractionConfig;
+    prepareLease: (metadata: CaptureJobMetadata) => Promise<PipelineHandle>;
     renewLease: () => void;
     releaseLease: () => void;
 };
@@ -41,11 +51,59 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
         [],
     );
 
+    const pipelineCacheKey = useMemo(
+        () =>
+            buildPipelineCacheKey(
+                veritieConfig.baseUrl,
+                veritieConfig.pipelineAlias,
+            ),
+        [veritieConfig.baseUrl, veritieConfig.pipelineAlias],
+    );
+
     const veritie = useVeritie({ config: veritieConfig });
     const [captureHandle, setCaptureHandle] = useState<PipelineHandle | null>(null);
     const [leasePhase, setLeasePhase] = useState<CaptureLeasePhase>("idle");
     const [leaseError, setLeaseError] = useState<string | null>(null);
+    const [pipelineConfig, setPipelineConfig] = useState<
+        PipelineDisplayConfigV1 | null
+    >(() => getCachedClientPipelineConfig(pipelineCacheKey));
     const prepareGenerationRef = useRef(0);
+    const pipelineConfigFetchStartedRef = useRef(false);
+
+    const extractionConfig = useMemo(
+        () => resolvePipelineExtractionConfig(pipelineConfig),
+        [pipelineConfig],
+    );
+
+    const getPipelineConfig = veritie.getPipelineConfig;
+
+    useEffect(() => {
+        if (pipelineConfigFetchStartedRef.current) {
+            return;
+        }
+        pipelineConfigFetchStartedRef.current = true;
+
+        let cancelled = false;
+
+        void getClientPipelineExtractionConfig(getPipelineConfig, pipelineCacheKey)
+            .then(() => {
+                if (!cancelled) {
+                    setPipelineConfig(getCachedClientPipelineConfig(pipelineCacheKey));
+                }
+            })
+            .catch((error) => {
+                captureFlowLog.warn("pipeline.config.fallback", {
+                    error: error instanceof Error ? error.message : String(error),
+                });
+                if (!cancelled) {
+                    setPipelineConfig(getCachedClientPipelineConfig(pipelineCacheKey));
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [getPipelineConfig, pipelineCacheKey]);
 
     const releaseLease = useCallback(() => {
         const jobId = captureHandle?.snapshot.jobId;
@@ -58,7 +116,7 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
         setLeaseError(null);
     }, [captureHandle, veritie]);
 
-    const prepareLeaseForRecording = useCallback(
+    const prepareLease = useCallback(
         async (metadata: CaptureJobMetadata): Promise<PipelineHandle> => {
             const generation = prepareGenerationRef.current + 1;
             prepareGenerationRef.current = generation;
@@ -131,7 +189,9 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
             captureHandle,
             leasePhase,
             leaseError,
-            prepareLeaseForRecording,
+            pipelineConfig,
+            extractionConfig,
+            prepareLease,
             renewLease,
             releaseLease,
         }),
@@ -140,7 +200,9 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
             captureHandle,
             leasePhase,
             leaseError,
-            prepareLeaseForRecording,
+            pipelineConfig,
+            extractionConfig,
+            prepareLease,
             renewLease,
             releaseLease,
         ],
