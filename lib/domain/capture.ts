@@ -45,6 +45,8 @@ export interface VoiceLog {
     language?: string;
     durationMs?: number;
     audioUri?: string;
+    indexArtifact?: Record<string, unknown> | null;
+    extractionPayload?: Record<string, unknown> | null;
     createdAt: string;
     updatedAt: string;
 }

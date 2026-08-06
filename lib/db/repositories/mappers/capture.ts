@@ -52,6 +52,12 @@ export function mapVoiceLogRowToStub(row: VoiceLogRow): VoiceLogStub {
         language: nullToUndefined(row.language),
         durationMs: nullToUndefined(row.durationMs),
         audioUri: nullToUndefined(row.audioUri),
+        indexArtifact: nullToUndefined(row.indexArtifact) as
+            | Record<string, unknown>
+            | undefined,
+        extractionPayload: nullToUndefined(row.extractionPayload) as
+            | Record<string, unknown>
+            | undefined,
         createdAt: toIso(row.createdAt),
         updatedAt: toIso(row.updatedAt),
     };
