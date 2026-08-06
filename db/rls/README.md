@@ -43,7 +43,7 @@ SELECT id, email FROM users WHERE id = auth.uid();
 
 Cross-account reads should return zero rows when using another user's JWT.
 
-After step 5, direct writes with user JWT should fail on sensitive tables:
+After step 5, run [`05_verify_privilege.sql`](./05_verify_privilege.sql) (replace `REPLACE_WITH_USERS_ID` with a real `public.users.id`). Direct writes with user JWT should fail on sensitive tables:
 
 ```sql
 -- Should fail (permission denied)
