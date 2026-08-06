@@ -1,19 +1,14 @@
 "use client";
 
 import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-model";
-import { CaptureIndexedSurface } from "@/components/indexed-result";
+import { CaptureDetailIndexedView } from "./CaptureDetailIndexedView";
 
 export function CaptureDetailView({
     detail,
-    initialExtractedValueId,
+    initialExtractedValueId: _initialExtractedValueId,
 }: {
     detail: CaptureDetailReadModel;
     initialExtractedValueId?: string | null;
 }) {
-    return (
-        <CaptureIndexedSurface
-            detail={detail}
-            initialExtractedValueId={initialExtractedValueId}
-        />
-    );
+    return <CaptureDetailIndexedView detail={detail} />;
 }
