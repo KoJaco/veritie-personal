@@ -14,9 +14,11 @@ const VoiceCapturePanel = dynamic(
 export function VoiceCaptureLauncherPanel({
     onBack,
     onComplete,
+    saveVoiceLogAudio = false,
 }: {
     onBack: () => void;
     onComplete: () => void;
+    saveVoiceLogAudio?: boolean;
 }) {
     const { veritie, captureHandle, leasePhase, leaseError, renewLease } =
         useVeritieCaptureLease();
@@ -31,6 +33,7 @@ export function VoiceCaptureLauncherPanel({
             embedded
             onBack={onBack}
             onComplete={onComplete}
+            saveVoiceLogAudio={saveVoiceLogAudio}
         />
     );
 }

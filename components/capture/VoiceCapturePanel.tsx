@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, Mic, Square } from "lucide-react";
 import type { useVeritie, PipelineHandle, LiveJobSession } from "@veritie/sdk";
+import type { JobDetailResponse } from "@veritie/sdk";
+import { hasPendingJobEnrichment } from "@veritie/sdk";
 import { Button } from "@/components/ui/button";
 import { LiveAudioWaveform } from "@/components/capture/LiveAudioWaveform";
+import { IndexedResultSurface } from "@/components/capture/indexed-result";
 import type { CaptureLeasePhase } from "@/components/capture/VeritieCaptureLeaseContext";
 import {
     captureFlowLog,
@@ -12,12 +15,18 @@ import {
     type CaptureFlowDiagnostics,
 } from "@/lib/capture/capture-flow-logger";
 import { enqueueCaptureBackgroundPipeline } from "@/lib/capture/capture-background-pipeline";
+import { captureJobCoordinator } from "@/lib/capture/capture-job-coordinator";
+import {
+    fetchCaptureAudioPlaybackUrl,
+    uploadCaptureAudio,
+} from "@/lib/capture/capture-audio-client";
 import {
     createLiveChunkStreamState,
     endLiveAudioStream,
     sendLiveAudioChunk,
     type LiveChunkStreamState,
 } from "@/lib/capture/live-audio-stream";
+import { mapJobToIndexedProps } from "@/lib/capture/map-job-to-indexed-props";
 import { persistCaptureForVoiceFlow } from "@/lib/capture/persist-capture-client";
 import { isTranscriptPending } from "@/lib/capture/transcript-readiness";
 import { useScreenWakeLock } from "@/lib/hooks/useScreenWakeLock";
@@ -50,6 +59,7 @@ export function VoiceCapturePanel({
     embedded = true,
     onBack,
     onComplete,
+    saveVoiceLogAudio = false,
     persistCaptureFn = persistCaptureForVoiceFlow,
 }: {
     veritie: VeritieHook;
@@ -60,12 +70,16 @@ export function VoiceCapturePanel({
     embedded?: boolean;
     onBack: () => void;
     onComplete: () => void;
+    saveVoiceLogAudio?: boolean;
     persistCaptureFn?: (jobId: string) => Promise<PersistCaptureResult>;
 }) {
     const [phase, setPhase] = useState<VoicePhase>("ready");
     const [error, setError] = useState<string | null>(null);
     const [statusLine, setStatusLine] = useState<string | null>(null);
     const [transcript, setTranscript] = useState<string | null>(null);
+    const [indexedJob, setIndexedJob] = useState<JobDetailResponse | null>(null);
+    const [audioPlaybackUrl, setAudioPlaybackUrl] = useState<string | null>(null);
+    const [activeJobId, setActiveJobId] = useState<string | null>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [recordingElapsedMs, setRecordingElapsedMs] = useState(0);
 
@@ -89,6 +103,9 @@ export function VoiceCapturePanel({
         chunksSent: 0,
         chunksBytesSent: 0,
     });
+    const audioChunksRef = useRef<Blob[]>([]);
+    const saveVoiceLogAudioRef = useRef(saveVoiceLogAudio);
+    saveVoiceLogAudioRef.current = saveVoiceLogAudio;
 
     const logDiagnostics = useCallback((step: string, extra?: Record<string, unknown>) => {
         captureFlowLog.snapshot(step, {
@@ -173,6 +190,35 @@ export function VoiceCapturePanel({
         };
     }, [abortInFlightWork, stopLocalRecording]);
 
+    useEffect(() => {
+        if (!activeJobId) {
+            return;
+        }
+
+        return captureJobCoordinator.subscribe((event) => {
+            if (event.jobId !== activeJobId) {
+                return;
+            }
+
+            if (event.type === "capture:job-update") {
+                setIndexedJob(event.job);
+            }
+
+            if (
+                event.type === "capture:enriched" &&
+                saveVoiceLogAudioRef.current
+            ) {
+                void fetchCaptureAudioPlaybackUrl(event.captureId).then(
+                    (url) => {
+                        if (mountedRef.current && url) {
+                            setAudioPlaybackUrl(url);
+                        }
+                    },
+                );
+            }
+        });
+    }, [activeJobId]);
+
     const startCapture = useCallback(async () => {
         if (!captureHandle || !leaseReady) {
             setError(
@@ -197,6 +243,10 @@ export function VoiceCapturePanel({
         setError(null);
         setStatusLine(null);
         setTranscript(null);
+        setIndexedJob(null);
+        setAudioPlaybackUrl(null);
+        setActiveJobId(null);
+        audioChunksRef.current = [];
         setPhase("requesting_microphone");
 
         const openController = new AbortController();
@@ -273,6 +323,10 @@ export function VoiceCapturePanel({
 
                 diagnosticsRef.current.dataAvailableBytes =
                     (diagnosticsRef.current.dataAvailableBytes ?? 0) + event.data.size;
+
+                if (saveVoiceLogAudioRef.current) {
+                    audioChunksRef.current.push(event.data);
+                }
 
                 captureFlowLog.debug("recorder.dataavailable", {
                     jobId: captureHandle.snapshot.jobId,
@@ -465,6 +519,8 @@ export function VoiceCapturePanel({
             }
 
             setTranscript(transcriptText);
+            setIndexedJob(job);
+            setActiveJobId(jobId);
             setPhase("transcript_ready");
             setStatusLine(null);
             finalizeAbortRef.current = null;
@@ -475,10 +531,29 @@ export function VoiceCapturePanel({
                 polls,
             });
 
+            const recorderMimeType =
+                diagnosticsRef.current.recorderMimeType ?? "audio/webm";
+            const audioBlob =
+                saveVoiceLogAudioRef.current &&
+                audioChunksRef.current.length > 0
+                    ? new Blob(audioChunksRef.current, {
+                          type: recorderMimeType,
+                      })
+                    : null;
+
             enqueueCaptureBackgroundPipeline({
                 jobId,
                 veritie,
                 persistCaptureFn,
+                audioBlob,
+                uploadAudioFn: saveVoiceLogAudioRef.current
+                    ? uploadCaptureAudio
+                    : undefined,
+                onJobUpdate: (updatedJob) => {
+                    if (mountedRef.current) {
+                        setIndexedJob(updatedJob);
+                    }
+                },
             });
         } catch (captureError) {
             if (!mountedRef.current || signal.aborted) return;
@@ -518,6 +593,10 @@ export function VoiceCapturePanel({
         setError(null);
         setStatusLine(null);
         setTranscript(null);
+        setIndexedJob(null);
+        setAudioPlaybackUrl(null);
+        setActiveJobId(null);
+        audioChunksRef.current = [];
         setPhase("ready");
         void renewLease();
     }, [abortInFlightWork, renewLease, stopLocalRecording]);
@@ -536,6 +615,14 @@ export function VoiceCapturePanel({
 
     const recordingMinutes = Math.floor(recordingElapsedMs / 60_000);
     const recordingSeconds = Math.floor((recordingElapsedMs % 60_000) / 1000);
+
+    const indexedProps = indexedJob
+        ? mapJobToIndexedProps(indexedJob, audioPlaybackUrl)
+        : null;
+    const showIndexedSurface =
+        phase === "transcript_ready" && indexedProps !== null;
+    const indexingPending =
+        indexedJob !== null && hasPendingJobEnrichment(indexedJob);
 
     return (
         <div
@@ -596,7 +683,7 @@ export function VoiceCapturePanel({
                 </div>
             )}
 
-            {transcript && (
+            {transcript && !showIndexedSurface && (
                 <div className="space-y-2">
                     <p className="text-sm font-medium">Transcript</p>
                     <p className="text-sm leading-6 text-foreground/80 whitespace-pre-wrap">
@@ -604,6 +691,23 @@ export function VoiceCapturePanel({
                     </p>
                 </div>
             )}
+
+            {showIndexedSurface && indexedProps ? (
+                <div className={cn(SURFACE_CLASS_NESTED, "rounded-xl p-3")}>
+                    <IndexedResultSurface
+                        {...indexedProps}
+                        layout="embedded"
+                        expectAudio={saveVoiceLogAudio}
+                        showIndexingBanner
+                        indexingState={indexedJob?.indexing_state ?? null}
+                    />
+                    {indexingPending ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                            Indexing extraction in the background…
+                        </p>
+                    ) : null}
+                </div>
+            ) : null}
 
             <div className="flex flex-wrap justify-center gap-3">
                 {canStart && (
