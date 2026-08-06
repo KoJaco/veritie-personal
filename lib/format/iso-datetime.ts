@@ -48,8 +48,8 @@ export function formatLocaleDateTime(
             day: "numeric",
             hour: "numeric",
             minute: "2-digit",
-            timeZoneName: "short",
-            // timeZone,
+            // timeZoneName: "short",
+            timeZone,
         });
     }
 
@@ -57,6 +57,6 @@ export function formatLocaleDateTime(
         year: "numeric",
         month: "short",
         day: "numeric",
-        // timeZone,
+        timeZone,
     });
 }
