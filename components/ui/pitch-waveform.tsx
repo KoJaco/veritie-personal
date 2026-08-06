@@ -30,12 +30,12 @@ export function PitchWaveform({
     ariaLabel = "Audio scrubber",
     onSeek,
 }: PitchWaveformProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
+    const stripRef = useRef<HTMLDivElement>(null);
 
     const handlePointer = useCallback(
         (clientX: number) => {
-            if (disabled || !onSeek || !containerRef.current) return;
-            const rect = containerRef.current.getBoundingClientRect();
+            if (disabled || !onSeek || !stripRef.current) return;
+            const rect = stripRef.current.getBoundingClientRect();
             const ratio = (clientX - rect.left) / rect.width;
             onSeek(Math.max(0, Math.min(1, ratio)));
         },
@@ -44,14 +44,13 @@ export function PitchWaveform({
 
     return (
         <div
-            ref={containerRef}
             role="slider"
             aria-label={ariaLabel}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progress * 100)}
             className={cn(
-                "flex w-full items-center justify-center",
+                "w-full min-w-0",
                 !disabled && onSeek && "cursor-pointer",
                 loading && "opacity-60",
             )}
@@ -63,14 +62,17 @@ export function PitchWaveform({
                 if (event.key === "ArrowLeft") onSeek(Math.max(0, progress - 0.05));
             }}
         >
-            <div className="flex items-center" style={{ gap: barGap }}>
+            <div
+                ref={stripRef}
+                className="flex w-full min-w-0 items-center"
+                style={{ gap: barGap, height }}
+            >
                 {values.map((value, index) => {
-                    const barProgress = index / Math.max(values.length - 1, 1);
+                    const barProgress = (index + 0.5) / Math.max(values.length, 1);
                     const isPlayed = barProgress <= progress;
                     const barHeight = Math.max(4, value * (height - 8));
                     const edgeFade = fadeEdges
-                        ? 0.35 +
-                          Math.sin(barProgress * Math.PI) * 0.65
+                        ? 0.35 + Math.sin(barProgress * Math.PI) * 0.65
                         : 1;
 
                     return (
@@ -78,9 +80,7 @@ export function PitchWaveform({
                             key={index}
                             className={cn(
                                 "transition-colors",
-                                isPlayed
-                                    ? "bg-primary"
-                                    : "bg-primary/25",
+                                isPlayed ? "bg-primary" : "bg-primary/25",
                             )}
                             style={{
                                 width: barWidth,
