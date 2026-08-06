@@ -42,6 +42,10 @@ jest.mock("next/server", () => ({
     },
 }));
 
+jest.mock("next/cache", () => ({
+    revalidatePath: jest.fn(),
+}));
+
 jest.mock("@/lib/veritie/server-client", () => ({
     getServerVeritieClient: () => ({
         getJob: mockGetJob,

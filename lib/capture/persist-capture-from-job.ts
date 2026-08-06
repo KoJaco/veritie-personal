@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { revalidatePath } from "next/cache";
 import {
     capturesPersistRequestSchema,
     veritieJobPersistSchema,
@@ -148,6 +149,9 @@ export async function persistCaptureFromVeritieJob(
         extractedValueCount: bundle.extractedValues.length,
     });
 
+    revalidatePath("/captures");
+    revalidatePath("/timeline");
+
     return {
         captureId: bundle.capture.id,
         timelineEventCount: bundle.timelineEvents.length,
@@ -230,6 +234,10 @@ export async function enrichCaptureFromVeritieJob(
         timelineEventCount: bundle.timelineEvents.length,
         extractedValueCount: bundle.extractedValues.length,
     });
+
+    revalidatePath("/captures");
+    revalidatePath("/timeline");
+    revalidatePath(`/captures/${existing.id}`);
 
     return {
         captureId: existing.id,
