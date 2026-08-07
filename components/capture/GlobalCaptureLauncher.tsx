@@ -403,7 +403,7 @@ function GlobalCaptureLauncherInner() {
                         className={cn(
                             "fixed rounded-3xl border border-border/80 bg-card p-4 shadow-2xl",
                             LAUNCHER_CHROME_Z,
-                            "bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4",
+                            "bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4",
                             "w-[min(calc(100vw-2rem),24rem)] md:w-[min(calc(100vw-2rem),42rem)]",
                             "max-h-[min(85dvh,800px)] min-h-[300px] overflow-y-auto",
                         )}

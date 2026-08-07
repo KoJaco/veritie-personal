@@ -483,8 +483,8 @@ export function VoiceCapturePanel({
             const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
                 ? "audio/webm;codecs=opus"
                 : MediaRecorder.isTypeSupported("audio/webm")
-                  ? "audio/webm"
-                  : "";
+                    ? "audio/webm"
+                    : "";
             const recorder = mimeType
                 ? new MediaRecorder(mediaStream, { mimeType })
                 : new MediaRecorder(mediaStream);
@@ -685,10 +685,10 @@ export function VoiceCapturePanel({
                 diagnosticsRef.current.recorderMimeType ?? "audio/webm";
             const audioBlob =
                 saveVoiceLogAudioRef.current &&
-                audioChunksRef.current.length > 0
+                    audioChunksRef.current.length > 0
                     ? new Blob(audioChunksRef.current, {
-                          type: recorderMimeType,
-                      })
+                        type: recorderMimeType,
+                    })
                     : null;
 
             const audioStagedForJob =
