@@ -40,6 +40,9 @@ function SidebarContent() {
                         icon={Mic}
                         label="Captures"
                     />
+                </SidebarGroup>
+
+                <SidebarGroup label="Plan" className="mt-6">
                     <SidebarItem
                         href="/events"
                         icon={Calendar}
@@ -50,9 +53,6 @@ function SidebarContent() {
                         icon={Bell}
                         label="Reminders"
                     />
-                </SidebarGroup>
-
-                <SidebarGroup label="Plan" className="mt-6">
                     <SidebarItem
                         href="/tasks"
                         icon={ListTodo}
