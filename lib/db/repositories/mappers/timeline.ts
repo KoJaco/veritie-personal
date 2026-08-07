@@ -53,6 +53,7 @@ export function mapTimelineEventToIndexItem(
         extractedObjectType: event.extractedObjectType,
         reviewState: event.reviewState,
         confidence: event.confidence,
+        createdAt: event.createdAt,
     };
 }
 
