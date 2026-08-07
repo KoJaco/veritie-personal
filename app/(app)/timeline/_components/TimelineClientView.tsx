@@ -8,11 +8,15 @@ import type { TimelineEventDetailReadModel } from "@/lib/data-source/timeline-re
 import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-model";
 import { TimelineEventRow } from "./TimelineEventRow";
 import { TimelineDetailPanel } from "./TimelineDetailPanel";
+import {
+    formatLocalDateGroupLabel,
+    getLocalDateKey,
+} from "@/lib/format/local-calendar-date";
 
-function groupByDate(items: TimelineIndexItem[]) {
+function groupByLocalDate(items: TimelineIndexItem[]) {
     const groups = new Map<string, TimelineIndexItem[]>();
     for (const item of items) {
-        const key = item.occurredAt.slice(0, 10);
+        const key = getLocalDateKey(item.occurredAt);
         const list = groups.get(key) ?? [];
         list.push(item);
         groups.set(key, list);
@@ -35,35 +39,35 @@ export function TimelineClientView({
         useState<CaptureDetailReadModel | null>(null);
     const [detailError, setDetailError] = useState<string | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
-    const groups = useMemo(() => groupByDate(items), [items]);
+    const groups = useMemo(() => groupByLocalDate(items), [items]);
 
     const loadDetail = useCallback(
         async (eventId: string, signal?: AbortSignal) => {
-        setDetailLoading(true);
-        setDetailError(null);
+            setDetailLoading(true);
+            setDetailError(null);
 
-        try {
-            const body = await getTimelineEventDetailAction(eventId);
-            if (signal?.aborted) return;
-            if (!body) {
-                throw new Error("Could not load event detail");
+            try {
+                const body = await getTimelineEventDetailAction(eventId);
+                if (signal?.aborted) return;
+                if (!body) {
+                    throw new Error("Could not load event detail");
+                }
+                setSelectedDetail(body.detail);
+                setSelectedCapture(body.captureDetail);
+            } catch (error) {
+                if (signal?.aborted) return;
+                setSelectedDetail(null);
+                setSelectedCapture(null);
+                setDetailError(
+                    error instanceof Error ? error.message : "Could not load event detail",
+                );
+            } finally {
+                if (!signal?.aborted) {
+                    setDetailLoading(false);
+                }
             }
-            setSelectedDetail(body.detail);
-            setSelectedCapture(body.captureDetail);
-        } catch (error) {
-            if (signal?.aborted) return;
-            setSelectedDetail(null);
-            setSelectedCapture(null);
-            setDetailError(
-                error instanceof Error ? error.message : "Could not load event detail",
-            );
-        } finally {
-            if (!signal?.aborted) {
-                setDetailLoading(false);
-            }
-        }
-    },
-    [],
+        },
+        [],
     );
 
     const refreshDetail = useCallback(() => {
@@ -92,16 +96,12 @@ export function TimelineClientView({
     return (
         <div className="relative">
             <div className="space-y-8">
-                {groups.map(([date, groupItems]) => (
-                    <section key={date} className="space-y-3">
+                {groups.map(([dateKey, groupItems]) => (
+                    <section key={dateKey} className="space-y-3">
                         <h2 className="text-sm font-medium text-muted-foreground">
-                            {new Date(date).toLocaleDateString(undefined, {
-                                weekday: "long",
-                                month: "long",
-                                day: "numeric",
-                            })}
+                            {formatLocalDateGroupLabel(groupItems[0].occurredAt)}
                         </h2>
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                             {groupItems.map((item) => (
                                 <TimelineEventRow
                                     key={item.id}

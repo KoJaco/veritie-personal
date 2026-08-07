@@ -18,6 +18,10 @@ import {
 } from "@/components/ui/table";
 import { useCaptureLiveUpdates } from "@/components/captures/CapturesLiveProvider";
 import { buildIndexHref } from "@/lib/route/build-index-href";
+import {
+    formatLocalDateGroupLabel,
+    getLocalDateKey,
+} from "@/lib/format/local-calendar-date";
 import { SURFACE_CLASS } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
 
@@ -27,10 +31,10 @@ type ViewMode = "cards" | "table";
 type SortBy = "createdAt" | "title" | "extractedCount";
 type SortDir = "asc" | "desc";
 
-function groupByDate(items: CaptureIndexItem[]) {
+function groupByLocalDate(items: CaptureIndexItem[]) {
     const groups = new Map<string, CaptureIndexItem[]>();
     for (const item of items) {
-        const key = item.createdAt.slice(0, 10);
+        const key = getLocalDateKey(item.createdAt);
         const list = groups.get(key) ?? [];
         list.push(item);
         groups.set(key, list);
@@ -58,7 +62,7 @@ export function CapturesClientView({
     const shouldReduceMotion = useReducedMotion();
     const { pendingNewIds, lastEnrichedIds, clearAnimatedIds } =
         useCaptureLiveUpdates();
-    const groups = useMemo(() => groupByDate(items), [items]);
+    const groups = useMemo(() => groupByLocalDate(items), [items]);
 
     const baseParams = {
         aspect,
@@ -172,11 +176,9 @@ export function CapturesClientView({
                     {groups.map(([date, groupItems]) => (
                         <section key={date} className="space-y-3">
                             <h2 className="text-sm font-medium text-muted-foreground">
-                                {new Date(date).toLocaleDateString(undefined, {
-                                    weekday: "long",
-                                    month: "long",
-                                    day: "numeric",
-                                })}
+                                {formatLocalDateGroupLabel(
+                                    groupItems[0].createdAt,
+                                )}
                             </h2>
                             <div className="space-y-2">
                                 {groupItems.map((item) => (
