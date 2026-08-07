@@ -6,3 +6,8 @@ export { IndexViewToggle } from "./IndexViewToggle";
 export type { IndexViewMode } from "./IndexViewToggle";
 export { EmptyState, NoResults } from "./EmptyState";
 export { IndexPagination } from "./IndexPagination";
+export {
+    PageHeaderContractHydrator,
+    PageHeaderContractReset,
+    usePageHeaderContract,
+} from "./page-header-contract";

@@ -2,15 +2,34 @@
 
 import {
     createContext,
+    useCallback,
     useContext,
     useLayoutEffect,
+    useMemo,
     useState,
     type ReactNode,
 } from "react";
 
+import type { IndexSearchCommandItem } from "@/components/route/IndexSearchCommand";
+
+export type PageHeaderContractState = {
+    canOpenAssistant: boolean;
+    searchItems: IndexSearchCommandItem[];
+    suggestionsReady: boolean;
+};
+
+const defaultPageHeaderContract: PageHeaderContractState = {
+    canOpenAssistant: false,
+    searchItems: [],
+    suggestionsReady: false,
+};
+
 interface AppShellPageHeaderContextType {
     header: ReactNode | null;
     setHeader: (header: ReactNode | null) => void;
+    contract: PageHeaderContractState;
+    hydrateContract: (state: PageHeaderContractState) => void;
+    resetContract: () => void;
 }
 
 const AppShellPageHeaderContext = createContext<
@@ -35,9 +54,31 @@ export function AppShellPageHeaderProvider({
     children,
 }: AppShellPageHeaderProviderProps) {
     const [header, setHeader] = useState<ReactNode | null>(null);
+    const [contract, setContract] = useState<PageHeaderContractState>(
+        defaultPageHeaderContract,
+    );
+
+    const hydrateContract = useCallback((state: PageHeaderContractState) => {
+        setContract(state);
+    }, []);
+
+    const resetContract = useCallback(() => {
+        setContract(defaultPageHeaderContract);
+    }, []);
+
+    const value = useMemo(
+        () => ({
+            header,
+            setHeader,
+            contract,
+            hydrateContract,
+            resetContract,
+        }),
+        [header, contract, hydrateContract, resetContract],
+    );
 
     return (
-        <AppShellPageHeaderContext.Provider value={{ header, setHeader }}>
+        <AppShellPageHeaderContext.Provider value={value}>
             {children}
         </AppShellPageHeaderContext.Provider>
     );
