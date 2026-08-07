@@ -19,6 +19,10 @@ import {
   pointerForIndex,
   pointerForProperty,
 } from "@/lib/evidence-index/json-pointer";
+import { buildExtractedValueId } from "@/lib/capture/extracted-value-path";
+import { parseEntityPointerPath } from "@/lib/capture/flatten-extracted-value";
+import { ExtractedValueEditorTrigger } from "@/components/extraction/ExtractedValueEditorSheet";
+import type { ExtractedValueStub } from "@/lib/stubs/capture-stubs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SURFACE_CLASS } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
@@ -27,6 +31,48 @@ import {
   IndexedResultStagger,
   IndexedResultStaggerItem,
 } from "./indexed-result-motion";
+
+function ExtractedEntityEditAction({
+  itemPath,
+  captureId,
+  extractedValues,
+  glossaryLabels,
+  onExtractedValueSaved,
+}: {
+  itemPath: string;
+  captureId?: string;
+  extractedValues?: ExtractedValueStub[];
+  glossaryLabels?: Record<string, string>;
+  onExtractedValueSaved?: () => void;
+}) {
+  const entity = parseEntityPointerPath(itemPath);
+  if (!captureId || !entity || !extractedValues) {
+    return null;
+  }
+
+  const extractedValueId = buildExtractedValueId(
+    captureId,
+    entity.listKey,
+    entity.index,
+  );
+  const extractedValue = extractedValues.find(
+    (value) => value.id === extractedValueId,
+  );
+  if (!extractedValue) {
+    return null;
+  }
+
+  return (
+    <ExtractedValueEditorTrigger
+      extractedValue={extractedValue}
+      listKey={entity.listKey}
+      index={entity.index}
+      glossaryLabels={glossaryLabels}
+      onSaved={onExtractedValueSaved}
+      variant="icon"
+    />
+  );
+}
 
 function EntryAffordance({
   entry,
@@ -179,6 +225,10 @@ type IndexedArtifactNodeProps = {
   activePath: string | null;
   hoverPath: string | null;
   entryIndexByPath: Record<string, number>;
+  glossaryLabels?: Record<string, string>;
+  captureId?: string;
+  extractedValues?: ExtractedValueStub[];
+  onExtractedValueSaved?: () => void;
   onFocusPath: (path: string, entryIndex: number) => void;
   onHoverPath: (path: string | null, entryIndex: number) => void;
   onActivatePath: (path: string, entry: EvidenceIndexEntry) => void;
@@ -186,7 +236,7 @@ type IndexedArtifactNodeProps = {
   animateEntrance?: boolean;
 };
 
-const ROOT_EXTRACTION_SCROLL_MAX_HEIGHT = "max-h-72";
+const ROOT_EXTRACTION_SCROLL_MAX_HEIGHT = "h-72";
 
 function IndexedReadableArtifactValue({
   path,
@@ -196,6 +246,10 @@ function IndexedReadableArtifactValue({
   activePath,
   hoverPath,
   entryIndexByPath,
+  glossaryLabels,
+  captureId,
+  extractedValues,
+  onExtractedValueSaved,
   onFocusPath,
   onHoverPath,
   onActivatePath,
@@ -230,7 +284,7 @@ function IndexedReadableArtifactValue({
     }
 
     return (
-      <div className={cn(SURFACE_CLASS, "grid gap-1.5")}>
+      <div className={cn(SURFACE_CLASS, "grid gap-1.5 p-3")}>
         {value.map((item, index) => {
           if (isEmptyArtifactValue(item)) {
             return null;
@@ -248,9 +302,23 @@ function IndexedReadableArtifactValue({
                   : "flex flex-wrap items-start gap-x-3 gap-y-1",
               )}
             >
-              <span className="text-xs font-medium capitalize text-foreground/75">
-                Item {index + 1}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium capitalize text-foreground/75">
+                  Item {index + 1}
+                </span>
+
+                <div className="absolute top-3 right-6">
+
+                  <ExtractedEntityEditAction
+                    itemPath={itemPath}
+                    captureId={captureId}
+                    extractedValues={extractedValues}
+                    glossaryLabels={glossaryLabels}
+                    onExtractedValueSaved={onExtractedValueSaved}
+                  />
+
+                </div>
+              </div>
               <div className="min-w-0 flex-1">
                 <IndexedReadableArtifactValue
                   path={itemPath}
@@ -260,6 +328,10 @@ function IndexedReadableArtifactValue({
                   activePath={activePath}
                   hoverPath={hoverPath}
                   entryIndexByPath={entryIndexByPath}
+                  glossaryLabels={glossaryLabels}
+                  captureId={captureId}
+                  extractedValues={extractedValues}
+                  onExtractedValueSaved={onExtractedValueSaved}
                   onFocusPath={onFocusPath}
                   onHoverPath={onHoverPath}
                   onActivatePath={onActivatePath}
@@ -297,7 +369,7 @@ function IndexedReadableArtifactValue({
               <CornerDownRight className="h-4 w-4 text-foreground/50" />
             ) : null}
             <span className="text-sm font-medium capitalize text-foreground">
-              {formatArtifactKey(key)}
+              {formatArtifactKey(key, glossaryLabels)}
             </span>
             {isPrimitiveArtifactValue(entryValue) ? (
               <IndexedPrimitiveValue
@@ -323,6 +395,10 @@ function IndexedReadableArtifactValue({
                   activePath={activePath}
                   hoverPath={hoverPath}
                   entryIndexByPath={entryIndexByPath}
+                  glossaryLabels={glossaryLabels}
+                  captureId={captureId}
+                  extractedValues={extractedValues}
+                  onExtractedValueSaved={onExtractedValueSaved}
                   onFocusPath={onFocusPath}
                   onHoverPath={onHoverPath}
                   onActivatePath={onActivatePath}
@@ -362,6 +438,10 @@ function IndexedReadableArtifactValue({
           activePath={activePath}
           hoverPath={hoverPath}
           entryIndexByPath={entryIndexByPath}
+          glossaryLabels={glossaryLabels}
+          captureId={captureId}
+          extractedValues={extractedValues}
+          onExtractedValueSaved={onExtractedValueSaved}
           onFocusPath={onFocusPath}
           onHoverPath={onHoverPath}
           onActivatePath={onActivatePath}
@@ -375,16 +455,15 @@ function IndexedReadableArtifactValue({
           className={cn(
             "grid gap-1.5",
             currentDepth > 0
-              ? "border-l-2 border-border px-3"
-              : cn(SURFACE_CLASS, "rounded-xl p-3"),
+            && "border-l-2 border-border px-3",
           )}
         >
           <span className="text-xs font-medium uppercase text-foreground">
-            {formatArtifactKey(key)}
+            {formatArtifactKey(key, glossaryLabels)}
           </span>
           <div className="min-w-0">
             {currentDepth === 0 ? (
-              <ScrollArea className={ROOT_EXTRACTION_SCROLL_MAX_HEIGHT}>
+              <ScrollArea className={cn("w-full")}>
                 <div className="pr-3">{extractionContent}</div>
               </ScrollArea>
             ) : (
@@ -418,6 +497,10 @@ export function IndexedExtractionTree({
   hoverPath,
   activeEntryIndex,
   entryIndexByPath,
+  glossaryLabels,
+  captureId,
+  extractedValues,
+  onExtractedValueSaved,
   onFocusPath,
   onHoverPath,
   onActivatePath,
@@ -430,6 +513,10 @@ export function IndexedExtractionTree({
   hoverPath: string | null;
   activeEntryIndex: number;
   entryIndexByPath: Record<string, number>;
+  glossaryLabels?: Record<string, string>;
+  captureId?: string;
+  extractedValues?: ExtractedValueStub[];
+  onExtractedValueSaved?: () => void;
   onFocusPath: (path: string, entryIndex: number) => void;
   onHoverPath: (path: string | null, entryIndex: number) => void;
   onActivatePath: (path: string, entry: EvidenceIndexEntry) => void;
@@ -449,6 +536,10 @@ export function IndexedExtractionTree({
       activePath={activePath}
       hoverPath={hoverPath}
       entryIndexByPath={entryIndexByPath}
+      glossaryLabels={glossaryLabels}
+      captureId={captureId}
+      extractedValues={extractedValues}
+      onExtractedValueSaved={onExtractedValueSaved}
       onFocusPath={onFocusPath}
       onHoverPath={onHoverPath}
       onActivatePath={onActivatePath}

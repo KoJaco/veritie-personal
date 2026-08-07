@@ -13,6 +13,7 @@ export type ExtractedObjectType =
     | "goal"
     | "goal_progress"
     | "money_entry"
+    | "event"
     | "record"
     | "resource";
 
@@ -73,11 +74,16 @@ export interface ExtractionCandidate {
 }
 
 export interface ExtractionPayload {
+    capture_summary?: string;
     tasks: ExtractionCandidate[];
     reminders: ExtractionCandidate[];
     goals: ExtractionCandidate[];
     goal_progress: ExtractionCandidate[];
-    expenses: ExtractionCandidate[];
+    money_entries: ExtractionCandidate[];
+    events: ExtractionCandidate[];
     records: ExtractionCandidate[];
     resources: ExtractionCandidate[];
+    extraction_warnings?: Array<Record<string, unknown>>;
+    /** Legacy wire key; prefer money_entries. */
+    expenses?: ExtractionCandidate[];
 }

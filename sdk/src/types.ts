@@ -36,10 +36,18 @@ export type JobEventType =
 
 export type EventLevel = "debug" | "info" | "warn" | "error";
 
+/** Documented keys for voice capture job metadata (also accepted as opaque metadata). */
+export interface CaptureJobMetadata {
+    captured_at: string;
+    timezone: string;
+    locale: string;
+    location_label?: string;
+}
+
 export interface CreateJobRequest {
     audio_content_type: string;
     audio_size_bytes?: number;
-    metadata?: Record<string, unknown>;
+    metadata?: CaptureJobMetadata | Record<string, unknown>;
 }
 
 export interface FinalizeUploadRequest {

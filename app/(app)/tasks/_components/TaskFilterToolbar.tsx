@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
     Command,
     CommandEmpty,
@@ -238,9 +239,7 @@ export function TaskFilterToolbar({
 
                     <div className="space-y-4">
                         <div className="flex flex-col gap-y-1.5">
-                            <label className="text-sm font-medium">
-                                Status
-                            </label>
+                            <Label>Status</Label>
                             <MultiSelectCombobox
                                 open={statusOpen}
                                 onOpenChange={setStatusOpen}
@@ -303,7 +302,7 @@ export function TaskFilterToolbar({
                         </div>
 
                         <div className="flex flex-col gap-y-1.5">
-                            <label className="text-sm font-medium">Owner</label>
+                            <Label>Owner</Label>
                             <MultiSelectCombobox
                                 open={ownerOpen}
                                 onOpenChange={setOwnerOpen}
@@ -384,9 +383,7 @@ export function TaskFilterToolbar({
                         </div>
 
                         <div className="flex flex-col gap-y-1.5">
-                            <label className="text-sm font-medium">
-                                Check
-                            </label>
+                            <Label>Check</Label>
                             <MultiSelectCombobox
                                 open={checkOpen}
                                 onOpenChange={setCheckOpen}
@@ -449,7 +446,7 @@ export function TaskFilterToolbar({
                         </div>
 
                         <div className="flex flex-col gap-y-1.5">
-                            <label className="text-sm font-medium">Resource</label>
+                            <Label>Resource</Label>
                             <MultiSelectCombobox
                                 open={resourceOpen}
                                 onOpenChange={setResourceOpen}

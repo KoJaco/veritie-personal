@@ -79,6 +79,8 @@ export const voiceLogs = pgTable("voice_logs", {
     language: text("language"),
     durationMs: integer("duration_ms"),
     audioUri: text("audio_uri"),
+    indexArtifact: jsonb("index_artifact"),
+    extractionPayload: jsonb("extraction_payload"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
 });

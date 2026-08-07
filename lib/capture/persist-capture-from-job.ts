@@ -2,9 +2,12 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import {
     capturesPersistRequestSchema,
-    veritieJobPersistSchema,
+    buildVeritieJobPersistSchema,
 } from "@/lib/capture/captures-persist-schema";
 import { mapVeritieJobToCaptureBundle } from "@/lib/capture/map-veritie-job";
+import { getServerPipelineExtractionConfig } from "@/lib/capture/server-pipeline-config";
+import { buildJobAudioStoragePath } from "@/lib/capture/capture-audio-paths";
+import { remapIndexArtifactSegmentIds } from "@/lib/capture/capture-segment-ids";
 import { requireUser } from "@/lib/auth/require-user";
 import { envServer } from "@/lib/config/env.server";
 import {
@@ -27,6 +30,7 @@ import {
 import { getServerVeritieClient } from "@/lib/veritie/server-client";
 import { logger } from "@/lib/logging/server-logger";
 import { captureFlowServerLog } from "@/lib/capture/capture-flow-server-logger";
+import { toCapturePersistError } from "@/lib/db/format-schema-error";
 
 export type PersistCaptureFromJobResult = {
     captureId: string;
@@ -53,7 +57,7 @@ function assertStubCaptureMutationsAllowed(): void {
 export async function persistCaptureFromVeritieJob(
     jobId: string,
 ): Promise<PersistCaptureFromJobResult> {
-    await requireUser();
+    const user = await requireUser();
 
     if (!isBackendPersistence()) {
         assertStubCaptureMutationsAllowed();
@@ -90,6 +94,7 @@ export async function persistCaptureFromVeritieJob(
     }
 
     const veritie = getServerVeritieClient();
+    const extractionConfig = await getServerPipelineExtractionConfig(veritie);
     const job = await veritie.getJob(validatedJobId);
 
     captureFlowServerLog.debug("persist.fetch_job.done", {
@@ -103,7 +108,9 @@ export async function persistCaptureFromVeritieJob(
         indexingState: job.indexing_state,
     });
 
-    const jobResult = veritieJobPersistSchema.safeParse(job);
+    const jobResult = buildVeritieJobPersistSchema(
+        extractionConfig.extractionListKeys,
+    ).safeParse(job);
     if (!jobResult.success) {
         logger.error("[captures] invalid_job_payload", {
             jobId: validatedJobId,
@@ -117,20 +124,40 @@ export async function persistCaptureFromVeritieJob(
     }
 
     const captureId = `capture_${randomUUID()}`;
-    const bundle = mapVeritieJobToCaptureBundle(jobResult.data, captureId);
+    const bundle = mapVeritieJobToCaptureBundle(
+        jobResult.data,
+        captureId,
+        extractionConfig,
+    );
+
+    if (user.appConfig?.saveVoiceLogAudio && scope) {
+        bundle.voiceLog.audioUri = buildJobAudioStoragePath(
+            scope.accountId,
+            scope.userId,
+            validatedJobId,
+        );
+    }
 
     if (scope) {
-        const persisted = await persistCaptureBundle(scope, bundle);
-        if (persisted.duplicate) {
-            captureFlowServerLog.info("persist.duplicate", {
+        try {
+            const persisted = await persistCaptureBundle(scope, bundle);
+            if (persisted.duplicate) {
+                captureFlowServerLog.info("persist.duplicate", {
+                    jobId: validatedJobId,
+                    captureId: persisted.capture.id,
+                });
+                return {
+                    captureId: persisted.capture.id,
+                    timelineEventCount: 0,
+                    duplicate: true,
+                };
+            }
+        } catch (error) {
+            captureFlowServerLog.error("persist.db_failed", {
                 jobId: validatedJobId,
-                captureId: persisted.capture.id,
+                error: error instanceof Error ? error.message : String(error),
             });
-            return {
-                captureId: persisted.capture.id,
-                timelineEventCount: 0,
-                duplicate: true,
-            };
+            throw toCapturePersistError(error);
         }
     } else {
         appendCaptureFromJob({
@@ -193,9 +220,12 @@ export async function enrichCaptureFromVeritieJob(
     });
 
     const veritie = getServerVeritieClient();
+    const extractionConfig = await getServerPipelineExtractionConfig(veritie);
     const job = await veritie.getJob(validatedJobId);
 
-    const jobResult = veritieJobPersistSchema.safeParse(job);
+    const jobResult = buildVeritieJobPersistSchema(
+        extractionConfig.extractionListKeys,
+    ).safeParse(job);
     if (!jobResult.success) {
         logger.error("[captures] invalid_job_payload_enrich", {
             jobId: validatedJobId,
@@ -208,23 +238,54 @@ export async function enrichCaptureFromVeritieJob(
         throw new Error("Invalid job payload from Veritie");
     }
 
-    const bundle = mapVeritieJobToCaptureBundle(jobResult.data, existing.id);
+    const bundle = mapVeritieJobToCaptureBundle(
+        jobResult.data,
+        existing.id,
+        extractionConfig,
+    );
     const status =
         jobResult.data.status === "completed" ? "completed" : "processing";
 
     if (scope) {
-        await mergeDbCaptureEnrichment(scope, {
-            captureId: existing.id,
-            status,
-            extractedValues: bundle.extractedValues,
-            timelineEvents: bundle.timelineEvents,
-        });
+        try {
+            await mergeDbCaptureEnrichment(scope, {
+                captureId: existing.id,
+                status,
+                title: bundle.capture.title,
+                aspectIds: bundle.capture.aspectIds,
+                extractedValues: bundle.extractedValues,
+                timelineEvents: bundle.timelineEvents,
+                voiceLogArtifacts: {
+                    indexArtifact: remapIndexArtifactSegmentIds(
+                        jobResult.data.index ?? null,
+                        existing.id,
+                    ) as Record<string, unknown> | null,
+                    extractionPayload: jobResult.data.extraction?.payload ?? null,
+                },
+            });
+        } catch (error) {
+            captureFlowServerLog.error("enrich.db_failed", {
+                jobId: validatedJobId,
+                captureId: existing.id,
+                error: error instanceof Error ? error.message : String(error),
+            });
+            throw toCapturePersistError(error);
+        }
     } else {
         mergeStubCaptureEnrichment({
             captureId: existing.id,
             status,
+            title: bundle.capture.title,
+            aspectIds: bundle.capture.aspectIds,
             extractedValues: bundle.extractedValues,
             timelineEvents: bundle.timelineEvents,
+            voiceLogArtifacts: {
+                indexArtifact: remapIndexArtifactSegmentIds(
+                    jobResult.data.index ?? null,
+                    existing.id,
+                ) as Record<string, unknown> | null,
+                extractionPayload: jobResult.data.extraction?.payload ?? null,
+            },
         });
     }
 

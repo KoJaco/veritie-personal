@@ -15,6 +15,8 @@ import {
     deleteAccountInputSchema,
     updateProfileInputSchema,
 } from "@/lib/settings/update-profile-schema";
+import { updateCaptureContextInputSchema } from "@/lib/settings/update-capture-context-schema";
+import { normalizeCaptureLocationLabel } from "@/lib/capture/capture-context-schema";
 
 export type SettingsActionResult =
     | { ok: true }
@@ -80,6 +82,37 @@ export async function updateVoiceLogBehaviorAction(input: {
 
     if (!updated) {
         return { ok: false, error: "Could not update voice log settings" };
+    }
+
+    return { ok: true };
+}
+
+export async function updateCaptureContextAction(input: {
+    captureLocationLabel?: string;
+}): Promise<SettingsActionResult> {
+    await requireUser();
+
+    if (getDataSourceKind() !== "backend") {
+        return {
+            ok: false,
+            error: "Capture settings require database-backed mode",
+        };
+    }
+
+    const parsed = updateCaptureContextInputSchema.safeParse(input);
+    if (!parsed.success) {
+        return { ok: false, error: "Invalid capture context settings" };
+    }
+
+    const scope = await requireAccountScope();
+    const updated = await updateAccountAppConfig(scope, {
+        captureLocationLabel: normalizeCaptureLocationLabel(
+            parsed.data.captureLocationLabel,
+        ),
+    });
+
+    if (!updated) {
+        return { ok: false, error: "Could not update capture context settings" };
     }
 
     return { ok: true };

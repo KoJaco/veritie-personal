@@ -5,6 +5,7 @@ import {
     getCaptureDetail as getCaptureDetailRepo,
     getCapturesIndex as getCapturesIndexRepo,
 } from "@/lib/db/repositories/captures";
+import { registerCaptureDetailExtractionKeys } from "../register-capture-detail-keys";
 import type { CapturesReadAdapter } from "../types";
 
 export const backendCapturesAdapter: CapturesReadAdapter = {
@@ -14,6 +15,8 @@ export const backendCapturesAdapter: CapturesReadAdapter = {
     },
     getCaptureDetail: async (id) => {
         const scope = await requireAccountScope();
-        return getCaptureDetailRepo(scope, id);
+        return registerCaptureDetailExtractionKeys(
+            await getCaptureDetailRepo(scope, id),
+        );
     },
 };

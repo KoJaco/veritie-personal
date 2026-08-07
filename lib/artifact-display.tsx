@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { formatLocaleDateTime, isDateLike } from "@/lib/format/iso-datetime";
+
 export type PrimitiveArtifactValue = string | number | boolean | null;
 
 export function isPrimitiveArtifactValue(
@@ -35,7 +37,15 @@ export function isStructuredArtifactValue(value: unknown): boolean {
     return Array.isArray(value) || (typeof value === "object" && value !== null);
 }
 
-export function formatArtifactKey(key: string): string {
+export function formatArtifactKey(
+    key: string,
+    glossaryLabels?: Record<string, string>,
+): string {
+    const glossaryLabel = glossaryLabels?.[key]?.trim();
+    if (glossaryLabel) {
+        return glossaryLabel;
+    }
+
     return key
         .replace(/_/g, " ")
         .replace(/\b\w/g, (character) => character.toUpperCase());
@@ -48,6 +58,10 @@ export function formatPrimitiveValue(value: PrimitiveArtifactValue): string {
 
     if (typeof value === "boolean") {
         return value ? "Yes" : "No";
+    }
+
+    if (typeof value === "string" && isDateLike(value)) {
+        return formatLocaleDateTime(value);
     }
 
     return String(value);

@@ -1,4 +1,6 @@
-import { VeritieSDK } from "../../sdk/src/client/veritie-sdk";
+import "server-only";
+
+import { VeritieSDK } from "@veritie/sdk/client";
 import { envServer } from "@/lib/config/env.server";
 
 let cachedClient: VeritieSDK | null = null;

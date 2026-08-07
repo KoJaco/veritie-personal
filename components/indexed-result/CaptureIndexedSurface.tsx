@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
+
+import { ExtractedValueEditorTrigger } from "@/components/extraction/ExtractedValueEditorSheet";
 import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-model";
 import type { SourceAnchorStub } from "@/lib/stubs/capture-stubs";
 import { updateExtractedValueReviewAction } from "@/lib/actions/stub-data-mutations";
@@ -13,7 +15,7 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { SURFACE_CLASS } from "@/lib/ui/surface";
-import { IndexedAudioPlayer } from "./IndexedAudioPlayer";
+import { IndexedAudioPlayer } from "@/components/capture/indexed-result/indexed-audio-player";
 
 function anchorForExtractedValue(
     anchors: SourceAnchorStub[],
@@ -200,13 +202,27 @@ export function ExtractedValueReviewActions({
     extractedValueId,
     reviewState,
     onUpdated,
+    showEditTrigger = true,
+    extractedValue,
+    listKey,
+    index,
+    glossaryLabels,
 }: {
     extractedValueId: string;
     reviewState: string;
     onUpdated?: (state: string) => void;
+    showEditTrigger?: boolean;
+    extractedValue?: import("@/lib/stubs/capture-stubs").ExtractedValueStub;
+    listKey?: string;
+    index?: number;
+    glossaryLabels?: Record<string, string>;
 }) {
     const [pending, setPending] = useState(false);
     const [localState, setLocalState] = useState(reviewState);
+
+    useEffect(() => {
+        setLocalState(reviewState);
+    }, [reviewState]);
 
     const submitReview = async (nextState: "confirmed" | "rejected") => {
         setPending(true);
@@ -227,7 +243,15 @@ export function ExtractedValueReviewActions({
         }
     };
 
-    if (localState !== "pending") {
+    const canEdit =
+        extractedValue &&
+        listKey != null &&
+        index != null &&
+        (localState === "pending" ||
+            localState === "rejected" ||
+            localState === "edited");
+
+    if (localState !== "pending" && !canEdit) {
         return (
             <p className="text-xs text-muted-foreground">
                 Review state: {localState}
@@ -237,23 +261,41 @@ export function ExtractedValueReviewActions({
 
     return (
         <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-                type="button"
-                size="sm"
-                disabled={pending}
-                onClick={() => void submitReview("confirmed")}
-            >
-                Confirm
-            </Button>
-            <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={pending}
-                onClick={() => void submitReview("rejected")}
-            >
-                Reject
-            </Button>
+            {localState === "pending" && (
+                <>
+                    <Button
+                        type="button"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => void submitReview("confirmed")}
+                    >
+                        Confirm
+                    </Button>
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() => void submitReview("rejected")}
+                    >
+                        Reject
+                    </Button>
+                </>
+            )}
+            {canEdit && showEditTrigger && (
+                <ExtractedValueEditorTrigger
+                    extractedValue={extractedValue}
+                    listKey={listKey}
+                    index={index}
+                    glossaryLabels={glossaryLabels}
+                    onSaved={() => onUpdated?.("edited")}
+                />
+            )}
+            {localState !== "pending" && (
+                <p className="text-xs text-muted-foreground">
+                    Review state: {localState}
+                </p>
+            )}
         </div>
     );
 }

@@ -15,13 +15,22 @@ export function VoiceCaptureLauncherPanel({
     onBack,
     onComplete,
     saveVoiceLogAudio = false,
+    captureLocationLabel = "",
 }: {
     onBack: () => void;
     onComplete: () => void;
     saveVoiceLogAudio?: boolean;
+    captureLocationLabel?: string;
 }) {
-    const { veritie, captureHandle, leasePhase, leaseError, renewLease } =
-        useVeritieCaptureLease();
+    const {
+        veritie,
+        captureHandle,
+        leasePhase,
+        leaseError,
+        prepareLease,
+        renewLease,
+        extractionConfig,
+    } = useVeritieCaptureLease();
 
     return (
         <VoiceCapturePanel
@@ -29,11 +38,14 @@ export function VoiceCaptureLauncherPanel({
             captureHandle={captureHandle}
             leasePhase={leasePhase}
             leaseError={leaseError}
+            prepareLease={prepareLease}
             renewLease={renewLease}
             embedded
             onBack={onBack}
             onComplete={onComplete}
             saveVoiceLogAudio={saveVoiceLogAudio}
+            captureLocationLabel={captureLocationLabel}
+            glossaryLabels={extractionConfig.glossaryLabels}
         />
     );
 }

@@ -103,3 +103,91 @@ export function renderHighlightedText(
     { text: text.slice(range.end), highlighted: false },
   ].filter((part) => part.text.length > 0);
 }
+
+export type TaggedHighlightRange = HighlightRange & {
+  primary?: boolean;
+};
+
+function mergeTaggedHighlightRanges(
+  ranges: TaggedHighlightRange[],
+): TaggedHighlightRange[] {
+  const sorted = [...ranges].sort((left, right) => left.start - right.start);
+  const merged: TaggedHighlightRange[] = [];
+
+  for (const range of sorted) {
+    const last = merged[merged.length - 1];
+    if (!last || range.start > last.end) {
+      merged.push({ ...range });
+      continue;
+    }
+
+    last.end = Math.max(last.end, range.end);
+    last.primary = last.primary || range.primary;
+  }
+
+  return merged;
+}
+
+export function collectTranscriptHighlightRanges(
+  transcriptText: string,
+  quotes: Array<{ quote: string; primary?: boolean }>,
+  fallbackSegmentTexts: string[] = [],
+): TaggedHighlightRange[] {
+  const ranges: TaggedHighlightRange[] = [];
+
+  for (const { quote, primary } of quotes) {
+    const trimmed = quote.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const range = findTranscriptEvidenceHighlightRange(
+      transcriptText,
+      trimmed,
+      fallbackSegmentTexts,
+    );
+    if (range) {
+      ranges.push({ ...range, primary });
+    }
+  }
+
+  return mergeTaggedHighlightRanges(ranges);
+}
+
+export function renderMultiHighlightedText(
+  text: string,
+  ranges: TaggedHighlightRange[],
+): Array<{ text: string; highlighted: boolean; primary?: boolean }> {
+  if (ranges.length === 0) {
+    return [{ text, highlighted: false }];
+  }
+
+  const parts: Array<{ text: string; highlighted: boolean; primary?: boolean }> =
+    [];
+  let cursor = 0;
+
+  for (const range of ranges) {
+    if (range.start > cursor) {
+      parts.push({
+        text: text.slice(cursor, range.start),
+        highlighted: false,
+      });
+    }
+
+    if (range.end > range.start) {
+      parts.push({
+        text: text.slice(range.start, range.end),
+        highlighted: true,
+        primary: range.primary,
+      });
+    }
+
+    cursor = Math.max(cursor, range.end);
+  }
+
+  if (cursor < text.length) {
+    parts.push({ text: text.slice(cursor), highlighted: false });
+  }
+
+  return parts.filter((part) => part.text.length > 0);
+}

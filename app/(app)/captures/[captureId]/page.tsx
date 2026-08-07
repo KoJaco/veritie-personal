@@ -15,18 +15,21 @@ export default async function CaptureDetailPage({
 }: CaptureDetailPageProps) {
     const { captureId } = await params;
     const { anchor } = await searchParams;
-    const detail = await getDataSourceAdapters().captures.getCaptureDetail(captureId);
+    const dataSource = getDataSourceAdapters();
+    const detail = await dataSource.captures.getCaptureDetail(captureId);
 
     if (!detail) {
         notFound();
     }
 
+    const glossaryLabels = await dataSource.pipeline.getExtractionGlossaryLabels();
+
     return (
         <PageFrame
             header={
                 <PageHeader
-                    title={detail.capture.title ?? "Capture"}
-                    description={detail.capture.type}
+                    title={detail.capture.type}
+                    description={detail.capture.title ?? "Capture"}
                     separator={false}
                 />
             }
@@ -34,6 +37,7 @@ export default async function CaptureDetailPage({
             <CaptureDetailView
                 detail={detail}
                 initialExtractedValueId={anchor}
+                glossaryLabels={glossaryLabels}
             />
         </PageFrame>
     );

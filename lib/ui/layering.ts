@@ -5,6 +5,7 @@ export const LAYER_Z_INDEX = {
     launcherChrome: 85,
     detailBackdrop: 90,
     detailPanel: 100,
+    nestedDialog: 110,
 } as const;
 
 /** Literal Tailwind classes — dynamic `z-[${n}]` is not emitted by the compiler. */
@@ -13,4 +14,5 @@ export const LAYER_CLASS = {
     launcherChrome: "z-[85]",
     detailBackdrop: "z-[90]",
     detailPanel: "z-[100]",
+    nestedDialog: "z-[110]",
 } as const;

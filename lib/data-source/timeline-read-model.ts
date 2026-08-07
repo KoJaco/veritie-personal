@@ -9,8 +9,13 @@ import type { ScopeLens } from "@/lib/lens";
 import { TIMELINE_EVENT_SEEDS, type TimelineEventStub } from "@/lib/stubs/timeline-stubs";
 import {
     EXTRACTED_VALUE_SEEDS,
+    VOICE_LOG_SEEDS,
     type ExtractedValueStub,
 } from "@/lib/stubs/capture-stubs";
+import {
+    applyTimelineItemSummaryFallback,
+    resolveCaptureSummaryFromPayload,
+} from "@/lib/capture/extraction-summary";
 
 export type TimelineIndexItem = {
     id: string;
@@ -53,22 +58,36 @@ function matchesLens(event: TimelineEventStub, lens?: ScopeLens): boolean {
     return event.aspect === lens.scope;
 }
 
+function resolveCaptureSummaryForId(captureId: string | undefined): string | undefined {
+    if (!captureId) {
+        return undefined;
+    }
+
+    const voiceLog = VOICE_LOG_SEEDS.find((log) => log.captureId === captureId);
+    return resolveCaptureSummaryFromPayload(voiceLog?.extractionPayload);
+}
+
 export function getTimelineIndex(
     query?: TimelineIndexQuery,
 ): TimelineIndexReadModel {
-    let items: TimelineIndexItem[] = TIMELINE_EVENT_SEEDS.map((event) => ({
-        id: event.id,
-        type: event.type,
-        title: event.title,
-        summary: event.summary,
-        aspect: event.aspect,
-        occurredAt: event.occurredAt,
-        captureId: event.captureId,
-        extractedValueId: event.extractedValueId,
-        extractedObjectType: event.extractedObjectType,
-        reviewState: event.reviewState,
-        confidence: event.confidence,
-    }));
+    let items: TimelineIndexItem[] = TIMELINE_EVENT_SEEDS.map((event) =>
+        applyTimelineItemSummaryFallback(
+            {
+                id: event.id,
+                type: event.type,
+                title: event.title,
+                summary: event.summary,
+                aspect: event.aspect,
+                occurredAt: event.occurredAt,
+                captureId: event.captureId,
+                extractedValueId: event.extractedValueId,
+                extractedObjectType: event.extractedObjectType,
+                reviewState: event.reviewState,
+                confidence: event.confidence,
+            },
+            resolveCaptureSummaryForId(event.captureId),
+        ),
+    );
 
     if (!query?.includeMetaEvents) {
         items = items.filter((item) => !isHiddenTimelineEventType(item.type));

@@ -16,10 +16,17 @@ sequenceDiagram
     participant Action as persistCaptureAction
     participant Store as Stub_or_DB
 
-    User->>Launcher: Open FAB, Voice log
+    User->>Launcher: Open FAB
+    Launcher->>Veritie: prepareCapture (lease)
     Launcher->>Panel: Render VoiceCapturePanel
-    User->>Panel: Record audio
-    Panel->>Veritie: Live stream chunks + STREAM_END
+    Panel->>Panel: Pre-warm microphone (optional)
+    User->>Panel: Start recording
+    par Mic and live session
+        Panel->>Panel: getUserMedia
+        Panel->>Veritie: startCapture (WebSocket)
+    end
+    Panel->>Panel: Buffer chunks until session ready
+    Panel->>Veritie: Flush buffered chunks + live stream
     Panel->>Proxy: POST /api/veritie/v1/jobs (session required)
     Proxy->>Leases: register lease on success
   loop Poll until transcript_ready
@@ -46,6 +53,7 @@ sequenceDiagram
 | --- | --- |
 | `POST/GET /api/veritie/v1/*` | `requireUser()` → 401; same-origin defense-in-depth |
 | `POST /jobs` | Registers `veritie_job_leases` row for `(jobId, accountId, userId)` |
+| `GET /pipeline/config` | Session required; no job lease (pipeline display bundle) |
 | `GET /jobs/:id`, `POST /jobs/:id/upload-finalize` | 403 unless lease exists for current account |
 | `persistCaptureAction` / `POST /api/captures` | Session required; lease ownership before `getJob` |
 | Duplicate persist | Partial unique index on `(account_id, veritie_job_id)` |
@@ -54,7 +62,7 @@ sequenceDiagram
 
 | Layer | File |
 | --- | --- |
-| Launcher shell | `components/capture/GlobalCaptureLauncher.tsx` |
+| Launcher shell | `components/capture/GlobalCaptureLauncher.tsx` (lease on FAB open) |
 | SDK wiring | `components/capture/VoiceCaptureLauncherPanel.tsx` |
 | Recording + upload UI | `components/capture/VoiceCapturePanel.tsx` |
 | Transcript readiness | `lib/capture/transcript-readiness.ts` |
@@ -64,6 +72,7 @@ sequenceDiagram
 | Server Veritie client | `lib/veritie/server-client.ts` |
 | Persist | `lib/capture/persist-capture-from-job.ts` |
 | Job → stub mapping | `lib/capture/map-veritie-job.ts` |
+| Extraction schema + aspect derivation | `docs/contracts/voice-log-extraction-schema.md`, `lib/capture/extraction-aspect.ts` |
 | Script persist API | `app/api/captures/route.ts` |
 
 ## Out of scope (follow-up)

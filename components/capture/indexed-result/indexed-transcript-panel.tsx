@@ -145,6 +145,7 @@ export function IndexedTranscriptPanel({
   animateEntrance = false,
   showTimingsSection = true,
   timingsExpanded = false,
+  viewMode = "paragraph",
 }: {
   transcript: IndexedTranscriptArtifact | null;
   activeEntry: EvidenceIndexEntry | null;
@@ -152,6 +153,7 @@ export function IndexedTranscriptPanel({
   animateEntrance?: boolean;
   showTimingsSection?: boolean;
   timingsExpanded?: boolean;
+  viewMode?: "paragraph" | "timings";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [userSegmentsOpen, setUserSegmentsOpen] = useState(false);
@@ -272,6 +274,45 @@ export function IndexedTranscriptPanel({
     );
   }
 
+  if (viewMode === "timings") {
+    if (segments.length === 0) {
+      return (
+        <p className="text-sm text-muted-foreground">No timed segments.</p>
+      );
+    }
+
+    return (
+      <div ref={containerRef} className="grid gap-2">
+        {segments.map((segment, index) => {
+          const highlight = highlightByIndex.get(index);
+          const isActive = highlightByIndex.has(index);
+          const segmentKey = `segment-${index}`;
+
+          return (
+            <SegmentRow
+              key={segment.id ?? segmentKey}
+              segmentKey={segmentKey}
+              startMs={segment.start_ms}
+              endMs={segment.end_ms}
+              text={segment.text ?? ""}
+              highlightRange={highlight?.highlightRange ?? null}
+              highlightWholeSegment={highlight?.highlightWholeSegment ?? false}
+              isActive={isActive}
+              ariaLabel={
+                isActive && activeEntry?.quote
+                  ? `Evidence for ${activePath}: ${activeEntry.quote}`
+                  : undefined
+              }
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
+  const showTimingsInParagraph =
+    showTimingsSection && viewMode === "paragraph";
+
   return (
     <div ref={containerRef} className="grid gap-3">
       {fullTranscriptText ? (
@@ -293,7 +334,7 @@ export function IndexedTranscriptPanel({
                 </IndexedResultStaggerItem>
               );
             })}
-            {segments.length && showTimingsSection ? (
+            {segments.length && showTimingsInParagraph ? (
               <IndexedResultStaggerItem>
                 <div>
                   <button
@@ -370,7 +411,7 @@ export function IndexedTranscriptPanel({
         )
       ) : null}
 
-      {segments.length && showTimingsSection && !shouldAnimateLines ? (
+      {segments.length && showTimingsInParagraph && !shouldAnimateLines ? (
         <div>
           <button
             type="button"

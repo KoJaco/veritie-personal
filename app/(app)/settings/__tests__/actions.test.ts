@@ -17,11 +17,15 @@ jest.mock("@/lib/db/repositories/context", () => ({
     requireAccountScope: () => mockRequireAccountScope(),
 }));
 
+const mockUpdateAccountAppConfig = jest.fn() as AnyMock;
+
 jest.mock("@/lib/db/repositories/settings", () => ({
     updateUserProfileFullName: (...args: never[]) =>
         mockUpdateUserProfileFullName(...args),
     updateAccountName: (...args: never[]) => mockUpdateAccountName(...args),
     softDeleteAccount: (...args: never[]) => mockSoftDeleteAccount(...args),
+    updateAccountAppConfig: (...args: never[]) =>
+        mockUpdateAccountAppConfig(...args),
 }));
 
 jest.mock("@/lib/data-source/registry", () => ({
@@ -57,7 +61,24 @@ describe("settings actions", () => {
         mockUpdateUserProfileFullName.mockResolvedValue(true);
         mockUpdateAccountName.mockResolvedValue(true);
         mockSoftDeleteAccount.mockResolvedValue(true);
+        mockUpdateAccountAppConfig.mockResolvedValue(true);
         mockSignOut.mockResolvedValue(undefined);
+    });
+
+    it("updates capture location label", async () => {
+        const { updateCaptureContextAction } = await import(
+            "@/lib/actions/settings-mutations"
+        );
+
+        const result = await updateCaptureContextAction({
+            captureLocationLabel: "North Manly",
+        });
+
+        expect(result).toEqual({ ok: true });
+        expect(mockUpdateAccountAppConfig).toHaveBeenCalledWith(
+            expect.anything(),
+            { captureLocationLabel: "North Manly" },
+        );
     });
 
     it("updates display and workspace name for owners", async () => {

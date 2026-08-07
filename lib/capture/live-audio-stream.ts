@@ -58,6 +58,34 @@ export async function sendLiveAudioChunk(
     };
 }
 
+export async function flushBufferedLiveChunks(
+    session: LiveJobSession,
+    state: LiveChunkStreamState,
+    chunks: Blob[],
+): Promise<LiveChunkStreamState> {
+    if (chunks.length === 0) {
+        return state;
+    }
+
+    let totalBytes = 0;
+    for (const chunk of chunks) {
+        totalBytes += chunk.size;
+    }
+
+    captureFlowLog.info("chunk.buffer_flush", {
+        count: chunks.length,
+        totalBytes,
+        sessionId: session.sessionId,
+        jobId: session.jobId,
+    });
+
+    let nextState = state;
+    for (const chunk of chunks) {
+        nextState = await sendLiveAudioChunk(session, nextState, chunk);
+    }
+    return nextState;
+}
+
 export async function endLiveAudioStream(
     session: LiveJobSession,
     state: LiveChunkStreamState,

@@ -294,6 +294,7 @@ export interface SettingsStub {
     scopeMapping: ScopeMappingConfigStub;
     voiceLog?: {
         saveAudio: boolean;
+        captureLocationLabel?: string;
     };
     /** @deprecated Use scopeMapping */
     frameworkConfiguration: {

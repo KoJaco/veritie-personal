@@ -4,6 +4,15 @@ import { useState } from "react";
 import { Filter } from "lucide-react";
 import { PageHeaderActionButton } from "@/components/route/PageHeaderActionButton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import {
     Sheet,
     SheetContent,
@@ -15,6 +24,8 @@ import {
 } from "@/components/ui/sheet";
 import { TIMELINE_SIGNAL_EVENT_TYPES } from "@/lib/domain/timeline-filters";
 import type { TimelineEventType } from "@/lib/domain/timeline";
+
+const ALL_FILTER_VALUE = "__all__";
 
 type TimelineFilterSheetProps = {
     aspect: string;
@@ -30,6 +41,8 @@ export function TimelineFilterSheet({
     reviewState,
 }: TimelineFilterSheetProps) {
     const [open, setOpen] = useState(false);
+    const [typeFilter, setTypeFilter] = useState(eventType ?? "");
+    const [reviewFilter, setReviewFilter] = useState(reviewState ?? "");
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -48,39 +61,63 @@ export function TimelineFilterSheet({
                     action="/timeline"
                     className="flex flex-col gap-4 px-4"
                 >
-                    <input type="hidden" name="aspect" value={aspect} />
+                    <Input type="hidden" name="aspect" value={aspect} />
                     {search ? (
-                        <input type="hidden" name="q" value={search} />
+                        <Input type="hidden" name="q" value={search} />
                     ) : null}
-                    <label className="space-y-1.5 text-sm">
-                        <span className="font-medium">Event type</span>
-                        <select
-                            name="type"
-                            defaultValue={eventType ?? ""}
-                            className="h-9 w-full rounded-md border border-input bg-background px-3"
+                    <Input type="hidden" name="type" value={typeFilter} />
+                    <Input type="hidden" name="review" value={reviewFilter} />
+                    <div className="space-y-1.5">
+                        <Label>Event type</Label>
+                        <Select
+                            value={typeFilter || ALL_FILTER_VALUE}
+                            onValueChange={(value) =>
+                                setTypeFilter(
+                                    value === ALL_FILTER_VALUE ? "" : value,
+                                )
+                            }
                         >
-                            <option value="">All event types</option>
-                            {TIMELINE_SIGNAL_EVENT_TYPES.map((type) => (
-                                <option key={type} value={type}>
-                                    {type.replace(/_/g, " ")}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                    <label className="space-y-1.5 text-sm">
-                        <span className="font-medium">Review state</span>
-                        <select
-                            name="review"
-                            defaultValue={reviewState ?? ""}
-                            className="h-9 w-full rounded-md border border-input bg-background px-3"
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="All event types" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL_FILTER_VALUE}>
+                                    All event types
+                                </SelectItem>
+                                {TIMELINE_SIGNAL_EVENT_TYPES.map((type) => (
+                                    <SelectItem key={type} value={type}>
+                                        {type.replace(/_/g, " ")}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Review state</Label>
+                        <Select
+                            value={reviewFilter || ALL_FILTER_VALUE}
+                            onValueChange={(value) =>
+                                setReviewFilter(
+                                    value === ALL_FILTER_VALUE ? "" : value,
+                                )
+                            }
                         >
-                            <option value="">All review states</option>
-                            <option value="pending">Pending</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="rejected">Rejected</option>
-                            <option value="edited">Edited</option>
-                        </select>
-                    </label>
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="All review states" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL_FILTER_VALUE}>
+                                    All review states
+                                </SelectItem>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="confirmed">
+                                    Confirmed
+                                </SelectItem>
+                                <SelectItem value="rejected">Rejected</SelectItem>
+                                <SelectItem value="edited">Edited</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <SheetFooter className="px-0">
                         <Button type="submit">Apply filters</Button>
                         <Button type="button" variant="outline" asChild>

@@ -5,6 +5,15 @@ import { useState } from "react";
 import { Filter } from "lucide-react";
 import { PageHeaderActionButton } from "@/components/route/PageHeaderActionButton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import {
     Sheet,
     SheetContent,
@@ -18,6 +27,8 @@ import {
 type SortBy = "createdAt" | "title" | "extractedCount";
 type SortDir = "asc" | "desc";
 type ViewMode = "cards" | "table";
+
+const ALL_FILTER_VALUE = "__all__";
 
 type CapturesFilterSheetProps = {
     aspect: string;
@@ -37,6 +48,9 @@ export function CapturesFilterSheet({
     view,
 }: CapturesFilterSheetProps) {
     const [open, setOpen] = useState(false);
+    const [statusFilter, setStatusFilter] = useState(status ?? "");
+    const [sortByFilter, setSortByFilter] = useState(sortBy);
+    const [sortDirFilter, setSortDirFilter] = useState(sortDir);
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -55,49 +69,80 @@ export function CapturesFilterSheet({
                     action="/captures"
                     className="flex flex-col gap-4 px-4"
                 >
-                    <input type="hidden" name="aspect" value={aspect} />
+                    <Input type="hidden" name="aspect" value={aspect} />
                     {search ? (
-                        <input type="hidden" name="q" value={search} />
+                        <Input type="hidden" name="q" value={search} />
                     ) : null}
-                    <input type="hidden" name="view" value={view} />
-                    <label className="space-y-1.5 text-sm">
-                        <span className="font-medium">Status</span>
-                        <select
-                            name="status"
-                            defaultValue={status ?? ""}
-                            className="h-9 w-full rounded-md border border-input bg-background px-3"
+                    <Input type="hidden" name="view" value={view} />
+                    <Input type="hidden" name="status" value={statusFilter} />
+                    <Input type="hidden" name="sortBy" value={sortByFilter} />
+                    <Input type="hidden" name="sortDir" value={sortDirFilter} />
+                    <div className="space-y-1.5">
+                        <Label>Status</Label>
+                        <Select
+                            value={statusFilter || ALL_FILTER_VALUE}
+                            onValueChange={(value) =>
+                                setStatusFilter(
+                                    value === ALL_FILTER_VALUE ? "" : value,
+                                )
+                            }
                         >
-                            <option value="">All statuses</option>
-                            <option value="completed">Completed</option>
-                            <option value="processing">Processing</option>
-                            <option value="failed">Failed</option>
-                        </select>
-                    </label>
-                    <label className="space-y-1.5 text-sm">
-                        <span className="font-medium">Sort by</span>
-                        <select
-                            name="sortBy"
-                            defaultValue={sortBy}
-                            className="h-9 w-full rounded-md border border-input bg-background px-3"
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="All statuses" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL_FILTER_VALUE}>
+                                    All statuses
+                                </SelectItem>
+                                <SelectItem value="completed">
+                                    Completed
+                                </SelectItem>
+                                <SelectItem value="processing">
+                                    Processing
+                                </SelectItem>
+                                <SelectItem value="failed">Failed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Sort by</Label>
+                        <Select
+                            value={sortByFilter}
+                            onValueChange={(value) =>
+                                setSortByFilter(value as SortBy)
+                            }
                         >
-                            <option value="createdAt">Date captured</option>
-                            <option value="title">Title</option>
-                            <option value="extractedCount">
-                                Extracted count
-                            </option>
-                        </select>
-                    </label>
-                    <label className="space-y-1.5 text-sm">
-                        <span className="font-medium">Direction</span>
-                        <select
-                            name="sortDir"
-                            defaultValue={sortDir}
-                            className="h-9 w-full rounded-md border border-input bg-background px-3"
+                            <SelectTrigger className="w-full">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="createdAt">
+                                    Date captured
+                                </SelectItem>
+                                <SelectItem value="title">Title</SelectItem>
+                                <SelectItem value="extractedCount">
+                                    Extracted count
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Direction</Label>
+                        <Select
+                            value={sortDirFilter}
+                            onValueChange={(value) =>
+                                setSortDirFilter(value as SortDir)
+                            }
                         >
-                            <option value="desc">Descending</option>
-                            <option value="asc">Ascending</option>
-                        </select>
-                    </label>
+                            <SelectTrigger className="w-full">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="desc">Descending</SelectItem>
+                                <SelectItem value="asc">Ascending</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <SheetFooter className="px-0">
                         <Button type="submit">Apply filters</Button>
                         <Button type="button" variant="outline" asChild>

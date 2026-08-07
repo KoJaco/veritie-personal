@@ -13,5 +13,6 @@ export async function GET() {
 
     return NextResponse.json({
         saveVoiceLogAudio: user.appConfig.saveVoiceLogAudio ?? false,
+        captureLocationLabel: user.appConfig.captureLocationLabel ?? "",
     });
 }

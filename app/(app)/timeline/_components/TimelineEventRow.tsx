@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import type { TimelineIndexItem } from "@/lib/data-source/timeline-read-model";
 import { cn } from "@/lib/utils";
+import { ArrowRight } from "lucide-react";
 
 export function TimelineEventRow({
     item,
@@ -19,45 +20,52 @@ export function TimelineEventRow({
             type="button"
             onClick={() => onSelect(item.id)}
             className={cn(
-                "w-full rounded-xl border border-border/70 bg-card px-4 py-3 text-left transition-colors hover:bg-accent/40",
+                "w-full rounded-xl border border-border/70 bg-card px-4 py-3 text-left transition-colors hover:bg-card/70 hover:border-foreground/20 duration-150",
                 selected && "ring-2 ring-primary",
             )}
         >
-            <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="text-[10px] uppercase">
-                    {item.type.replace(/_/g, " ")}
-                </Badge>
-                <Badge variant="secondary" className="text-[10px] uppercase">
-                    {item.aspect}
-                </Badge>
-                {item.reviewState && (
-                    <Badge variant="outline" className="text-[10px]">
-                        {item.reviewState}
+            <div className="flex items-center justify-between gap-1.5">
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="secondary" className="text-[10px] uppercase">
+                        {item.aspect}
                     </Badge>
-                )}
+                    <Badge variant="outline" className="text-[10px] uppercase">
+                        {item.type.replace(/_/g, " ")}
+                    </Badge>
+                    {item.reviewState && (
+                        <Badge variant="outline" className="text-[10px]">
+                            {item.reviewState}
+                        </Badge>
+                    )}
+                </div>
                 {item.captureId && (
                     <Link
                         href={`/captures/${item.captureId}`}
-                        className="text-[10px] font-medium text-primary underline-offset-2 hover:underline"
+                        className="text-xs font-medium underline-offset-2 hover:underline items-center gap-1.5 flex items-center text-foreground/75 hover:text-foreground"
                         onClick={(event) => event.stopPropagation()}
                     >
                         View capture
+                        <ArrowRight className="size-3" />
                     </Link>
                 )}
             </div>
             <p className="mt-2 font-medium">{item.title}</p>
             {item.summary && (
+
                 <p className="mt-1 text-sm text-muted-foreground">
                     {item.summary}
                 </p>
+
+
             )}
             <p className="mt-2 text-xs text-muted-foreground">
-                {new Date(item.occurredAt).toLocaleString()}
-                {item.confidence != null && (
+                {new Date(item.occurredAt).toLocaleTimeString()}
+                {/* {item.confidence != null && (
                     <span className="ml-2">
                         {Math.round(item.confidence * 100)}% confidence
                     </span>
-                )}
+                )} */}
             </p>
         </button>
     );

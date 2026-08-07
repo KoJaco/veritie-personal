@@ -28,7 +28,8 @@ import { LAYER_CLASS } from "@/lib/ui/layering";
 import { cn } from "@/lib/utils";
 import { isCaptureJobInFlight } from "@/lib/capture/capture-background-pipeline";
 import { captureJobCoordinator } from "@/lib/capture/capture-job-coordinator";
-import { getVoiceLogPreferences } from "@/lib/capture/capture-audio-client";
+import { getCapturePreferences } from "@/lib/capture/capture-audio-client";
+import { buildCaptureJobMetadata } from "@/lib/capture/build-capture-job-metadata";
 
 const LAUNCHER_BACKDROP_Z = LAYER_CLASS.launcherBackdrop;
 const LAUNCHER_CHROME_Z = LAYER_CLASS.launcherChrome;
@@ -70,9 +71,12 @@ function GlobalCaptureLauncherInner() {
     } | null>(null);
     const suppressTriggerClickRef = useRef(false);
     const openedAtRef = useRef(0);
+    const openGenerationRef = useRef(0);
 
-    const { prepareLease, releaseLease, captureHandle } = useVeritieCaptureLease();
+    const { releaseLease, captureHandle, prepareLease, leasePhase } =
+        useVeritieCaptureLease();
     const [saveVoiceLogAudio, setSaveVoiceLogAudio] = useState(false);
+    const [captureLocationLabel, setCaptureLocationLabel] = useState("");
     const pendingReleaseJobIdRef = useRef<string | null>(null);
 
     const resetTransientState = useCallback(() => {
@@ -90,6 +94,7 @@ function GlobalCaptureLauncherInner() {
     }, [captureHandle, releaseLease]);
 
     const closeUi = useCallback(() => {
+        openGenerationRef.current += 1;
         setOpen(false);
         resetTransientState();
         tryReleaseLease();
@@ -99,15 +104,44 @@ function GlobalCaptureLauncherInner() {
         closeUi();
     }, [closeUi]);
 
+    const prepareVoiceLease = useCallback(
+        (generation: number) => {
+            void getCapturePreferences().then((prefs) => {
+                if (openGenerationRef.current !== generation) {
+                    return;
+                }
+
+                const locationLabel = prefs.captureLocationLabel ?? "";
+                setSaveVoiceLogAudio(prefs.saveVoiceLogAudio);
+                setCaptureLocationLabel(locationLabel);
+                const metadata = buildCaptureJobMetadata({
+                    capturedAt: new Date().toISOString(),
+                    locationLabel,
+                });
+                void prepareLease(metadata).catch(() => {
+                    // Lease errors surface via leasePhase/leaseError in the voice panel.
+                });
+            });
+        },
+        [prepareLease],
+    );
+
     const openLauncher = useCallback(() => {
+        const generation = openGenerationRef.current + 1;
+        openGenerationRef.current = generation;
         openedAtRef.current = Date.now();
         setOpen(true);
         resetTransientState();
-        void prepareLease();
-        void getVoiceLogPreferences().then((prefs) => {
-            setSaveVoiceLogAudio(prefs.saveVoiceLogAudio);
-        });
-    }, [prepareLease, resetTransientState]);
+        prepareVoiceLease(generation);
+    }, [prepareVoiceLease, resetTransientState]);
+
+    const enterVoiceMode = useCallback(() => {
+        const generation = openGenerationRef.current;
+        setMode("voice");
+        if (leasePhase === "idle" || leasePhase === "error") {
+            prepareVoiceLease(generation);
+        }
+    }, [leasePhase, prepareVoiceLease]);
 
     useEffect(() => {
         return captureJobCoordinator.subscribe((event) => {
@@ -303,7 +337,7 @@ function GlobalCaptureLauncherInner() {
                                 <CaptureOption
                                     label="Voice log"
                                     icon={AudioWaveform}
-                                    onSelect={() => setMode("voice")}
+                                    onSelect={enterVoiceMode}
                                 />
                                 {/* <CaptureOption
                                     label="PDF"
@@ -369,7 +403,7 @@ function GlobalCaptureLauncherInner() {
                         className={cn(
                             "fixed rounded-3xl border border-border/80 bg-card p-4 shadow-2xl",
                             LAUNCHER_CHROME_Z,
-                            "bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4",
+                            "bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4",
                             "w-[min(calc(100vw-2rem),24rem)] md:w-[min(calc(100vw-2rem),42rem)]",
                             "max-h-[min(85dvh,800px)] min-h-[300px] overflow-y-auto",
                         )}
@@ -388,6 +422,7 @@ function GlobalCaptureLauncherInner() {
                             onBack={returnToOptions}
                             onComplete={close}
                             saveVoiceLogAudio={saveVoiceLogAudio}
+                            captureLocationLabel={captureLocationLabel}
                         />
                     </motion.div>
                 )}

@@ -11,7 +11,17 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { PitchWaveform } from "@/components/ui/pitch-waveform";
+import {
+  computeWaveformBarCount,
+  downsampleSpectrumValues,
+  WAVEFORM_BAR_GAP,
+  WAVEFORM_BAR_WIDTH,
+  WAVEFORM_HORIZONTAL_PADDING,
+  WAVEFORM_MIN_BAR_COUNT,
+} from "@/lib/capture/audio-waveform-layout";
 import { cn } from "@/lib/utils";
 
 type SpectrumState = {
@@ -21,11 +31,11 @@ type SpectrumState = {
   durationSeconds: number | null;
 };
 
-const SPECTRUM_BAR_COUNT = 320;
+const DECODE_SPECTRUM_BAR_COUNT = 320;
 const FALLBACK_SPECTRUM = Array.from(
-  { length: SPECTRUM_BAR_COUNT },
+  { length: DECODE_SPECTRUM_BAR_COUNT },
   (_, index) => {
-    const position = index / Math.max(SPECTRUM_BAR_COUNT - 1, 1);
+    const position = index / Math.max(DECODE_SPECTRUM_BAR_COUNT - 1, 1);
     const pulse =
       Math.sin(position * Math.PI * 8) * 0.18 +
       Math.sin(position * Math.PI * 21) * 0.08;
@@ -187,7 +197,7 @@ function useAudioSpectrum(audioUrl: string | null): SpectrumState {
 
         setState({
           audioUrl,
-          values: buildSpectrumValues(audioBuffer, SPECTRUM_BAR_COUNT),
+          values: buildSpectrumValues(audioBuffer, DECODE_SPECTRUM_BAR_COUNT),
           status: "ready",
           durationSeconds: audioBuffer.duration,
         });
@@ -249,12 +259,14 @@ export function IndexedAudioPlayer({
   onSeekHandled: () => void;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const waveformContainerRef = useRef<HTMLDivElement>(null);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [barCount, setBarCount] = useState(WAVEFORM_MIN_BAR_COUNT);
   const spectrum = useAudioSpectrum(audioUrl);
 
   const effectiveDuration = useMemo(
@@ -269,6 +281,32 @@ export function IndexedAudioPlayer({
 
     return clamp(currentTime / effectiveDuration, 0, 1);
   }, [currentTime, effectiveDuration]);
+
+  useEffect(() => {
+    const node = waveformContainerRef.current;
+    if (!node) {
+      return;
+    }
+
+    const syncBarCount = () => {
+      setBarCount(
+        computeWaveformBarCount(
+          node.clientWidth,
+          WAVEFORM_BAR_WIDTH,
+          WAVEFORM_BAR_GAP,
+          WAVEFORM_HORIZONTAL_PADDING,
+        ),
+      );
+    };
+
+    syncBarCount();
+    const observer = new ResizeObserver(syncBarCount);
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [audioUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -367,6 +405,12 @@ export function IndexedAudioPlayer({
     };
   }, [audioUrl, onSeekHandled, requestedSeekMs]);
 
+  const renderedSpectrum = useMemo(() => {
+    const baseSpectrum =
+      spectrum.values.length > 0 ? spectrum.values : FALLBACK_SPECTRUM;
+    return downsampleSpectrumValues(baseSpectrum, barCount);
+  }, [barCount, spectrum.values]);
+
   if (!audioUrl) {
     return null;
   }
@@ -431,15 +475,11 @@ export function IndexedAudioPlayer({
     });
   };
 
-  const renderedSpectrum =
-    spectrum.values.length > 0 ? spectrum.values : FALLBACK_SPECTRUM;
   const isSpectrumLoading = spectrum.status === "loading";
   const timeLabel = `${formatPlaybackTime(currentTime)} / ${formatPlaybackTime(effectiveDuration)}`;
 
   return (
-    <div
-      className="mt-1.5 grid w-full min-w-0 max-w-full gap-3 sm:max-w-sm md:max-w-md lg:max-w-lg"
-    >
+    <div className="mt-1.5 grid w-full min-w-0 gap-3">
       <audio
         key={audioUrl}
         ref={audioRef}
@@ -517,6 +557,7 @@ export function IndexedAudioPlayer({
       </div>
 
       <div
+        ref={waveformContainerRef}
         className={cn(
           "w-full min-w-0 overflow-hidden rounded-full bg-muted/40 px-2 text-primary",
           isSpectrumLoading && "animate-pulse",
@@ -528,8 +569,8 @@ export function IndexedAudioPlayer({
           loading={isSpectrumLoading}
           disabled={effectiveDuration <= 0}
           height={68}
-          barWidth={4}
-          barGap={2}
+          barWidth={WAVEFORM_BAR_WIDTH}
+          barGap={WAVEFORM_BAR_GAP}
           barRadius={2}
           fadeEdges
           ariaLabel="Audio spectrum scrubber"
@@ -552,18 +593,18 @@ export function IndexedAudioPlayer({
             <Volume2 className="size-3.5" />
           )}
         </Button>
-        <label className="flex min-w-36 flex-1 items-center gap-2">
+        <Label className="flex min-w-36 flex-1 items-center gap-2">
           <span className="sr-only">Volume</span>
-          <input
+          <Input
             type="range"
             min={0}
             max={1}
             step={0.05}
             value={muted ? 0 : volume}
             onChange={(event) => handleVolumeChange(Number(event.target.value))}
-            className="h-1.5 w-full accent-primary"
+            className="h-1.5 w-full accent-primary border-0 bg-transparent shadow-none focus-visible:ring-0"
           />
-        </label>
+        </Label>
         <Button
           type="button"
           size="sm"

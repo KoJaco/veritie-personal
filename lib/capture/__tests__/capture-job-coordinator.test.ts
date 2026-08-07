@@ -88,7 +88,54 @@ describe("lib/capture/capture-job-coordinator", () => {
         resetCaptureBackgroundPipelineForTests();
     });
 
-    it("runs persist, optional audio upload, then enrich", async () => {
+    it("runs persist then enrich in parallel with staged audio", async () => {
+        const calls: string[] = [];
+        let resolveStaging: (() => void) | undefined;
+        const audioStagingPromise = new Promise<void>((resolve) => {
+            resolveStaging = () => {
+                calls.push("staging");
+                resolve();
+            };
+        });
+        const persistCaptureFn = jest.fn(async () => {
+            calls.push("persist");
+            return { captureId: "capture_1", timelineEventCount: 0 };
+        });
+        const enrichCaptureFn = jest.fn(async () => {
+            calls.push("enrich");
+            return {
+                captureId: "capture_1",
+                timelineEventCount: 1,
+                extractedValueCount: 1,
+            };
+        });
+        const getJob = jest
+            .fn<(jobId: string) => Promise<JobDetailResponse>>()
+            .mockResolvedValue(completedJob);
+
+        captureJobCoordinator.start({
+            jobId: "job_coord",
+            veritie: { getJob },
+            persistCaptureFn,
+            enrichCaptureFn,
+            audioStagedForJob: true,
+            audioStagingPromise,
+        });
+
+        await waitFor(() => {
+            expect(calls).toContain("persist");
+            expect(calls).toContain("enrich");
+        });
+
+        expect(calls).not.toContain("staging");
+        resolveStaging?.();
+
+        await waitFor(() => {
+            expect(calls).toEqual(["persist", "enrich", "staging"]);
+        });
+    });
+
+    it("runs persist, optional capture audio upload, then enrich in parallel", async () => {
         const calls: string[] = [];
         const uploadAudioFn = jest.fn(async () => {
             calls.push("upload");
@@ -120,7 +167,36 @@ describe("lib/capture/capture-job-coordinator", () => {
         });
 
         await waitFor(() => {
-            expect(calls).toEqual(["persist", "upload", "enrich"]);
+            expect(calls).toContain("persist");
+            expect(calls).toContain("upload");
+            expect(calls).toContain("enrich");
+        });
+    });
+
+    it("emits capture:audio-uploaded for staged audio", async () => {
+        const events: string[] = [];
+        captureJobCoordinator.subscribe((event) => {
+            events.push(event.type);
+        });
+
+        captureJobCoordinator.start({
+            jobId: "job_coord",
+            veritie: { getJob: jest.fn(async () => completedJob) },
+            persistCaptureFn: jest.fn(async () => ({
+                captureId: "capture_1",
+                timelineEventCount: 0,
+            })),
+            enrichCaptureFn: jest.fn(async () => ({
+                captureId: "capture_1",
+                timelineEventCount: 0,
+                extractedValueCount: 0,
+            })),
+            audioStagedForJob: true,
+            audioStagingPromise: Promise.resolve(),
+        });
+
+        await waitFor(() => {
+            expect(events).toContain("capture:audio-uploaded");
         });
     });
 

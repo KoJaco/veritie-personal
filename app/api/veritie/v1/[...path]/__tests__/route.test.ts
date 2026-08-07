@@ -465,4 +465,27 @@ describe("app/api/veritie/v1/[...path]/route", () => {
         expect(body.error).toMatch(/not allowed/i);
         expect(mockProxyVeritieRequest).not.toHaveBeenCalled();
     });
+
+    it("proxies GET pipeline/config for authenticated users", async () => {
+        mockProxyVeritieRequest.mockResolvedValueOnce(
+            new Response(JSON.stringify({ version: "v1" }), {
+                status: 200,
+                headers: { "content-type": "application/json" },
+            }),
+        );
+
+        const { GET } = await import("@/app/api/veritie/v1/[...path]/route");
+        const response = await GET(createNextRequest(), {
+            params: Promise.resolve({ path: ["pipeline", "config"] }),
+        });
+
+        expect(response.status).toBe(200);
+        expect(mockProxyVeritieRequest).toHaveBeenCalledWith(
+            expect.objectContaining({
+                method: "GET",
+                pathSegments: ["pipeline", "config"],
+            }),
+            expect.any(Object),
+        );
+    });
 });

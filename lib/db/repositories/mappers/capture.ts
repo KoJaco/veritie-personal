@@ -52,6 +52,12 @@ export function mapVoiceLogRowToStub(row: VoiceLogRow): VoiceLogStub {
         language: nullToUndefined(row.language),
         durationMs: nullToUndefined(row.durationMs),
         audioUri: nullToUndefined(row.audioUri),
+        indexArtifact: nullToUndefined(row.indexArtifact) as
+            | Record<string, unknown>
+            | undefined,
+        extractionPayload: nullToUndefined(row.extractionPayload) as
+            | Record<string, unknown>
+            | undefined,
         createdAt: toIso(row.createdAt),
         updatedAt: toIso(row.updatedAt),
     };
@@ -89,6 +95,7 @@ export function mapExtractedValueRowToStub(row: ExtractedValueRow): ExtractedVal
 export function mapCaptureToIndexItem(
     capture: CaptureStub,
     extractedCount: number,
+    extractedSummary: string | null = null,
 ): CaptureIndexItem {
     return {
         id: capture.id,
@@ -98,6 +105,7 @@ export function mapCaptureToIndexItem(
         aspectIds: capture.aspectIds,
         createdAt: capture.createdAt,
         extractedCount,
+        extractedSummary,
     };
 }
 
@@ -154,4 +162,5 @@ export interface CapturePersistBundle {
     segments: TranscriptSegmentStub[];
     extractedValues: ExtractedValueStub[];
     timelineEvents: import("@/lib/stubs/timeline-stubs").TimelineEventStub[];
+    extractionSchemaVersion?: string | null;
 }

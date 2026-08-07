@@ -8,10 +8,7 @@ import {
 } from "@/lib/api/read-bounded-body";
 import { EXTRACTED_VALUE_REVIEW_MAX_BODY_BYTES } from "@/lib/api/body-limits";
 import { extractedValueReviewRequestSchema } from "@/lib/capture/extracted-value-review-schema";
-import { getDataSourceKind } from "@/lib/data-source/registry";
-import { updateExtractedValueReviewState as updateStubExtractedValueReviewState } from "@/lib/data-source/timeline-read-model";
-import { requireAccountScope } from "@/lib/db/repositories/context";
-import { updateExtractedValueReviewState as updateDbExtractedValueReviewState } from "@/lib/db/repositories/timeline";
+import { getDataSourceAdapters } from "@/lib/data-source";
 import { logger } from "@/lib/logging/server-logger";
 
 /**
@@ -37,30 +34,15 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (getDataSourceKind() === "backend") {
-            const scope = await requireAccountScope();
-            const updated = await updateDbExtractedValueReviewState(
-                scope,
-                parsed.data.extractedValueId,
-                parsed.data.reviewState,
+        const updated = await getDataSourceAdapters().extractedValues.updateExtractedValueReviewState(
+            parsed.data.extractedValueId,
+            parsed.data.reviewState,
+        );
+        if (!updated) {
+            return NextResponse.json(
+                { error: "Extracted value not found" },
+                { status: 404 },
             );
-            if (!updated) {
-                return NextResponse.json(
-                    { error: "Extracted value not found" },
-                    { status: 404 },
-                );
-            }
-        } else {
-            const updated = updateStubExtractedValueReviewState(
-                parsed.data.extractedValueId,
-                parsed.data.reviewState,
-            );
-            if (!updated) {
-                return NextResponse.json(
-                    { error: "Extracted value not found" },
-                    { status: 404 },
-                );
-            }
         }
 
         return NextResponse.json({ ok: true });

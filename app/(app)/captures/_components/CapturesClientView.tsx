@@ -6,6 +6,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 
 import type { CaptureIndexItem } from "@/lib/data-source/captures-read-model";
+import { formatExtractedCountLabel } from "@/lib/capture/extraction-summary";
 import { Badge } from "@/components/ui/badge";
 import {
     Table,
@@ -17,6 +18,10 @@ import {
 } from "@/components/ui/table";
 import { useCaptureLiveUpdates } from "@/components/captures/CapturesLiveProvider";
 import { buildIndexHref } from "@/lib/route/build-index-href";
+import {
+    formatLocalDateGroupLabel,
+    getLocalDateKey,
+} from "@/lib/format/local-calendar-date";
 import { SURFACE_CLASS } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
 
@@ -26,10 +31,10 @@ type ViewMode = "cards" | "table";
 type SortBy = "createdAt" | "title" | "extractedCount";
 type SortDir = "asc" | "desc";
 
-function groupByDate(items: CaptureIndexItem[]) {
+function groupByLocalDate(items: CaptureIndexItem[]) {
     const groups = new Map<string, CaptureIndexItem[]>();
     for (const item of items) {
-        const key = item.createdAt.slice(0, 10);
+        const key = getLocalDateKey(item.createdAt);
         const list = groups.get(key) ?? [];
         list.push(item);
         groups.set(key, list);
@@ -57,7 +62,7 @@ export function CapturesClientView({
     const shouldReduceMotion = useReducedMotion();
     const { pendingNewIds, lastEnrichedIds, clearAnimatedIds } =
         useCaptureLiveUpdates();
-    const groups = useMemo(() => groupByDate(items), [items]);
+    const groups = useMemo(() => groupByLocalDate(items), [items]);
 
     const baseParams = {
         aspect,
@@ -153,7 +158,10 @@ export function CapturesClientView({
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {item.extractedCount}
+                                        {formatExtractedCountLabel(
+                                            item.extractedCount,
+                                            item.extractedSummary,
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
                                         {new Date(item.createdAt).toLocaleString()}
@@ -168,11 +176,9 @@ export function CapturesClientView({
                     {groups.map(([date, groupItems]) => (
                         <section key={date} className="space-y-3">
                             <h2 className="text-sm font-medium text-muted-foreground">
-                                {new Date(date).toLocaleDateString(undefined, {
-                                    weekday: "long",
-                                    month: "long",
-                                    day: "numeric",
-                                })}
+                                {formatLocalDateGroupLabel(
+                                    groupItems[0].createdAt,
+                                )}
                             </h2>
                             <div className="space-y-2">
                                 {groupItems.map((item) => (
@@ -195,21 +201,28 @@ export function CapturesClientView({
                                                 "block px-4 py-3 transition-colors hover:bg-accent/40",
                                             )}
                                         >
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <p className="font-medium">
-                                                    {item.title}
-                                                </p>
+                                            <div className="flex flex-col gap-1.5">
                                                 <Badge
                                                     variant="outline"
                                                     className="text-[10px]"
                                                 >
                                                     {item.status}
                                                 </Badge>
+                                                <p className="font-medium">
+                                                    {item.title}
+                                                </p>
                                             </div>
+
                                             <p className="mt-1 text-sm text-muted-foreground">
+
                                                 {item.type} ·{" "}
-                                                {item.extractedCount} extracted
-                                                ·{" "}
+                                                {formatExtractedCountLabel(
+                                                    item.extractedCount,
+                                                    item.extractedSummary,
+                                                )}
+
+                                            </p>
+                                            <p className="text-sm text-muted-foreground mt-1">
                                                 {new Date(
                                                     item.createdAt,
                                                 ).toLocaleTimeString(undefined, {

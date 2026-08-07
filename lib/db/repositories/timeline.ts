@@ -1,8 +1,12 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
-import { extractedValues, timelineEvents } from "@/db/schema/capture";
+import { extractedValues, timelineEvents, voiceLogs } from "@/db/schema/capture";
+import {
+    applyTimelineItemSummaryFallback,
+    resolveCaptureSummaryFromPayload,
+} from "@/lib/capture/extraction-summary";
 import { getDb } from "@/lib/db";
 import type { TimelineIndexQuery } from "@/lib/data-source/timeline-read-model";
 import { isHiddenTimelineEventType } from "@/lib/domain/timeline-filters";
@@ -29,6 +33,42 @@ export async function getTimelineIndex(
     let items = rows.map((row) =>
         mapTimelineEventToIndexItem(mapTimelineEventRowToStub(row)),
     );
+
+    const captureIds = [
+        ...new Set(
+            items
+                .map((item) => item.captureId)
+                .filter((id): id is string => Boolean(id)),
+        ),
+    ];
+
+    if (captureIds.length > 0) {
+        const voiceLogRows = await db.query.voiceLogs.findMany({
+            where: and(
+                eq(voiceLogs.accountId, scope.accountId),
+                inArray(voiceLogs.captureId, captureIds),
+            ),
+        });
+
+        const summaryByCaptureId = new Map<string, string>();
+        for (const voiceLogRow of voiceLogRows) {
+            const summary = resolveCaptureSummaryFromPayload(
+                voiceLogRow.extractionPayload,
+            );
+            if (summary && voiceLogRow.captureId) {
+                summaryByCaptureId.set(voiceLogRow.captureId, summary);
+            }
+        }
+
+        items = items.map((item) =>
+            applyTimelineItemSummaryFallback(
+                item,
+                item.captureId
+                    ? summaryByCaptureId.get(item.captureId)
+                    : undefined,
+            ),
+        );
+    }
 
     if (!query?.includeMetaEvents) {
         items = items.filter((item) => !isHiddenTimelineEventType(item.type));

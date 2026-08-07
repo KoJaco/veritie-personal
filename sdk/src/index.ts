@@ -23,6 +23,7 @@ export type {
   CreateAndUploadJobResult,
   CreateJobOptions,
   CreateJobRequest,
+  CaptureJobMetadata,
   ErrorResponse,
   EventLevel,
   EvidenceIndexArtifact,

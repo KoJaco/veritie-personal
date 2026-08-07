@@ -1,5 +1,28 @@
 import { buildCaptureAudioPlaybackUrl } from "@/lib/capture/map-job-to-indexed-props";
 
+export async function uploadCaptureJobAudio(
+    jobId: string,
+    audioBlob: Blob,
+): Promise<void> {
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "audio.webm");
+
+    const response = await fetch(
+        `/api/captures/jobs/${encodeURIComponent(jobId)}/audio`,
+        {
+            method: "POST",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+            | { error?: string }
+            | null;
+        throw new Error(payload?.error ?? "Failed to upload job audio");
+    }
+}
+
 export async function uploadCaptureAudio(
     captureId: string,
     audioBlob: Blob,
@@ -39,12 +62,24 @@ export async function fetchCaptureAudioPlaybackUrl(
     return payload.url ?? null;
 }
 
-export async function getVoiceLogPreferences(): Promise<{
+export async function getCapturePreferences(): Promise<{
     saveVoiceLogAudio: boolean;
+    captureLocationLabel?: string;
 }> {
     const response = await fetch("/api/capture/preferences");
     if (!response.ok) {
         return { saveVoiceLogAudio: false };
     }
-    return (await response.json()) as { saveVoiceLogAudio: boolean };
+    return (await response.json()) as {
+        saveVoiceLogAudio: boolean;
+        captureLocationLabel?: string;
+    };
+}
+
+/** @deprecated Use getCapturePreferences */
+export async function getVoiceLogPreferences(): Promise<{
+    saveVoiceLogAudio: boolean;
+}> {
+    const prefs = await getCapturePreferences();
+    return { saveVoiceLogAudio: prefs.saveVoiceLogAudio };
 }

@@ -26,6 +26,7 @@ export function PageAssistantAction({
             variant="default"
             onClick={() => open()}
             aria-expanded={state !== "CLOSED"}
+            disabled={true}
         />
     );
 }

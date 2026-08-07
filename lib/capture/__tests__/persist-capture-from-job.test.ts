@@ -45,6 +45,7 @@ describe("persistCaptureFromVeritieJob", () => {
         mockRequireUser.mockResolvedValue({
             id: "user_1",
             accountId: "account_a",
+            appConfig: { saveVoiceLogAudio: false },
         });
         mockRequireAccountScope.mockResolvedValue({
             accountId: "account_a",

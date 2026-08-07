@@ -23,6 +23,7 @@ import {
     DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
     Select,
     SelectContent,
@@ -117,9 +118,7 @@ export function ResourceCreateFlow() {
     const content = (
         <div className={cn("space-y-6", SURFACE_CLASS, "p-3")}>
             <div className="space-y-3">
-                <label className="text-sm font-medium" htmlFor="resource-name">
-                    Name
-                </label>
+                <Label htmlFor="resource-name">Name</Label>
                 <Input
                     id="resource-name"
                     value={name}
@@ -131,7 +130,7 @@ export function ResourceCreateFlow() {
 
             <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Category</label>
+                    <Label>Category</Label>
                     <Select
                         value={category}
                         onValueChange={(value) =>
@@ -152,12 +151,7 @@ export function ResourceCreateFlow() {
                 </div>
 
                 <div className="space-y-2">
-                    <label
-                        className="text-sm font-medium"
-                        htmlFor="resource-owner"
-                    >
-                        Owner
-                    </label>
+                    <Label htmlFor="resource-owner">Owner</Label>
                     <Input
                         id="resource-owner"
                         value={ownerName}
@@ -168,7 +162,7 @@ export function ResourceCreateFlow() {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Criticality</label>
+                    <Label>Criticality</Label>
                     <Select
                         value={criticality}
                         onValueChange={(value) =>
@@ -189,7 +183,7 @@ export function ResourceCreateFlow() {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Sensitivity</label>
+                    <Label>Sensitivity</Label>
                     <Select
                         value={sensitivity}
                         onValueChange={(value) =>

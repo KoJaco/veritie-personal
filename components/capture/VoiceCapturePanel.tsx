@@ -19,15 +19,20 @@ import { captureJobCoordinator } from "@/lib/capture/capture-job-coordinator";
 import {
     fetchCaptureAudioPlaybackUrl,
     uploadCaptureAudio,
+    uploadCaptureJobAudio,
 } from "@/lib/capture/capture-audio-client";
 import {
     createLiveChunkStreamState,
     endLiveAudioStream,
+    flushBufferedLiveChunks,
+    MAX_LIVE_STREAM_BYTES,
     sendLiveAudioChunk,
     type LiveChunkStreamState,
 } from "@/lib/capture/live-audio-stream";
 import { mapJobToIndexedProps } from "@/lib/capture/map-job-to-indexed-props";
+import { buildCaptureJobMetadata } from "@/lib/capture/build-capture-job-metadata";
 import { persistCaptureForVoiceFlow } from "@/lib/capture/persist-capture-client";
+import type { CaptureJobMetadata } from "@veritie/sdk";
 import { isTranscriptPending } from "@/lib/capture/transcript-readiness";
 import { useScreenWakeLock } from "@/lib/hooks/useScreenWakeLock";
 import { SURFACE_CLASS_NESTED } from "@/lib/ui/surface";
@@ -55,22 +60,28 @@ export function VoiceCapturePanel({
     captureHandle,
     leasePhase,
     leaseError = null,
+    prepareLease,
     renewLease,
     embedded = true,
     onBack,
     onComplete,
     saveVoiceLogAudio = false,
+    captureLocationLabel = "",
+    glossaryLabels,
     persistCaptureFn = persistCaptureForVoiceFlow,
 }: {
     veritie: VeritieHook;
     captureHandle: PipelineHandle | null;
     leasePhase: CaptureLeasePhase;
     leaseError?: string | null;
-    renewLease: () => Promise<void>;
+    prepareLease: (metadata: CaptureJobMetadata) => Promise<PipelineHandle>;
+    renewLease: () => void;
     embedded?: boolean;
     onBack: () => void;
     onComplete: () => void;
     saveVoiceLogAudio?: boolean;
+    captureLocationLabel?: string;
+    glossaryLabels?: Record<string, string>;
     persistCaptureFn?: (jobId: string) => Promise<PersistCaptureResult>;
 }) {
     const [phase, setPhase] = useState<VoicePhase>("ready");
@@ -82,6 +93,7 @@ export function VoiceCapturePanel({
     const [activeJobId, setActiveJobId] = useState<string | null>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [recordingElapsedMs, setRecordingElapsedMs] = useState(0);
+    const [isRecorderLive, setIsRecorderLive] = useState(false);
 
     const recorderRef = useRef<MediaRecorder | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -104,8 +116,15 @@ export function VoiceCapturePanel({
         chunksBytesSent: 0,
     });
     const audioChunksRef = useRef<Blob[]>([]);
+    const pendingChunksRef = useRef<Blob[]>([]);
+    const pendingChunkBytesRef = useRef(0);
+    const micPrewarmRef = useRef<MediaStream | null>(null);
+    const captureInProgressRef = useRef(false);
     const saveVoiceLogAudioRef = useRef(saveVoiceLogAudio);
     saveVoiceLogAudioRef.current = saveVoiceLogAudio;
+    const captureLocationLabelRef = useRef(captureLocationLabel);
+    captureLocationLabelRef.current = captureLocationLabel;
+    const activeCaptureHandleRef = useRef<PipelineHandle | null>(null);
 
     const logDiagnostics = useCallback((step: string, extra?: Record<string, unknown>) => {
         captureFlowLog.snapshot(step, {
@@ -125,13 +144,28 @@ export function VoiceCapturePanel({
         };
     }, []);
 
-    const leaseReady = leasePhase === "ready" && captureHandle !== null;
-
     const shouldKeepScreenAwake =
         phase === "requesting_microphone" ||
         phase === "recording" ||
         phase === "processing";
     useScreenWakeLock(shouldKeepScreenAwake);
+
+    const stopMicPrewarm = useCallback(() => {
+        if (recorderRef.current || captureInProgressRef.current) {
+            return;
+        }
+
+        const prewarmed = micPrewarmRef.current;
+        if (prewarmed) {
+            prewarmed.getTracks().forEach((track) => track.stop());
+            micPrewarmRef.current = null;
+        }
+
+        if (streamRef.current === prewarmed) {
+            streamRef.current = null;
+            setStream(null);
+        }
+    }, []);
 
     const stopLocalRecording = useCallback(() => {
         if (recordingTimerRef.current) {
@@ -140,6 +174,7 @@ export function VoiceCapturePanel({
         }
         recordingStartedAtRef.current = null;
         setRecordingElapsedMs(0);
+        setIsRecorderLive(false);
 
         const recorder = recorderRef.current;
         if (recorder && recorder.state !== "inactive") {
@@ -153,6 +188,7 @@ export function VoiceCapturePanel({
         }
         streamRef.current = null;
         setStream(null);
+        captureInProgressRef.current = false;
     }, []);
 
     const closeLiveSession = useCallback(() => {
@@ -163,6 +199,8 @@ export function VoiceCapturePanel({
         liveSessionRef.current = null;
         chunkStreamStateRef.current = createLiveChunkStreamState();
         chunkSendChainRef.current = Promise.resolve();
+        pendingChunksRef.current = [];
+        pendingChunkBytesRef.current = 0;
     }, []);
 
     const abortOpenWork = useCallback(() => {
@@ -205,7 +243,8 @@ export function VoiceCapturePanel({
             }
 
             if (
-                event.type === "capture:enriched" &&
+                (event.type === "capture:enriched" ||
+                    event.type === "capture:audio-uploaded") &&
                 saveVoiceLogAudioRef.current
             ) {
                 void fetchCaptureAudioPlaybackUrl(event.captureId).then(
@@ -219,27 +258,44 @@ export function VoiceCapturePanel({
         });
     }, [activeJobId]);
 
+    useEffect(() => {
+        if (leasePhase !== "preparing" && leasePhase !== "ready") {
+            return;
+        }
+        if (phase !== "ready") {
+            return;
+        }
+        if (!navigator.mediaDevices?.getUserMedia) {
+            return;
+        }
+
+        let cancelled = false;
+
+        void navigator.mediaDevices.getUserMedia({ audio: true }).then((mediaStream) => {
+            if (cancelled || !mountedRef.current) {
+                mediaStream.getTracks().forEach((track) => track.stop());
+                return;
+            }
+
+            micPrewarmRef.current = mediaStream;
+            streamRef.current = mediaStream;
+            setStream(mediaStream);
+        });
+
+        return () => {
+            cancelled = true;
+            if (!captureInProgressRef.current) {
+                stopMicPrewarm();
+            }
+        };
+    }, [leasePhase, phase, stopMicPrewarm]);
+
     const startCapture = useCallback(async () => {
-        if (!captureHandle || !leaseReady) {
-            setError(
-                leaseError ??
-                (leasePhase === "preparing"
-                    ? "Veritie lease is still preparing."
-                    : "Veritie capture lease is not ready."),
-            );
-            setPhase("failed");
+        if (leasePhase === "preparing" || !captureHandle) {
             return;
         }
 
         abortInFlightWork();
-        resetDiagnostics({
-            jobId: captureHandle.snapshot.jobId,
-            leasePhase,
-        });
-        captureFlowLog.info("capture.start", {
-            jobId: captureHandle.snapshot.jobId,
-            leasePhase,
-        });
         setError(null);
         setStatusLine(null);
         setTranscript(null);
@@ -247,146 +303,36 @@ export function VoiceCapturePanel({
         setAudioPlaybackUrl(null);
         setActiveJobId(null);
         audioChunksRef.current = [];
-        setPhase("requesting_microphone");
+        pendingChunksRef.current = [];
+        pendingChunkBytesRef.current = 0;
 
         const openController = new AbortController();
         openAbortRef.current = openController;
         const { signal: openSignal } = openController;
+
+        const handle = captureHandle;
+        activeCaptureHandleRef.current = handle;
+        const jobId = handle.snapshot.jobId;
+        const prewarmedStream = micPrewarmRef.current;
+        micPrewarmRef.current = null;
+        captureInProgressRef.current = true;
 
         try {
             if (!navigator.mediaDevices?.getUserMedia) {
                 throw new Error("Microphone not available in this browser.");
             }
 
-            setStatusLine("Opening live session…");
-            const liveSession = await captureHandle.startCapture({
-                signal: openSignal,
+            resetDiagnostics({
+                jobId,
+                leasePhase,
             });
-            if (!mountedRef.current || openSignal.aborted) {
-                liveSession.close(1000, "aborted");
-                return;
-            }
-
-            // Session is open — do not abort openSignal during finalize (closes WebSocket).
-            openAbortRef.current = null;
-
-            liveSessionRef.current = liveSession;
-            diagnosticsRef.current.sessionId = liveSession.sessionId;
-            chunkStreamStateRef.current = createLiveChunkStreamState();
-            chunkSendChainRef.current = Promise.resolve();
-
-            captureFlowLog.info("live.session.opened", {
-                jobId: captureHandle.snapshot.jobId,
-                sessionId: liveSession.sessionId,
+            captureFlowLog.info("capture.start", {
+                jobId,
+                leasePhase,
             });
 
-            const mediaStream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
-            });
-            if (!mountedRef.current || openSignal.aborted) {
-                mediaStream.getTracks().forEach((track) => track.stop());
-                return;
-            }
-
-            streamRef.current = mediaStream;
-            setStream(mediaStream);
-
-            const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-                ? "audio/webm"
-                : "";
-            const recorder = mimeType
-                ? new MediaRecorder(mediaStream, { mimeType })
-                : new MediaRecorder(mediaStream);
-            diagnosticsRef.current.recorderMimeType = recorder.mimeType;
-
-            recorder.ondataavailable = (event) => {
-                diagnosticsRef.current.dataAvailableEvents =
-                    (diagnosticsRef.current.dataAvailableEvents ?? 0) + 1;
-
-                if (event.data.size === 0) {
-                    diagnosticsRef.current.dataAvailableEmpty =
-                        (diagnosticsRef.current.dataAvailableEmpty ?? 0) + 1;
-                    captureFlowLog.debug("recorder.dataavailable.empty", {
-                        jobId: captureHandle.snapshot.jobId,
-                        recorderState: recorder.state,
-                    });
-                    return;
-                }
-
-                if (!liveSessionRef.current) {
-                    captureFlowLog.warn("recorder.dataavailable.no_session", {
-                        jobId: captureHandle.snapshot.jobId,
-                        bytes: event.data.size,
-                    });
-                    return;
-                }
-
-                diagnosticsRef.current.dataAvailableBytes =
-                    (diagnosticsRef.current.dataAvailableBytes ?? 0) + event.data.size;
-
-                if (saveVoiceLogAudioRef.current) {
-                    audioChunksRef.current.push(event.data);
-                }
-
-                captureFlowLog.debug("recorder.dataavailable", {
-                    jobId: captureHandle.snapshot.jobId,
-                    bytes: event.data.size,
-                    recorderState: recorder.state,
-                });
-
-                chunkSendChainRef.current = chunkSendChainRef.current
-                    .then(async () => {
-                        if (!liveSessionRef.current) return;
-                        const before = chunkStreamStateRef.current;
-                        chunkStreamStateRef.current = await sendLiveAudioChunk(
-                            liveSessionRef.current,
-                            chunkStreamStateRef.current,
-                            event.data,
-                        );
-                        if (chunkStreamStateRef.current.sequence > before.sequence) {
-                            diagnosticsRef.current.chunksSent =
-                                chunkStreamStateRef.current.sequence;
-                            diagnosticsRef.current.chunksBytesSent =
-                                chunkStreamStateRef.current.offsetBytes;
-                        }
-                    })
-                    .catch((chunkError) => {
-                        captureFlowLog.error("chunk.send_failed", {
-                            jobId: captureHandle.snapshot.jobId,
-                            error:
-                                chunkError instanceof Error
-                                    ? chunkError.message
-                                    : String(chunkError),
-                        });
-                        if (!mountedRef.current) return;
-                        setError(
-                            chunkError instanceof Error
-                                ? chunkError.message
-                                : "Failed to stream audio chunk.",
-                        );
-                        setPhase("failed");
-                        stopLocalRecording();
-                        closeLiveSession();
-                        void renewLease();
-                    });
-            };
-            recorder.onerror = () => {
-                if (!mountedRef.current) return;
-                setError("Recording failed.");
-                setPhase("failed");
-                stopLocalRecording();
-                closeLiveSession();
-                void renewLease();
-            };
-
-            recorder.start(250);
-            recorderRef.current = recorder;
             recordingStartedAtRef.current = Date.now();
-            captureFlowLog.info("recorder.started", {
-                jobId: captureHandle.snapshot.jobId,
-                mimeType: recorder.mimeType,
-                timesliceMs: 250,
-            });
+            setPhase("recording");
             recordingTimerRef.current = setInterval(() => {
                 const startedAt = recordingStartedAtRef.current;
                 if (!startedAt) return;
@@ -396,14 +342,240 @@ export function VoiceCapturePanel({
                     void finishCaptureRef.current?.();
                 }
             }, 500);
-            setStatusLine(null);
-            setPhase("recording");
+
+            const handleChunkSendError = (chunkError: unknown) => {
+                captureFlowLog.error("chunk.send_failed", {
+                    jobId,
+                    error:
+                        chunkError instanceof Error
+                            ? chunkError.message
+                            : String(chunkError),
+                });
+                if (!mountedRef.current) return;
+                setError(
+                    chunkError instanceof Error
+                        ? chunkError.message
+                        : "Failed to stream audio chunk.",
+                );
+                setPhase("failed");
+                stopLocalRecording();
+                closeLiveSession();
+                renewLease();
+            };
+
+            const enqueuePendingChunk = (data: Blob) => {
+                if (data.size === 0) {
+                    return;
+                }
+                if (
+                    pendingChunkBytesRef.current + data.size >
+                    MAX_LIVE_STREAM_BYTES
+                ) {
+                    throw new Error(
+                        "Recording exceeded the maximum live stream size.",
+                    );
+                }
+                pendingChunksRef.current.push(data);
+                pendingChunkBytesRef.current += data.size;
+            };
+
+            const scheduleChunkSend = (data: Blob) => {
+                if (data.size === 0) {
+                    return;
+                }
+
+                diagnosticsRef.current.dataAvailableBytes =
+                    (diagnosticsRef.current.dataAvailableBytes ?? 0) + data.size;
+
+                if (saveVoiceLogAudioRef.current) {
+                    audioChunksRef.current.push(data);
+                }
+
+                captureFlowLog.debug("recorder.dataavailable", {
+                    jobId,
+                    bytes: data.size,
+                    buffered: !liveSessionRef.current,
+                });
+
+                if (!liveSessionRef.current) {
+                    enqueuePendingChunk(data);
+                    return;
+                }
+
+                chunkSendChainRef.current = chunkSendChainRef.current
+                    .then(async () => {
+                        if (!liveSessionRef.current) {
+                            enqueuePendingChunk(data);
+                            return;
+                        }
+                        const before = chunkStreamStateRef.current;
+                        chunkStreamStateRef.current = await sendLiveAudioChunk(
+                            liveSessionRef.current,
+                            chunkStreamStateRef.current,
+                            data,
+                        );
+                        if (chunkStreamStateRef.current.sequence > before.sequence) {
+                            diagnosticsRef.current.chunksSent =
+                                chunkStreamStateRef.current.sequence;
+                            diagnosticsRef.current.chunksBytesSent =
+                                chunkStreamStateRef.current.offsetBytes;
+                        }
+                    })
+                    .catch(handleChunkSendError);
+            };
+
+            const attachLiveSession = (liveSession: LiveJobSession) => {
+                liveSessionRef.current = liveSession;
+                diagnosticsRef.current.sessionId = liveSession.sessionId;
+                chunkStreamStateRef.current = createLiveChunkStreamState();
+                chunkSendChainRef.current = Promise.resolve();
+
+                captureFlowLog.info("live.session.opened", {
+                    jobId,
+                    sessionId: liveSession.sessionId,
+                });
+
+                const pending = pendingChunksRef.current;
+                pendingChunksRef.current = [];
+                pendingChunkBytesRef.current = 0;
+
+                if (pending.length === 0) {
+                    return;
+                }
+
+                chunkSendChainRef.current = chunkSendChainRef.current
+                    .then(async () => {
+                        const before = chunkStreamStateRef.current;
+                        chunkStreamStateRef.current = await flushBufferedLiveChunks(
+                            liveSession,
+                            chunkStreamStateRef.current,
+                            pending,
+                        );
+                        if (chunkStreamStateRef.current.sequence > before.sequence) {
+                            diagnosticsRef.current.chunksSent =
+                                chunkStreamStateRef.current.sequence;
+                            diagnosticsRef.current.chunksBytesSent =
+                                chunkStreamStateRef.current.offsetBytes;
+                        }
+                    })
+                    .catch(handleChunkSendError);
+            };
+
+            const sessionPromise = handle.startCapture({
+                signal: openSignal,
+            });
+
+            const micPromise = prewarmedStream
+                ? Promise.resolve(prewarmedStream)
+                : navigator.mediaDevices.getUserMedia({ audio: true });
+
+            const mediaStream = await micPromise;
+
+            if (!mountedRef.current || openSignal.aborted) {
+                mediaStream.getTracks().forEach((track) => track.stop());
+                captureInProgressRef.current = false;
+                return;
+            }
+
+            streamRef.current = mediaStream;
+            setStream(mediaStream);
+
+            const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+                ? "audio/webm;codecs=opus"
+                : MediaRecorder.isTypeSupported("audio/webm")
+                    ? "audio/webm"
+                    : "";
+            const recorder = mimeType
+                ? new MediaRecorder(mediaStream, { mimeType })
+                : new MediaRecorder(mediaStream);
+            diagnosticsRef.current.recorderMimeType = recorder.mimeType;
+
+            const liveTracks = mediaStream
+                .getAudioTracks()
+                .filter((track) => track.readyState === "live");
+            if (liveTracks.length === 0) {
+                throw new Error(
+                    "Microphone is not available. Check permissions and try again.",
+                );
+            }
+
+            recorder.ondataavailable = (event) => {
+                diagnosticsRef.current.dataAvailableEvents =
+                    (diagnosticsRef.current.dataAvailableEvents ?? 0) + 1;
+
+                if (event.data.size === 0) {
+                    diagnosticsRef.current.dataAvailableEmpty =
+                        (diagnosticsRef.current.dataAvailableEmpty ?? 0) + 1;
+                    captureFlowLog.debug("recorder.dataavailable.empty", {
+                        jobId,
+                        recorderState: recorder.state,
+                    });
+                    return;
+                }
+
+                try {
+                    scheduleChunkSend(event.data);
+                } catch (chunkError) {
+                    handleChunkSendError(chunkError);
+                }
+            };
+            recorder.onerror = () => {
+                if (!mountedRef.current) return;
+                setError("Recording failed.");
+                setPhase("failed");
+                stopLocalRecording();
+                closeLiveSession();
+                renewLease();
+            };
+
+            recorder.start(250);
+            recorderRef.current = recorder;
+            setIsRecorderLive(true);
+            captureFlowLog.info("recorder.started", {
+                jobId,
+                mimeType: recorder.mimeType,
+                timesliceMs: 250,
+            });
+
+            sessionPromise
+                .then((liveSession) => {
+                    if (!mountedRef.current || openSignal.aborted) {
+                        liveSession.close(1000, "aborted");
+                        return;
+                    }
+
+                    openAbortRef.current = null;
+                    attachLiveSession(liveSession);
+                })
+                .catch((sessionError) => {
+                    if (!mountedRef.current || openSignal.aborted) {
+                        return;
+                    }
+                    captureInProgressRef.current = false;
+                    stopLocalRecording();
+                    closeLiveSession();
+                    captureFlowLog.error("capture.start_failed", {
+                        jobId,
+                        error:
+                            sessionError instanceof Error
+                                ? sessionError.message
+                                : String(sessionError),
+                    });
+                    setError(
+                        sessionError instanceof Error
+                            ? sessionError.message
+                            : "Failed to open live session.",
+                    );
+                    setPhase("failed");
+                    renewLease();
+                });
         } catch (captureError) {
             if (!mountedRef.current || openController.signal.aborted) return;
+            captureInProgressRef.current = false;
             stopLocalRecording();
             closeLiveSession();
             captureFlowLog.error("capture.start_failed", {
-                jobId: captureHandle?.snapshot.jobId,
+                jobId: activeCaptureHandleRef.current?.snapshot.jobId,
                 error:
                     captureError instanceof Error
                         ? captureError.message
@@ -416,19 +588,27 @@ export function VoiceCapturePanel({
             );
             setPhase("failed");
             setStatusLine(null);
-            void renewLease();
+            renewLease();
         }
     }, [
         abortInFlightWork,
         captureHandle,
         closeLiveSession,
-        leaseError,
         leasePhase,
-        leaseReady,
         renewLease,
         stopLocalRecording,
         resetDiagnostics,
     ]);
+
+    const retryLease = useCallback(() => {
+        const metadata = buildCaptureJobMetadata({
+            capturedAt: new Date().toISOString(),
+            locationLabel: captureLocationLabelRef.current,
+        });
+        void prepareLease(metadata).catch(() => {
+            // Errors surface via leaseError.
+        });
+    }, [prepareLease]);
 
     const finishCapture = useCallback(async () => {
         const recorder = recorderRef.current;
@@ -443,7 +623,7 @@ export function VoiceCapturePanel({
         setPhase("processing");
         setStatusLine("Finishing recording…");
 
-        const handle = captureHandle;
+        const handle = activeCaptureHandleRef.current ?? captureHandle;
 
         try {
             const recordingStartedAt = recordingStartedAtRef.current;
@@ -501,6 +681,35 @@ export function VoiceCapturePanel({
 
             const jobId = handle.snapshot.jobId;
 
+            const recorderMimeType =
+                diagnosticsRef.current.recorderMimeType ?? "audio/webm";
+            const audioBlob =
+                saveVoiceLogAudioRef.current &&
+                    audioChunksRef.current.length > 0
+                    ? new Blob(audioChunksRef.current, {
+                        type: recorderMimeType,
+                    })
+                    : null;
+
+            const audioStagedForJob =
+                saveVoiceLogAudioRef.current && audioBlob != null;
+
+            let audioStagingPromise: Promise<void> | undefined;
+            if (audioStagedForJob && audioBlob) {
+                audioStagingPromise = uploadCaptureJobAudio(jobId, audioBlob).catch(
+                    (stagingError) => {
+                        captureFlowLog.error("audio.staging.failed", {
+                            jobId,
+                            error:
+                                stagingError instanceof Error
+                                    ? stagingError.message
+                                    : String(stagingError),
+                        });
+                        throw stagingError;
+                    },
+                );
+            }
+
             let job = await handle.refresh({ signal });
             setStatusLine("Waiting for transcript…");
             let polls = 0;
@@ -531,24 +740,17 @@ export function VoiceCapturePanel({
                 polls,
             });
 
-            const recorderMimeType =
-                diagnosticsRef.current.recorderMimeType ?? "audio/webm";
-            const audioBlob =
-                saveVoiceLogAudioRef.current &&
-                audioChunksRef.current.length > 0
-                    ? new Blob(audioChunksRef.current, {
-                          type: recorderMimeType,
-                      })
-                    : null;
-
             enqueueCaptureBackgroundPipeline({
                 jobId,
                 veritie,
                 persistCaptureFn,
-                audioBlob,
-                uploadAudioFn: saveVoiceLogAudioRef.current
-                    ? uploadCaptureAudio
-                    : undefined,
+                audioStagedForJob,
+                audioStagingPromise,
+                audioBlob: audioStagedForJob ? null : audioBlob,
+                uploadAudioFn:
+                    audioStagedForJob || !saveVoiceLogAudioRef.current
+                        ? undefined
+                        : uploadCaptureAudio,
                 onJobUpdate: (updatedJob) => {
                     if (mountedRef.current) {
                         setIndexedJob(updatedJob);
@@ -573,7 +775,7 @@ export function VoiceCapturePanel({
             });
             setPhase("failed");
             setStatusLine(null);
-            void renewLease();
+            renewLease();
         }
     }, [
         captureHandle,
@@ -589,7 +791,9 @@ export function VoiceCapturePanel({
 
     const cancelCapture = useCallback(() => {
         abortInFlightWork();
+        captureInProgressRef.current = false;
         stopLocalRecording();
+        stopMicPrewarm();
         setError(null);
         setStatusLine(null);
         setTranscript(null);
@@ -598,19 +802,38 @@ export function VoiceCapturePanel({
         setActiveJobId(null);
         audioChunksRef.current = [];
         setPhase("ready");
-        void renewLease();
-    }, [abortInFlightWork, renewLease, stopLocalRecording]);
+        renewLease();
+        const metadata = buildCaptureJobMetadata({
+            capturedAt: new Date().toISOString(),
+            locationLabel: captureLocationLabelRef.current,
+        });
+        void prepareLease(metadata).catch(() => {
+            // Errors surface via leaseError.
+        });
+    }, [abortInFlightWork, prepareLease, renewLease, stopLocalRecording, stopMicPrewarm]);
+
+    const handleBack = useCallback(() => {
+        abortInFlightWork();
+        captureInProgressRef.current = false;
+        stopLocalRecording();
+        stopMicPrewarm();
+        onBack();
+    }, [abortInFlightWork, onBack, stopLocalRecording, stopMicPrewarm]);
 
     const waveformMode =
         phase === "recording"
-            ? "active"
+            ? isRecorderLive
+                ? "active"
+                : "passive"
             : phase === "processing" || phase === "requesting_microphone"
                 ? "passive"
                 : "idle";
 
     const isRecording = phase === "recording";
     const canStart =
-        (phase === "ready" || phase === "failed") && leaseReady;
+        (phase === "ready" || phase === "failed") &&
+        leasePhase === "ready" &&
+        captureHandle !== null;
     const isPreparingLease = leasePhase === "preparing";
 
     const recordingMinutes = Math.floor(recordingElapsedMs / 60_000);
@@ -627,16 +850,16 @@ export function VoiceCapturePanel({
     return (
         <div
             className={cn(
-                "w-full space-y-3",
+                "flex min-h-[280px] w-full flex-col",
                 phase === "processing" && "animate-pulse",
             )}
         >
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex shrink-0 items-center justify-between gap-3">
                 <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={onBack}
+                    onClick={handleBack}
                 >
                     <ArrowLeft className="size-4" />
                     Capture
@@ -658,58 +881,79 @@ export function VoiceCapturePanel({
                 )}
             </div>
 
-            {phase !== "transcript_ready" ? (
-                <LiveAudioWaveform stream={stream} mode={waveformMode} />
-            ) : null}
+            <div className="flex min-h-0 flex-1 flex-col gap-3 py-3">
+                {phase !== "transcript_ready" ? (
+                    <div className="flex flex-1 items-center justify-center min-h-[120px]">
+                        <LiveAudioWaveform stream={stream} mode={waveformMode} />
+                    </div>
+                ) : null}
 
-            {isPreparingLease && phase === "ready" && (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin" />
-                    Preparing Veritie lease…
-                </div>
-            )}
+                {isPreparingLease && phase === "ready" && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="size-4 animate-spin" />
+                        Preparing Veritie lease…
+                    </div>
+                )}
 
-            {(error || leaseError) && (
-                <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    <p className="font-medium">Voice log unavailable</p>
-                    <p className="mt-1 text-destructive/90">{error ?? leaseError}</p>
-                </div>
-            )}
+                {(error || leaseError) && (
+                    <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                        <p className="font-medium">Voice log unavailable</p>
+                        <p className="mt-1 text-destructive/90">{error ?? leaseError}</p>
+                        {leaseError && !error ? (
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="mt-2"
+                                onClick={retryLease}
+                            >
+                                Retry lease
+                            </Button>
+                        ) : null}
+                    </div>
+                )}
 
-            {statusLine && (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin" />
-                    {statusLine}
-                </div>
-            )}
+                {statusLine && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="size-4 animate-spin" />
+                        {statusLine}
+                    </div>
+                )}
 
-            {transcript && !showIndexedSurface && (
-                <div className="space-y-2">
-                    <p className="text-sm font-medium">Transcript</p>
-                    <p className="text-sm leading-6 text-foreground/80 whitespace-pre-wrap">
-                        {transcript}
-                    </p>
-                </div>
-            )}
-
-            {showIndexedSurface && indexedProps ? (
-                <div className={cn(SURFACE_CLASS_NESTED, "rounded-xl p-3")}>
-                    <IndexedResultSurface
-                        {...indexedProps}
-                        layout="embedded"
-                        expectAudio={saveVoiceLogAudio}
-                        showIndexingBanner
-                        indexingState={indexedJob?.indexing_state ?? null}
-                    />
-                    {indexingPending ? (
-                        <p className="mt-2 text-xs text-muted-foreground">
-                            Indexing extraction in the background…
+                {transcript && !showIndexedSurface && (
+                    <div className="space-y-2">
+                        <p className="text-sm font-medium">Transcript</p>
+                        <p className="text-sm leading-6 text-foreground/80 whitespace-pre-wrap">
+                            {transcript}
                         </p>
-                    ) : null}
-                </div>
-            ) : null}
+                    </div>
+                )}
 
-            <div className="flex flex-wrap justify-center gap-3">
+                {showIndexedSurface && indexedProps ? (
+                    <div
+                        className={cn(
+                            SURFACE_CLASS_NESTED,
+                            "min-h-0 flex-1 overflow-y-auto rounded-xl p-3",
+                        )}
+                    >
+                        <IndexedResultSurface
+                            {...indexedProps}
+                            layout="embedded"
+                            expectAudio={saveVoiceLogAudio}
+                            showIndexingBanner
+                            indexingState={indexedJob?.indexing_state ?? null}
+                            glossaryLabels={glossaryLabels}
+                        />
+                        {indexingPending ? (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                                Indexing extraction in the background…
+                            </p>
+                        ) : null}
+                    </div>
+                ) : null}
+            </div>
+
+            <div className="flex shrink-0 flex-wrap justify-center gap-3 pt-1">
                 {canStart && (
                     <Button
                         type="button"
