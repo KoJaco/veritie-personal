@@ -48,7 +48,7 @@ describe("ExtractedValueInlineReviewActions", () => {
             />,
         );
 
-        fireEvent.click(screen.getByRole("button", { name: /rollback/i }));
+        fireEvent.click(screen.getByRole("button", { name: /undo/i }));
 
         await waitFor(() => {
             expect(updateExtractedValueReviewAction).toHaveBeenCalledWith(

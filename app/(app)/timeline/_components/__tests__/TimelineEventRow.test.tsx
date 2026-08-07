@@ -57,7 +57,7 @@ describe("TimelineEventRow", () => {
         expect(screen.getAllByRole("button", { name: /reject/i }).length).toBeGreaterThan(0);
     });
 
-    it("shows rollback for confirmed items", () => {
+    it("shows undo for confirmed items", () => {
         render(
             <TimelineEventRow
                 item={{ ...item, reviewState: "confirmed" }}
@@ -67,7 +67,7 @@ describe("TimelineEventRow", () => {
             />,
         );
 
-        expect(screen.getAllByRole("button", { name: /rollback/i }).length).toBeGreaterThan(0);
+        expect(screen.getAllByRole("button", { name: /undo/i }).length).toBeGreaterThan(0);
         expect(screen.queryByRole("button", { name: /accept/i })).not.toBeInTheDocument();
     });
 });
