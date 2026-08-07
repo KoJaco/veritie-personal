@@ -16,6 +16,7 @@ import { getDb } from "@/lib/db";
 import type { CapturesIndexQuery } from "@/lib/data-source/captures-read-model";
 import { buildExtractedSummary } from "@/lib/capture/extraction-summary";
 import { aspectIdsMatchLens } from "@/lib/aspect-lens";
+import { matchesCalendarDateRange } from "@/lib/format/date-range";
 
 import type { AccountScope } from "./context";
 import {
@@ -114,6 +115,16 @@ export async function getCapturesIndex(
 
     if (query?.status) {
         items = items.filter((item) => item.status === query.status);
+    }
+
+    if (query?.startDate || query?.endDate) {
+        items = items.filter((item) =>
+            matchesCalendarDateRange(
+                item.createdAt,
+                query.startDate,
+                query.endDate,
+            ),
+        );
     }
 
     const sortBy = query?.sortBy ?? "createdAt";

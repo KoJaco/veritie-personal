@@ -15,6 +15,8 @@ type TimelinePageDataProps = {
     search?: string;
     eventType?: TimelineEventType;
     reviewState?: ReviewState;
+    startDate?: string;
+    endDate?: string;
 };
 
 export async function TimelinePageData({
@@ -22,6 +24,8 @@ export async function TimelinePageData({
     search,
     eventType,
     reviewState,
+    startDate,
+    endDate,
 }: TimelinePageDataProps) {
     const scopeLens = { scope: aspect };
     const dataSource = getDataSourceAdapters();
@@ -30,6 +34,8 @@ export async function TimelinePageData({
         search: search || undefined,
         eventTypes: eventType ? [eventType] : undefined,
         reviewStates: reviewState ? [reviewState] : undefined,
+        startDate,
+        endDate,
     });
 
     const glossaryLabels =

@@ -24,6 +24,8 @@ type CapturesPageDataProps = {
     sortBy: SortBy;
     sortDir: SortDir;
     view: IndexViewMode;
+    startDate?: string;
+    endDate?: string;
 };
 
 export async function CapturesPageData({
@@ -33,6 +35,8 @@ export async function CapturesPageData({
     sortBy,
     sortDir,
     view,
+    startDate,
+    endDate,
 }: CapturesPageDataProps) {
     const dataSource = getDataSourceAdapters();
     const capturesIndex = await dataSource.captures.getCapturesIndex({
@@ -41,6 +45,8 @@ export async function CapturesPageData({
         status,
         sortBy,
         sortDir,
+        startDate,
+        endDate,
     });
 
     const contract = buildCapturesRouteContract({
@@ -82,6 +88,8 @@ export async function CapturesPageData({
                 sortBy={sortBy}
                 sortDir={sortDir}
                 view={view}
+                startDate={startDate}
+                endDate={endDate}
             />
         </>
     );

@@ -12,7 +12,9 @@ import {
     parseCaptureStatus,
     parseCapturesSortBy,
     parseCapturesView,
+    parseEndDateParam,
     parseSortDir,
+    parseStartDateParam,
 } from "@/lib/route/search-params";
 import { CapturesListSkeleton } from "./_components/CapturesListSkeleton";
 import { CapturesPageData } from "./_components/CapturesPageData";
@@ -29,6 +31,8 @@ function buildCapturesContractResetKey({
     sortBy,
     sortDir,
     view,
+    startDate,
+    endDate,
 }: {
     aspect: string;
     search?: string;
@@ -36,8 +40,19 @@ function buildCapturesContractResetKey({
     sortBy: string;
     sortDir: string;
     view: string;
+    startDate?: string;
+    endDate?: string;
 }) {
-    return [aspect, search ?? "", status ?? "", sortBy, sortDir, view].join("|");
+    return [
+        aspect,
+        search ?? "",
+        status ?? "",
+        sortBy,
+        sortDir,
+        view,
+        startDate ?? "",
+        endDate ?? "",
+    ].join("|");
 }
 
 export default async function CapturesPage({ searchParams }: CapturesPageProps) {
@@ -48,6 +63,8 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
     const sortBy = parseCapturesSortBy(getStringParam(resolved.sortBy));
     const sortDir = parseSortDir(getStringParam(resolved.sortDir));
     const view = parseCapturesView(getStringParam(resolved.view));
+    const startDate = parseStartDateParam(getStringParam(resolved.startDate));
+    const endDate = parseEndDateParam(getStringParam(resolved.endDate));
     const contractResetKey = buildCapturesContractResetKey({
         aspect: lens.aspect,
         search,
@@ -55,6 +72,8 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
         sortBy,
         sortDir,
         view,
+        startDate,
+        endDate,
     });
 
     return (
@@ -70,6 +89,8 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
                         sortBy={sortBy}
                         sortDir={sortDir}
                         view={view}
+                        startDate={startDate}
+                        endDate={endDate}
                     />
                 }
             >
@@ -83,6 +104,8 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
                         sortBy={sortBy}
                         sortDir={sortDir}
                         view={view}
+                        startDate={startDate}
+                        endDate={endDate}
                     />
                 </Suspense>
             </PageFrame>

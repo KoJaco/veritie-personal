@@ -23,6 +23,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 type SortBy = "createdAt" | "title" | "extractedCount";
 type SortDir = "asc" | "desc";
@@ -37,6 +38,8 @@ type CapturesFilterSheetProps = {
     sortBy: SortBy;
     sortDir: SortDir;
     view: ViewMode;
+    startDate?: string;
+    endDate?: string;
 };
 
 export function CapturesFilterSheet({
@@ -46,11 +49,15 @@ export function CapturesFilterSheet({
     sortBy,
     sortDir,
     view,
+    startDate,
+    endDate,
 }: CapturesFilterSheetProps) {
     const [open, setOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState(status ?? "");
     const [sortByFilter, setSortByFilter] = useState(sortBy);
     const [sortDirFilter, setSortDirFilter] = useState(sortDir);
+    const [startDateFilter, setStartDateFilter] = useState(startDate ?? "");
+    const [endDateFilter, setEndDateFilter] = useState(endDate ?? "");
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -61,7 +68,7 @@ export function CapturesFilterSheet({
                 <SheetHeader>
                     <SheetTitle>Capture filters</SheetTitle>
                     <SheetDescription>
-                        Filter by status and sort order.
+                        Filter by date, status, and sort order.
                     </SheetDescription>
                 </SheetHeader>
                 <form
@@ -77,6 +84,19 @@ export function CapturesFilterSheet({
                     <Input type="hidden" name="status" value={statusFilter} />
                     <Input type="hidden" name="sortBy" value={sortByFilter} />
                     <Input type="hidden" name="sortDir" value={sortDirFilter} />
+                    <Input type="hidden" name="startDate" value={startDateFilter} />
+                    <Input type="hidden" name="endDate" value={endDateFilter} />
+                    <div className="space-y-1.5">
+                        <Label>Date range</Label>
+                        <DateRangePicker
+                            startDate={startDateFilter || undefined}
+                            endDate={endDateFilter || undefined}
+                            onChange={({ startDate: nextStart, endDate: nextEnd }) => {
+                                setStartDateFilter(nextStart ?? "");
+                                setEndDateFilter(nextEnd ?? "");
+                            }}
+                        />
+                    </div>
                     <div className="space-y-1.5">
                         <Label>Status</Label>
                         <Select

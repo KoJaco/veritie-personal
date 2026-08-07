@@ -12,6 +12,7 @@ import { getDb } from "@/lib/db";
 import type { TimelineIndexQuery } from "@/lib/data-source/timeline-read-model";
 import { isHiddenTimelineEventType } from "@/lib/domain/timeline-filters";
 import type { ReviewState } from "@/lib/domain/extraction";
+import { matchesCalendarDateRange } from "@/lib/format/date-range";
 import { sortTimelineIndexItems } from "@/lib/timeline/sort-timeline-index-items";
 
 import type { AccountScope } from "./context";
@@ -145,12 +146,14 @@ export async function getTimelineIndex(
         items = items.filter((item) => item.captureId === query.captureId);
     }
 
-    if (query?.startDate) {
-        items = items.filter((item) => item.occurredAt >= query.startDate!);
-    }
-
-    if (query?.endDate) {
-        items = items.filter((item) => item.occurredAt <= query.endDate!);
+    if (query?.startDate || query?.endDate) {
+        items = items.filter((item) =>
+            matchesCalendarDateRange(
+                item.occurredAt,
+                query.startDate,
+                query.endDate,
+            ),
+        );
     }
 
     items = sortTimelineIndexItems(items);

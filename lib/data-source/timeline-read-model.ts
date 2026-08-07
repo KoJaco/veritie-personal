@@ -17,6 +17,7 @@ import {
     resolveCaptureSummaryFromPayload,
 } from "@/lib/capture/extraction-summary";
 import { isValidReviewTransition } from "@/lib/capture/extracted-value-review-transitions";
+import { matchesCalendarDateRange } from "@/lib/format/date-range";
 import { sortTimelineIndexItems } from "@/lib/timeline/sort-timeline-index-items";
 
 export type TimelineIndexItem = {
@@ -148,12 +149,14 @@ export function getTimelineIndex(
         items = items.filter((item) => item.captureId === query.captureId);
     }
 
-    if (query?.startDate) {
-        items = items.filter((item) => item.occurredAt >= query.startDate!);
-    }
-
-    if (query?.endDate) {
-        items = items.filter((item) => item.occurredAt <= query.endDate!);
+    if (query?.startDate || query?.endDate) {
+        items = items.filter((item) =>
+            matchesCalendarDateRange(
+                item.occurredAt,
+                query.startDate,
+                query.endDate,
+            ),
+        );
     }
 
     items = sortTimelineIndexItems(items);

@@ -108,7 +108,7 @@ export function ExtractedValueInlineReviewActions({
                     title="Rollback"
                 >
                     <Undo2 className="size-3.5 shrink-0" />
-                    <span className="text-primary/75">Undo</span>
+                    <span className="text-foreground/75">Undo</span>
                 </Button>
             </div>
         );

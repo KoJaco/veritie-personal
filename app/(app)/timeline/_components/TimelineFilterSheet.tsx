@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/sheet";
 import { TIMELINE_SIGNAL_EVENT_TYPES } from "@/lib/domain/timeline-filters";
 import type { TimelineEventType } from "@/lib/domain/timeline";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 const ALL_FILTER_VALUE = "__all__";
 
@@ -32,6 +33,8 @@ type TimelineFilterSheetProps = {
     search?: string;
     eventType?: TimelineEventType;
     reviewState?: string;
+    startDate?: string;
+    endDate?: string;
 };
 
 export function TimelineFilterSheet({
@@ -39,10 +42,14 @@ export function TimelineFilterSheet({
     search,
     eventType,
     reviewState,
+    startDate,
+    endDate,
 }: TimelineFilterSheetProps) {
     const [open, setOpen] = useState(false);
     const [typeFilter, setTypeFilter] = useState(eventType ?? "");
     const [reviewFilter, setReviewFilter] = useState(reviewState ?? "");
+    const [startDateFilter, setStartDateFilter] = useState(startDate ?? "");
+    const [endDateFilter, setEndDateFilter] = useState(endDate ?? "");
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -53,7 +60,7 @@ export function TimelineFilterSheet({
                 <SheetHeader>
                     <SheetTitle>Timeline filters</SheetTitle>
                     <SheetDescription>
-                        Narrow events by type and review state.
+                        Narrow events by date, type, and review state.
                     </SheetDescription>
                 </SheetHeader>
                 <form
@@ -67,6 +74,19 @@ export function TimelineFilterSheet({
                     ) : null}
                     <Input type="hidden" name="type" value={typeFilter} />
                     <Input type="hidden" name="review" value={reviewFilter} />
+                    <Input type="hidden" name="startDate" value={startDateFilter} />
+                    <Input type="hidden" name="endDate" value={endDateFilter} />
+                    <div className="space-y-1.5">
+                        <Label>Date range</Label>
+                        <DateRangePicker
+                            startDate={startDateFilter || undefined}
+                            endDate={endDateFilter || undefined}
+                            onChange={({ startDate: nextStart, endDate: nextEnd }) => {
+                                setStartDateFilter(nextStart ?? "");
+                                setEndDateFilter(nextEnd ?? "");
+                            }}
+                        />
+                    </div>
                     <div className="space-y-1.5">
                         <Label>Event type</Label>
                         <Select
@@ -85,8 +105,9 @@ export function TimelineFilterSheet({
                                     All event types
                                 </SelectItem>
                                 {TIMELINE_SIGNAL_EVENT_TYPES.map((type) => (
-                                    <SelectItem key={type} value={type}>
-                                        {type.replace(/_/g, " ")}
+                                    <SelectItem key={type} value={type} className="capitalize">
+
+                                        {type.split("_")[0] ?? type.replace(/_/g, " ")}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

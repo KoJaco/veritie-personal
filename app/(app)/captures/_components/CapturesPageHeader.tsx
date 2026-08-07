@@ -21,6 +21,8 @@ type CapturesPageHeaderProps = {
     sortBy: SortBy;
     sortDir: SortDir;
     view: IndexViewMode;
+    startDate?: string;
+    endDate?: string;
 };
 
 export function CapturesPageHeader({
@@ -30,6 +32,8 @@ export function CapturesPageHeader({
     sortBy,
     sortDir,
     view,
+    startDate,
+    endDate,
 }: CapturesPageHeaderProps) {
     const { canOpenAssistant, searchItems, suggestionsReady } =
         usePageHeaderContract();
@@ -41,6 +45,8 @@ export function CapturesPageHeader({
         sortBy,
         sortDir,
         view,
+        startDate,
+        endDate,
     };
 
     return (
@@ -74,6 +80,8 @@ export function CapturesPageHeader({
                         sortBy={sortBy}
                         sortDir={sortDir}
                         view={view}
+                        startDate={startDate}
+                        endDate={endDate}
                     />
                     <PageAssistantAction canOpenAssistant={canOpenAssistant} />
                 </>

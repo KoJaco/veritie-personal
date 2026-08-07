@@ -12,6 +12,8 @@ type TimelinePageHeaderProps = {
     search?: string;
     eventType?: TimelineEventType;
     reviewState?: ReviewState;
+    startDate?: string;
+    endDate?: string;
 };
 
 export function TimelinePageHeader({
@@ -19,6 +21,8 @@ export function TimelinePageHeader({
     search,
     eventType,
     reviewState,
+    startDate,
+    endDate,
 }: TimelinePageHeaderProps) {
     const { canOpenAssistant, searchItems, suggestionsReady } =
         usePageHeaderContract();
@@ -37,6 +41,8 @@ export function TimelinePageHeader({
                             aspect,
                             type: eventType,
                             review: reviewState,
+                            startDate,
+                            endDate,
                         }}
                         items={searchItems}
                         suggestionsReady={suggestionsReady}
@@ -51,6 +57,8 @@ export function TimelinePageHeader({
                         search={search}
                         eventType={eventType}
                         reviewState={reviewState}
+                        startDate={startDate}
+                        endDate={endDate}
                     />
                     <PageAssistantAction canOpenAssistant={canOpenAssistant} />
                 </>

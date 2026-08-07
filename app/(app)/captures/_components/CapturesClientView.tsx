@@ -50,6 +50,8 @@ export function CapturesClientView({
     sortBy,
     sortDir,
     view,
+    startDate,
+    endDate,
 }: {
     items: CaptureIndexItem[];
     aspect: string;
@@ -58,6 +60,8 @@ export function CapturesClientView({
     sortBy: SortBy;
     sortDir: SortDir;
     view: ViewMode;
+    startDate?: string;
+    endDate?: string;
 }) {
     const shouldReduceMotion = useReducedMotion();
     const { pendingNewIds, lastEnrichedIds, clearAnimatedIds } =
@@ -71,6 +75,8 @@ export function CapturesClientView({
         sortBy,
         sortDir,
         view,
+        startDate,
+        endDate,
     };
 
     const enterOffset =

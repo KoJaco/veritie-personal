@@ -7,7 +7,6 @@ import {
 } from "@/lib/artifact-display";
 import type { ExtractedValueStub } from "@/lib/stubs/capture-stubs";
 import { flattenExtractedValueAttributes } from "@/lib/capture/flatten-extracted-value";
-import { SURFACE_CLASS } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
 
 const HIDDEN_INLINE_FIELD_KEYS = new Set(["aspect", "title", "source_quote"]);
@@ -40,22 +39,22 @@ function FieldValue({
 
     return (
         <span className="inline-flex items-baseline gap-1">
-            <span className="font-medium text-primary">{label}:</span>
+            <span className="font-medium text-foreground">{label}:</span>
             {isActivatable ? (
                 <button
                     type="button"
                     onClick={() => onFieldActivate?.(fieldKey, quoteHint)}
                     className={cn(
                         "rounded-sm text-left text-foreground transition-colors",
-                        "hover:text-primary hover:underline underline-offset-2",
+                        "hover:text-foreground hover:underline underline-offset-2",
                         isActive &&
-                        "bg-primary/10 px-1 font-medium text-primary underline decoration-primary/40",
+                        "bg-primary/10 px-1 font-medium text-foreground underline decoration-foreground/40",
                     )}
                 >
                     {displayValue}
                 </button>
             ) : (
-                <span className="text-primary/75">{displayValue}</span>
+                <span className="text-foreground/75">{displayValue}</span>
             )}
         </span>
     );

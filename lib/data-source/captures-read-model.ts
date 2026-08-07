@@ -14,6 +14,7 @@ import type { TimelineEventType } from "@/lib/domain/timeline";
 import type { ScopeLens } from "@/lib/lens";
 import { aspectIdsMatchLens } from "@/lib/aspect-lens";
 import { buildExtractedSummary } from "@/lib/capture/extraction-summary";
+import { matchesCalendarDateRange } from "@/lib/format/date-range";
 import {
     CAPTURE_SEEDS,
     EXTRACTED_VALUE_SEEDS,
@@ -59,6 +60,8 @@ export type CapturesIndexQuery = {
     status?: CaptureStub["status"];
     sortBy?: "createdAt" | "title" | "extractedCount";
     sortDir?: "asc" | "desc";
+    startDate?: string;
+    endDate?: string;
 };
 
 export function getCapturesIndex(
@@ -99,6 +102,16 @@ export function getCapturesIndex(
 
     if (query?.status) {
         items = items.filter((item) => item.status === query.status);
+    }
+
+    if (query?.startDate || query?.endDate) {
+        items = items.filter((item) =>
+            matchesCalendarDateRange(
+                item.createdAt,
+                query.startDate,
+                query.endDate,
+            ),
+        );
     }
 
     const sortBy = query?.sortBy ?? "createdAt";

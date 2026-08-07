@@ -1,5 +1,6 @@
 import type { TimelineEventType } from "@/lib/domain/timeline";
 import { TIMELINE_SIGNAL_EVENT_TYPES } from "@/lib/domain/timeline-filters";
+import { parseCalendarDateParam } from "@/lib/format/date-range";
 
 export type SearchParamValue = string | string[] | undefined;
 
@@ -57,6 +58,18 @@ export function parseSortDir(value: string | undefined): "asc" | "desc" {
 
 export function parseCapturesView(value: string | undefined): "cards" | "table" {
     return value === "table" ? "table" : "cards";
+}
+
+export function parseStartDateParam(
+    value: string | undefined,
+): string | undefined {
+    return parseCalendarDateParam(value);
+}
+
+export function parseEndDateParam(
+    value: string | undefined,
+): string | undefined {
+    return parseCalendarDateParam(value);
 }
 
 export const INDEX_SEARCH_SUGGESTION_LIMIT = 50;

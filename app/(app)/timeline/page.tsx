@@ -9,7 +9,9 @@ import {
 } from "@/lib/aspect-lens";
 import {
     getStringParam,
+    parseEndDateParam,
     parseReviewState,
+    parseStartDateParam,
     parseTimelineEventType,
 } from "@/lib/route/search-params";
 import { TimelineListSkeleton } from "./_components/TimelineListSkeleton";
@@ -25,13 +27,24 @@ function buildTimelineContractResetKey({
     search,
     eventType,
     reviewState,
+    startDate,
+    endDate,
 }: {
     aspect: string;
     search?: string;
     eventType?: string;
     reviewState?: string;
+    startDate?: string;
+    endDate?: string;
 }) {
-    return [aspect, search ?? "", eventType ?? "", reviewState ?? ""].join("|");
+    return [
+        aspect,
+        search ?? "",
+        eventType ?? "",
+        reviewState ?? "",
+        startDate ?? "",
+        endDate ?? "",
+    ].join("|");
 }
 
 export default async function TimelinePage({ searchParams }: TimelinePageProps) {
@@ -40,11 +53,15 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
     const search = getStringParam(resolved.q);
     const eventType = parseTimelineEventType(getStringParam(resolved.type));
     const reviewState = parseReviewState(getStringParam(resolved.review));
+    const startDate = parseStartDateParam(getStringParam(resolved.startDate));
+    const endDate = parseEndDateParam(getStringParam(resolved.endDate));
     const contractResetKey = buildTimelineContractResetKey({
         aspect: lens.aspect,
         search,
         eventType,
         reviewState,
+        startDate,
+        endDate,
     });
 
     return (
@@ -58,6 +75,8 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
                         search={search}
                         eventType={eventType}
                         reviewState={reviewState}
+                        startDate={startDate}
+                        endDate={endDate}
                     />
                 }
             >
@@ -67,6 +86,8 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
                         search={search}
                         eventType={eventType}
                         reviewState={reviewState}
+                        startDate={startDate}
+                        endDate={endDate}
                     />
                 </Suspense>
             </PageFrame>
