@@ -9,6 +9,8 @@ import {
 } from "@/lib/capture/capture-audio-client";
 import { mapCaptureDetailToIndexedProps } from "@/lib/capture/map-capture-detail-to-indexed-props";
 import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-model";
+import { cn } from "@/lib/utils";
+import { SURFACE_CLASS } from "@/lib/ui/surface";
 
 export function CaptureDetailIndexedView({
     detail,
@@ -42,15 +44,18 @@ export function CaptureDetailIndexedView({
     const indexedProps = mapCaptureDetailToIndexedProps(detail, audioUrl);
 
     return (
-        <IndexedResultSurface
-            {...indexedProps}
-            layout="default"
-            expectAudio={hasAudioUri}
-            showIndexingBanner={false}
-            glossaryLabels={glossaryLabels}
-            captureId={detail.capture.id}
-            extractedValues={detail.extractedValues}
-            onExtractedValueSaved={() => router.refresh()}
-        />
+        <div className={cn(SURFACE_CLASS, "p-3")}>
+
+            <IndexedResultSurface
+                {...indexedProps}
+                layout="default"
+                expectAudio={hasAudioUri}
+                showIndexingBanner={false}
+                glossaryLabels={glossaryLabels}
+                captureId={detail.capture.id}
+                extractedValues={detail.extractedValues}
+                onExtractedValueSaved={() => router.refresh()}
+            />
+        </div>
     );
 }

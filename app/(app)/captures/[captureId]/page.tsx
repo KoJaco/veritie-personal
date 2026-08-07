@@ -28,8 +28,8 @@ export default async function CaptureDetailPage({
         <PageFrame
             header={
                 <PageHeader
-                    title={detail.capture.title ?? "Capture"}
-                    description={detail.capture.type}
+                    title={detail.capture.type}
+                    description={detail.capture.title ?? "Capture"}
                     separator={false}
                 />
             }
