@@ -24,7 +24,7 @@ export function IndexViewToggle({
     return (
         <div
             className={cn(
-                "flex items-center gap-1 rounded-md border border-border/70 p-0.5",
+                "flex items-center gap-1 rounded-md border border-border/70 p-0.5 h-8",
                 className,
             )}
         >
@@ -35,6 +35,7 @@ export function IndexViewToggle({
                 aria-label="Card view"
                 aria-pressed={view === "cards"}
                 asChild
+                className="h-7"
             >
                 <Link
                     href={buildIndexHref(route, baseParams, { view: "cards" })}
@@ -49,6 +50,7 @@ export function IndexViewToggle({
                 aria-label="Table view"
                 aria-pressed={view === "table"}
                 asChild
+                className="h-7"
             >
                 <Link
                     href={buildIndexHref(route, baseParams, { view: "table" })}
