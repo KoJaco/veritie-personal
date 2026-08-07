@@ -100,6 +100,15 @@ export function CapturesClientView({
                             <TableRow>
                                 <TableHead>
                                     <SortLink
+                                        label="Captured"
+                                        sortBy="createdAt"
+                                        currentSortBy={sortBy}
+                                        currentSortDir={sortDir}
+                                        baseParams={baseParams}
+                                    />
+                                </TableHead>
+                                <TableHead>
+                                    <SortLink
                                         label="Capture"
                                         sortBy="title"
                                         currentSortBy={sortBy}
@@ -113,15 +122,6 @@ export function CapturesClientView({
                                     <SortLink
                                         label="Extracted"
                                         sortBy="extractedCount"
-                                        currentSortBy={sortBy}
-                                        currentSortDir={sortDir}
-                                        baseParams={baseParams}
-                                    />
-                                </TableHead>
-                                <TableHead>
-                                    <SortLink
-                                        label="Captured"
-                                        sortBy="createdAt"
                                         currentSortBy={sortBy}
                                         currentSortDir={sortDir}
                                         baseParams={baseParams}
@@ -141,7 +141,10 @@ export function CapturesClientView({
                                         duration: shouldReduceMotion ? 0 : 0.25,
                                     }}
                                 >
-                                    <TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {new Date(item.createdAt).toLocaleString()}
+                                    </TableCell>
+                                    <TableCell className="max-w-lg truncate">
                                         <Link
                                             href={`/captures/${item.id}`}
                                             className="font-medium hover:underline"
@@ -157,15 +160,13 @@ export function CapturesClientView({
                                             {item.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right tabular-nums">
+                                    <TableCell className="text-right tabular-nums max-w-sm whitespace-normal">
                                         {formatExtractedCountLabel(
                                             item.extractedCount,
                                             item.extractedSummary,
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {new Date(item.createdAt).toLocaleString()}
-                                    </TableCell>
+
                                 </MotionTableRow>
                             ))}
                         </TableBody>
@@ -198,7 +199,7 @@ export function CapturesClientView({
                                             href={`/captures/${item.id}`}
                                             className={cn(
                                                 SURFACE_CLASS,
-                                                "block px-4 py-3 transition-colors hover:bg-accent/40",
+                                                "block px-4 py-3 transition-colors hover:bg-card/50 hover:border-foreground/20",
                                             )}
                                         >
                                             <div className="flex flex-col gap-1.5">
