@@ -73,7 +73,8 @@ function GlobalCaptureLauncherInner() {
     const openedAtRef = useRef(0);
     const openGenerationRef = useRef(0);
 
-    const { releaseLease, captureHandle, prepareLease } = useVeritieCaptureLease();
+    const { releaseLease, captureHandle, prepareLease, leasePhase } =
+        useVeritieCaptureLease();
     const [saveVoiceLogAudio, setSaveVoiceLogAudio] = useState(false);
     const [captureLocationLabel, setCaptureLocationLabel] = useState("");
     const pendingReleaseJobIdRef = useRef<string | null>(null);
@@ -103,29 +104,59 @@ function GlobalCaptureLauncherInner() {
         closeUi();
     }, [closeUi]);
 
+    const loadCapturePreferences = useCallback(
+        (generation: number) => {
+            void getCapturePreferences().then((prefs) => {
+                if (openGenerationRef.current !== generation) {
+                    return;
+                }
+
+                const locationLabel = prefs.captureLocationLabel ?? "";
+                setSaveVoiceLogAudio(prefs.saveVoiceLogAudio);
+                setCaptureLocationLabel(locationLabel);
+            });
+        },
+        [],
+    );
+
+    const prepareVoiceLease = useCallback(
+        (generation: number) => {
+            void getCapturePreferences().then((prefs) => {
+                if (openGenerationRef.current !== generation) {
+                    return;
+                }
+
+                const locationLabel = prefs.captureLocationLabel ?? "";
+                setSaveVoiceLogAudio(prefs.saveVoiceLogAudio);
+                setCaptureLocationLabel(locationLabel);
+                const metadata = buildCaptureJobMetadata({
+                    capturedAt: new Date().toISOString(),
+                    locationLabel,
+                });
+                void prepareLease(metadata).catch(() => {
+                    // Lease errors surface via leasePhase/leaseError in the voice panel.
+                });
+            });
+        },
+        [prepareLease],
+    );
+
     const openLauncher = useCallback(() => {
         const generation = openGenerationRef.current + 1;
         openGenerationRef.current = generation;
         openedAtRef.current = Date.now();
         setOpen(true);
         resetTransientState();
-        void getCapturePreferences().then((prefs) => {
-            if (openGenerationRef.current !== generation) {
-                return;
-            }
+        loadCapturePreferences(generation);
+    }, [loadCapturePreferences, resetTransientState]);
 
-            const locationLabel = prefs.captureLocationLabel ?? "";
-            setSaveVoiceLogAudio(prefs.saveVoiceLogAudio);
-            setCaptureLocationLabel(locationLabel);
-            const metadata = buildCaptureJobMetadata({
-                capturedAt: new Date().toISOString(),
-                locationLabel,
-            });
-            void prepareLease(metadata).catch(() => {
-                // Lease errors surface via leasePhase/leaseError in the voice panel.
-            });
-        });
-    }, [prepareLease, resetTransientState]);
+    const enterVoiceMode = useCallback(() => {
+        const generation = openGenerationRef.current;
+        setMode("voice");
+        if (leasePhase === "idle" || leasePhase === "error") {
+            prepareVoiceLease(generation);
+        }
+    }, [leasePhase, prepareVoiceLease]);
 
     useEffect(() => {
         return captureJobCoordinator.subscribe((event) => {
@@ -144,7 +175,8 @@ function GlobalCaptureLauncherInner() {
 
     const returnToOptions = useCallback(() => {
         resetTransientState();
-    }, [resetTransientState]);
+        tryReleaseLease();
+    }, [resetTransientState, tryReleaseLease]);
 
     const isLauncherTucked = isHydrated && isTucked;
 
@@ -321,7 +353,7 @@ function GlobalCaptureLauncherInner() {
                                 <CaptureOption
                                     label="Voice log"
                                     icon={AudioWaveform}
-                                    onSelect={() => setMode("voice")}
+                                    onSelect={enterVoiceMode}
                                 />
                                 {/* <CaptureOption
                                     label="PDF"

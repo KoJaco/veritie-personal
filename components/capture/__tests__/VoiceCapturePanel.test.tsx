@@ -364,4 +364,20 @@ describe("VoiceCapturePanel", () => {
 
         expect(useScreenWakeLock).toHaveBeenLastCalledWith(false);
     });
+
+    it("cleans up capture session when navigating back", async () => {
+        const onBack = jest.fn();
+        renderPanel({ onBack });
+
+        fireEvent.click(screen.getByRole("button", { name: /start recording/i }));
+        await waitFor(() => {
+            expect(screen.getByRole("button", { name: /stop/i })).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole("button", { name: /^capture$/i }));
+
+        expect(onBack).toHaveBeenCalled();
+        expect(liveSessionMock.close).toHaveBeenCalled();
+        expect(trackStop).toHaveBeenCalled();
+    });
 });

@@ -152,4 +152,70 @@ describe("VeritieCaptureLeaseContext", () => {
 
         expect(mockPrepareCapture).toHaveBeenCalled();
     });
+
+    it("releaseLease clears prepared handle after prepare", async () => {
+        const mockClose = jest.fn();
+
+        mockPrepareCapture.mockResolvedValue({
+            snapshot: {
+                jobId: "job-release",
+                bootstrap: {
+                    stream_ingest: { session_id: "session-release" },
+                },
+            },
+            close: mockClose,
+        });
+
+        function PrepareReleaseProbe() {
+            const { prepareLease, releaseLease, captureHandle, leasePhase } =
+                useVeritieCaptureLease();
+
+            return (
+                <div>
+                    <span data-testid="lease-phase">{leasePhase}</span>
+                    <span data-testid="has-handle">
+                        {captureHandle ? "yes" : "no"}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            void prepareLease({
+                                captured_at: "2026-01-01T00:00:00.000Z",
+                                timezone: "UTC",
+                                locale: "en",
+                            })
+                        }
+                    >
+                        Prepare
+                    </button>
+                    <button type="button" onClick={() => releaseLease()}>
+                        Release
+                    </button>
+                </div>
+            );
+        }
+
+        render(
+            <VeritieCaptureLeaseProvider>
+                <PrepareReleaseProbe />
+            </VeritieCaptureLeaseProvider>,
+        );
+
+        screen.getByRole("button", { name: "Prepare" }).click();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("lease-phase")).toHaveTextContent("ready");
+            expect(screen.getByTestId("has-handle")).toHaveTextContent("yes");
+        });
+
+        screen.getByRole("button", { name: "Release" }).click();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("lease-phase")).toHaveTextContent("idle");
+            expect(screen.getByTestId("has-handle")).toHaveTextContent("no");
+        });
+
+        expect(mockClose).toHaveBeenCalled();
+        expect(mockClearPreparedHandle).toHaveBeenCalled();
+    });
 });

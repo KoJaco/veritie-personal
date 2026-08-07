@@ -639,6 +639,12 @@ export function VoiceCapturePanel({
         renewLease();
     }, [abortInFlightWork, renewLease, stopLocalRecording]);
 
+    const handleBack = useCallback(() => {
+        abortInFlightWork();
+        stopLocalRecording();
+        onBack();
+    }, [abortInFlightWork, onBack, stopLocalRecording]);
+
     const waveformMode =
         phase === "recording"
             ? "active"
@@ -667,16 +673,16 @@ export function VoiceCapturePanel({
     return (
         <div
             className={cn(
-                "w-full space-y-3",
+                "flex min-h-[280px] w-full flex-col",
                 phase === "processing" && "animate-pulse",
             )}
         >
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex shrink-0 items-center justify-between gap-3">
                 <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={onBack}
+                    onClick={handleBack}
                 >
                     <ArrowLeft className="size-4" />
                     Capture
@@ -698,70 +704,79 @@ export function VoiceCapturePanel({
                 )}
             </div>
 
-            {phase !== "transcript_ready" ? (
-                <LiveAudioWaveform stream={stream} mode={waveformMode} />
-            ) : null}
+            <div className="flex min-h-0 flex-1 flex-col gap-3 py-3">
+                {phase !== "transcript_ready" ? (
+                    <div className="flex flex-1 items-center justify-center min-h-[120px]">
+                        <LiveAudioWaveform stream={stream} mode={waveformMode} />
+                    </div>
+                ) : null}
 
-            {isPreparingLease && phase === "ready" && (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin" />
-                    Preparing Veritie lease…
-                </div>
-            )}
+                {isPreparingLease && phase === "ready" && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="size-4 animate-spin" />
+                        Preparing Veritie lease…
+                    </div>
+                )}
 
-            {(error || leaseError) && (
-                <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    <p className="font-medium">Voice log unavailable</p>
-                    <p className="mt-1 text-destructive/90">{error ?? leaseError}</p>
-                    {leaseError && !error ? (
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="mt-2"
-                            onClick={retryLease}
-                        >
-                            Retry lease
-                        </Button>
-                    ) : null}
-                </div>
-            )}
+                {(error || leaseError) && (
+                    <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                        <p className="font-medium">Voice log unavailable</p>
+                        <p className="mt-1 text-destructive/90">{error ?? leaseError}</p>
+                        {leaseError && !error ? (
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="mt-2"
+                                onClick={retryLease}
+                            >
+                                Retry lease
+                            </Button>
+                        ) : null}
+                    </div>
+                )}
 
-            {statusLine && (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin" />
-                    {statusLine}
-                </div>
-            )}
+                {statusLine && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="size-4 animate-spin" />
+                        {statusLine}
+                    </div>
+                )}
 
-            {transcript && !showIndexedSurface && (
-                <div className="space-y-2">
-                    <p className="text-sm font-medium">Transcript</p>
-                    <p className="text-sm leading-6 text-foreground/80 whitespace-pre-wrap">
-                        {transcript}
-                    </p>
-                </div>
-            )}
-
-            {showIndexedSurface && indexedProps ? (
-                <div className={cn(SURFACE_CLASS_NESTED, "rounded-xl p-3")}>
-                    <IndexedResultSurface
-                        {...indexedProps}
-                        layout="embedded"
-                        expectAudio={saveVoiceLogAudio}
-                        showIndexingBanner
-                        indexingState={indexedJob?.indexing_state ?? null}
-                        glossaryLabels={glossaryLabels}
-                    />
-                    {indexingPending ? (
-                        <p className="mt-2 text-xs text-muted-foreground">
-                            Indexing extraction in the background…
+                {transcript && !showIndexedSurface && (
+                    <div className="space-y-2">
+                        <p className="text-sm font-medium">Transcript</p>
+                        <p className="text-sm leading-6 text-foreground/80 whitespace-pre-wrap">
+                            {transcript}
                         </p>
-                    ) : null}
-                </div>
-            ) : null}
+                    </div>
+                )}
 
-            <div className="flex flex-wrap justify-center gap-3">
+                {showIndexedSurface && indexedProps ? (
+                    <div
+                        className={cn(
+                            SURFACE_CLASS_NESTED,
+                            "min-h-0 flex-1 overflow-y-auto rounded-xl p-3",
+                        )}
+                    >
+                        <IndexedResultSurface
+                            {...indexedProps}
+                            layout="embedded"
+                            expectAudio={saveVoiceLogAudio}
+                            showIndexingBanner
+                            indexingState={indexedJob?.indexing_state ?? null}
+                            glossaryLabels={glossaryLabels}
+                        />
+                        {indexingPending ? (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                                Indexing extraction in the background…
+                            </p>
+                        ) : null}
+                    </div>
+                ) : null}
+            </div>
+
+            <div className="flex shrink-0 flex-wrap justify-center gap-3 pt-1">
                 {canStart && (
                     <Button
                         type="button"
