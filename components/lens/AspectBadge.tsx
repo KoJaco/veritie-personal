@@ -18,9 +18,9 @@ export function AspectBadge({
 
     return (
         <Badge
-            variant="secondary"
+            variant="outline"
             className={cn(
-                "text-[10px] uppercase",
+                "text-[10px] uppercase border-0 shadow-none",
                 aspectBadgeClass(aspect),
                 className,
             )}
