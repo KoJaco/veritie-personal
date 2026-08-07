@@ -104,21 +104,6 @@ function GlobalCaptureLauncherInner() {
         closeUi();
     }, [closeUi]);
 
-    const loadCapturePreferences = useCallback(
-        (generation: number) => {
-            void getCapturePreferences().then((prefs) => {
-                if (openGenerationRef.current !== generation) {
-                    return;
-                }
-
-                const locationLabel = prefs.captureLocationLabel ?? "";
-                setSaveVoiceLogAudio(prefs.saveVoiceLogAudio);
-                setCaptureLocationLabel(locationLabel);
-            });
-        },
-        [],
-    );
-
     const prepareVoiceLease = useCallback(
         (generation: number) => {
             void getCapturePreferences().then((prefs) => {
@@ -147,8 +132,8 @@ function GlobalCaptureLauncherInner() {
         openedAtRef.current = Date.now();
         setOpen(true);
         resetTransientState();
-        loadCapturePreferences(generation);
-    }, [loadCapturePreferences, resetTransientState]);
+        prepareVoiceLease(generation);
+    }, [prepareVoiceLease, resetTransientState]);
 
     const enterVoiceMode = useCallback(() => {
         const generation = openGenerationRef.current;
@@ -175,8 +160,7 @@ function GlobalCaptureLauncherInner() {
 
     const returnToOptions = useCallback(() => {
         resetTransientState();
-        tryReleaseLease();
-    }, [resetTransientState, tryReleaseLease]);
+    }, [resetTransientState]);
 
     const isLauncherTucked = isHydrated && isTucked;
 
