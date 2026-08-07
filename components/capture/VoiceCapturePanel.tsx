@@ -18,6 +18,7 @@ import { enqueueCaptureBackgroundPipeline } from "@/lib/capture/capture-backgrou
 import { captureJobCoordinator } from "@/lib/capture/capture-job-coordinator";
 import {
     fetchCaptureAudioPlaybackUrl,
+    handoffCaptureJobCompletion,
     uploadCaptureAudio,
     uploadCaptureJobAudio,
 } from "@/lib/capture/capture-audio-client";
@@ -824,6 +825,16 @@ export function VoiceCapturePanel({
                 jobId,
                 transcriptLength: transcriptText.length,
                 polls,
+            });
+
+            void handoffCaptureJobCompletion(jobId).catch((handoffError) => {
+                captureFlowLog.error("completion.handoff_failed", {
+                    jobId,
+                    error:
+                        handoffError instanceof Error
+                            ? handoffError.message
+                            : String(handoffError),
+                });
             });
 
             enqueueCaptureBackgroundPipeline({

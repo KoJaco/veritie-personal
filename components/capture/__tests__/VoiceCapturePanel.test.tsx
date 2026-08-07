@@ -11,6 +11,7 @@ const mockRenewLease = jest.fn();
 const mockPrepareLease = jest.fn();
 const mockGetOrPrepareLease = jest.fn();
 const mockEnqueueBackgroundPipeline = jest.fn();
+const mockHandoffCaptureJobCompletion = jest.fn();
 
 jest.mock("sonner", () => ({
     toast: {
@@ -52,6 +53,14 @@ jest.mock("@/lib/capture/live-audio-stream", () => ({
 jest.mock("@/lib/capture/capture-background-pipeline", () => ({
     enqueueCaptureBackgroundPipeline: (...args: unknown[]) =>
         mockEnqueueBackgroundPipeline(...args),
+}));
+
+jest.mock("@/lib/capture/capture-audio-client", () => ({
+    fetchCaptureAudioPlaybackUrl: jest.fn(async () => null),
+    handoffCaptureJobCompletion: (...args: unknown[]) =>
+        mockHandoffCaptureJobCompletion(...args),
+    uploadCaptureAudio: jest.fn(async () => undefined),
+    uploadCaptureJobAudio: jest.fn(async () => undefined),
 }));
 
 jest.mock("@/lib/hooks/useScreenWakeLock", () => ({
@@ -173,6 +182,7 @@ describe("VoiceCapturePanel", () => {
         jest.clearAllMocks();
         mockPrepareLease.mockResolvedValue(captureHandleMock);
         mockGetOrPrepareLease.mockResolvedValue(captureHandleMock);
+        mockHandoffCaptureJobCompletion.mockResolvedValue(undefined);
         mockRenewLease.mockImplementation(() => undefined);
         mockStartCapture.mockImplementation(async (options?: { signal?: AbortSignal }) => {
             if (options?.signal?.aborted) {
@@ -234,6 +244,9 @@ describe("VoiceCapturePanel", () => {
         });
 
         expect(mockGetJob).not.toHaveBeenCalled();
+        expect(mockHandoffCaptureJobCompletion).toHaveBeenCalledWith(
+            "job_voice_test",
+        );
         expect(mockEnqueueBackgroundPipeline).toHaveBeenCalledWith(
             expect.objectContaining({ jobId: "job_voice_test" }),
         );

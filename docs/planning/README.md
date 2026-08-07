@@ -12,6 +12,10 @@ This directory contains active implementation planning that is intended to guide
 
 - `2026-08-03-voice-log-personal-restructure-plan.md`
 
+## Active implementation plans
+
+- `2026-08-07-capture-completion-job-queue-plan.md`
+
 ## Previous initiative (complete)
 
 - `2026-06-08-domain-agnostic-migration-plan.md`

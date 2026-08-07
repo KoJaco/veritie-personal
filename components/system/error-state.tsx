@@ -6,6 +6,10 @@ import { envPublic } from "@/lib/config/env.public";
 
 export interface ErrorStateProps {
     /**
+     * Optional icon override (defaults to AlertCircle)
+     */
+    icon?: LucideIcon;
+    /**
      * Error title (i.e., "Something went wrong")
      */
     title?: string;
@@ -35,6 +39,7 @@ export interface ErrorStateProps {
  * Details are only shown in development mode.
  */
 export function ErrorState({
+    icon: Icon = AlertCircle,
     title = "Something went wrong",
     message,
     action,
@@ -47,7 +52,7 @@ export function ErrorState({
         <div className="flex h-screen flex-col items-center justify-center px-4 py-8">
             <div className="w-full max-w-md space-y-4 text-center">
                 <div className="flex justify-center">
-                    <AlertCircle
+                    <Icon
                         className="h-12 w-12 text-destructive"
                         aria-hidden="true"
                     />
