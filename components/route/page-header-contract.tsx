@@ -13,9 +13,15 @@ export function usePageHeaderContract() {
 export function PageHeaderContractHydrator({
     canOpenAssistant,
     searchItems,
+    headerTitle,
+    headerDescription,
+    suggestionsReady = true,
 }: {
     canOpenAssistant: boolean;
     searchItems: IndexSearchCommandItem[];
+    headerTitle?: string;
+    headerDescription?: string;
+    suggestionsReady?: boolean;
 }) {
     const { hydrateContract } = useAppShellPageHeader();
 
@@ -23,9 +29,18 @@ export function PageHeaderContractHydrator({
         hydrateContract({
             canOpenAssistant,
             searchItems,
-            suggestionsReady: true,
+            suggestionsReady,
+            headerTitle,
+            headerDescription,
         });
-    }, [canOpenAssistant, hydrateContract, searchItems]);
+    }, [
+        canOpenAssistant,
+        headerDescription,
+        headerTitle,
+        hydrateContract,
+        searchItems,
+        suggestionsReady,
+    ]);
 
     return null;
 }

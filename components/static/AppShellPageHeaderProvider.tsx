@@ -16,6 +16,8 @@ export type PageHeaderContractState = {
     canOpenAssistant: boolean;
     searchItems: IndexSearchCommandItem[];
     suggestionsReady: boolean;
+    headerTitle?: string;
+    headerDescription?: string;
 };
 
 const defaultPageHeaderContract: PageHeaderContractState = {
