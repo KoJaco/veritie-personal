@@ -24,6 +24,8 @@ import {
 import {
     createLiveChunkStreamState,
     endLiveAudioStream,
+    flushBufferedLiveChunks,
+    MAX_LIVE_STREAM_BYTES,
     sendLiveAudioChunk,
     type LiveChunkStreamState,
 } from "@/lib/capture/live-audio-stream";
@@ -91,6 +93,7 @@ export function VoiceCapturePanel({
     const [activeJobId, setActiveJobId] = useState<string | null>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [recordingElapsedMs, setRecordingElapsedMs] = useState(0);
+    const [isRecorderLive, setIsRecorderLive] = useState(false);
 
     const recorderRef = useRef<MediaRecorder | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -113,6 +116,10 @@ export function VoiceCapturePanel({
         chunksBytesSent: 0,
     });
     const audioChunksRef = useRef<Blob[]>([]);
+    const pendingChunksRef = useRef<Blob[]>([]);
+    const pendingChunkBytesRef = useRef(0);
+    const micPrewarmRef = useRef<MediaStream | null>(null);
+    const captureInProgressRef = useRef(false);
     const saveVoiceLogAudioRef = useRef(saveVoiceLogAudio);
     saveVoiceLogAudioRef.current = saveVoiceLogAudio;
     const captureLocationLabelRef = useRef(captureLocationLabel);
@@ -143,6 +150,23 @@ export function VoiceCapturePanel({
         phase === "processing";
     useScreenWakeLock(shouldKeepScreenAwake);
 
+    const stopMicPrewarm = useCallback(() => {
+        if (recorderRef.current || captureInProgressRef.current) {
+            return;
+        }
+
+        const prewarmed = micPrewarmRef.current;
+        if (prewarmed) {
+            prewarmed.getTracks().forEach((track) => track.stop());
+            micPrewarmRef.current = null;
+        }
+
+        if (streamRef.current === prewarmed) {
+            streamRef.current = null;
+            setStream(null);
+        }
+    }, []);
+
     const stopLocalRecording = useCallback(() => {
         if (recordingTimerRef.current) {
             clearInterval(recordingTimerRef.current);
@@ -150,6 +174,7 @@ export function VoiceCapturePanel({
         }
         recordingStartedAtRef.current = null;
         setRecordingElapsedMs(0);
+        setIsRecorderLive(false);
 
         const recorder = recorderRef.current;
         if (recorder && recorder.state !== "inactive") {
@@ -163,6 +188,7 @@ export function VoiceCapturePanel({
         }
         streamRef.current = null;
         setStream(null);
+        captureInProgressRef.current = false;
     }, []);
 
     const closeLiveSession = useCallback(() => {
@@ -173,6 +199,8 @@ export function VoiceCapturePanel({
         liveSessionRef.current = null;
         chunkStreamStateRef.current = createLiveChunkStreamState();
         chunkSendChainRef.current = Promise.resolve();
+        pendingChunksRef.current = [];
+        pendingChunkBytesRef.current = 0;
     }, []);
 
     const abortOpenWork = useCallback(() => {
@@ -230,6 +258,38 @@ export function VoiceCapturePanel({
         });
     }, [activeJobId]);
 
+    useEffect(() => {
+        if (leasePhase !== "preparing" && leasePhase !== "ready") {
+            return;
+        }
+        if (phase !== "ready") {
+            return;
+        }
+        if (!navigator.mediaDevices?.getUserMedia) {
+            return;
+        }
+
+        let cancelled = false;
+
+        void navigator.mediaDevices.getUserMedia({ audio: true }).then((mediaStream) => {
+            if (cancelled || !mountedRef.current) {
+                mediaStream.getTracks().forEach((track) => track.stop());
+                return;
+            }
+
+            micPrewarmRef.current = mediaStream;
+            streamRef.current = mediaStream;
+            setStream(mediaStream);
+        });
+
+        return () => {
+            cancelled = true;
+            if (!captureInProgressRef.current) {
+                stopMicPrewarm();
+            }
+        };
+    }, [leasePhase, phase, stopMicPrewarm]);
+
     const startCapture = useCallback(async () => {
         if (leasePhase === "preparing" || !captureHandle) {
             return;
@@ -243,7 +303,8 @@ export function VoiceCapturePanel({
         setAudioPlaybackUrl(null);
         setActiveJobId(null);
         audioChunksRef.current = [];
-        setPhase("requesting_microphone");
+        pendingChunksRef.current = [];
+        pendingChunkBytesRef.current = 0;
 
         const openController = new AbortController();
         openAbortRef.current = openController;
@@ -251,6 +312,10 @@ export function VoiceCapturePanel({
 
         const handle = captureHandle;
         activeCaptureHandleRef.current = handle;
+        const jobId = handle.snapshot.jobId;
+        const prewarmedStream = micPrewarmRef.current;
+        micPrewarmRef.current = null;
+        captureInProgressRef.current = true;
 
         try {
             if (!navigator.mediaDevices?.getUserMedia) {
@@ -258,54 +323,181 @@ export function VoiceCapturePanel({
             }
 
             resetDiagnostics({
-                jobId: handle.snapshot.jobId,
+                jobId,
                 leasePhase,
             });
             captureFlowLog.info("capture.start", {
-                jobId: handle.snapshot.jobId,
+                jobId,
                 leasePhase,
             });
 
-            setStatusLine("Opening live session…");
-            const liveSession = await handle.startCapture({
+            recordingStartedAtRef.current = Date.now();
+            setPhase("recording");
+            recordingTimerRef.current = setInterval(() => {
+                const startedAt = recordingStartedAtRef.current;
+                if (!startedAt) return;
+                const elapsed = Date.now() - startedAt;
+                setRecordingElapsedMs(elapsed);
+                if (elapsed >= MAX_RECORDING_MS) {
+                    void finishCaptureRef.current?.();
+                }
+            }, 500);
+
+            const handleChunkSendError = (chunkError: unknown) => {
+                captureFlowLog.error("chunk.send_failed", {
+                    jobId,
+                    error:
+                        chunkError instanceof Error
+                            ? chunkError.message
+                            : String(chunkError),
+                });
+                if (!mountedRef.current) return;
+                setError(
+                    chunkError instanceof Error
+                        ? chunkError.message
+                        : "Failed to stream audio chunk.",
+                );
+                setPhase("failed");
+                stopLocalRecording();
+                closeLiveSession();
+                renewLease();
+            };
+
+            const enqueuePendingChunk = (data: Blob) => {
+                if (data.size === 0) {
+                    return;
+                }
+                if (
+                    pendingChunkBytesRef.current + data.size >
+                    MAX_LIVE_STREAM_BYTES
+                ) {
+                    throw new Error(
+                        "Recording exceeded the maximum live stream size.",
+                    );
+                }
+                pendingChunksRef.current.push(data);
+                pendingChunkBytesRef.current += data.size;
+            };
+
+            const scheduleChunkSend = (data: Blob) => {
+                if (data.size === 0) {
+                    return;
+                }
+
+                diagnosticsRef.current.dataAvailableBytes =
+                    (diagnosticsRef.current.dataAvailableBytes ?? 0) + data.size;
+
+                if (saveVoiceLogAudioRef.current) {
+                    audioChunksRef.current.push(data);
+                }
+
+                captureFlowLog.debug("recorder.dataavailable", {
+                    jobId,
+                    bytes: data.size,
+                    buffered: !liveSessionRef.current,
+                });
+
+                if (!liveSessionRef.current) {
+                    enqueuePendingChunk(data);
+                    return;
+                }
+
+                chunkSendChainRef.current = chunkSendChainRef.current
+                    .then(async () => {
+                        if (!liveSessionRef.current) {
+                            enqueuePendingChunk(data);
+                            return;
+                        }
+                        const before = chunkStreamStateRef.current;
+                        chunkStreamStateRef.current = await sendLiveAudioChunk(
+                            liveSessionRef.current,
+                            chunkStreamStateRef.current,
+                            data,
+                        );
+                        if (chunkStreamStateRef.current.sequence > before.sequence) {
+                            diagnosticsRef.current.chunksSent =
+                                chunkStreamStateRef.current.sequence;
+                            diagnosticsRef.current.chunksBytesSent =
+                                chunkStreamStateRef.current.offsetBytes;
+                        }
+                    })
+                    .catch(handleChunkSendError);
+            };
+
+            const attachLiveSession = (liveSession: LiveJobSession) => {
+                liveSessionRef.current = liveSession;
+                diagnosticsRef.current.sessionId = liveSession.sessionId;
+                chunkStreamStateRef.current = createLiveChunkStreamState();
+                chunkSendChainRef.current = Promise.resolve();
+
+                captureFlowLog.info("live.session.opened", {
+                    jobId,
+                    sessionId: liveSession.sessionId,
+                });
+
+                const pending = pendingChunksRef.current;
+                pendingChunksRef.current = [];
+                pendingChunkBytesRef.current = 0;
+
+                if (pending.length === 0) {
+                    return;
+                }
+
+                chunkSendChainRef.current = chunkSendChainRef.current
+                    .then(async () => {
+                        const before = chunkStreamStateRef.current;
+                        chunkStreamStateRef.current = await flushBufferedLiveChunks(
+                            liveSession,
+                            chunkStreamStateRef.current,
+                            pending,
+                        );
+                        if (chunkStreamStateRef.current.sequence > before.sequence) {
+                            diagnosticsRef.current.chunksSent =
+                                chunkStreamStateRef.current.sequence;
+                            diagnosticsRef.current.chunksBytesSent =
+                                chunkStreamStateRef.current.offsetBytes;
+                        }
+                    })
+                    .catch(handleChunkSendError);
+            };
+
+            const sessionPromise = handle.startCapture({
                 signal: openSignal,
             });
-            if (!mountedRef.current || openSignal.aborted) {
-                liveSession.close(1000, "aborted");
-                return;
-            }
 
-            // Session is open — do not abort openSignal during finalize (closes WebSocket).
-            openAbortRef.current = null;
+            const micPromise = prewarmedStream
+                ? Promise.resolve(prewarmedStream)
+                : navigator.mediaDevices.getUserMedia({ audio: true });
 
-            liveSessionRef.current = liveSession;
-            diagnosticsRef.current.sessionId = liveSession.sessionId;
-            chunkStreamStateRef.current = createLiveChunkStreamState();
-            chunkSendChainRef.current = Promise.resolve();
+            const mediaStream = await micPromise;
 
-            captureFlowLog.info("live.session.opened", {
-                jobId: handle.snapshot.jobId,
-                sessionId: liveSession.sessionId,
-            });
-
-            const mediaStream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
-            });
             if (!mountedRef.current || openSignal.aborted) {
                 mediaStream.getTracks().forEach((track) => track.stop());
+                captureInProgressRef.current = false;
                 return;
             }
 
             streamRef.current = mediaStream;
             setStream(mediaStream);
 
-            const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-                ? "audio/webm"
-                : "";
+            const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+                ? "audio/webm;codecs=opus"
+                : MediaRecorder.isTypeSupported("audio/webm")
+                  ? "audio/webm"
+                  : "";
             const recorder = mimeType
                 ? new MediaRecorder(mediaStream, { mimeType })
                 : new MediaRecorder(mediaStream);
             diagnosticsRef.current.recorderMimeType = recorder.mimeType;
+
+            const liveTracks = mediaStream
+                .getAudioTracks()
+                .filter((track) => track.readyState === "live");
+            if (liveTracks.length === 0) {
+                throw new Error(
+                    "Microphone is not available. Check permissions and try again.",
+                );
+            }
 
             recorder.ondataavailable = (event) => {
                 diagnosticsRef.current.dataAvailableEvents =
@@ -315,68 +507,17 @@ export function VoiceCapturePanel({
                     diagnosticsRef.current.dataAvailableEmpty =
                         (diagnosticsRef.current.dataAvailableEmpty ?? 0) + 1;
                     captureFlowLog.debug("recorder.dataavailable.empty", {
-                        jobId: handle.snapshot.jobId,
+                        jobId,
                         recorderState: recorder.state,
                     });
                     return;
                 }
 
-                if (!liveSessionRef.current) {
-                    captureFlowLog.warn("recorder.dataavailable.no_session", {
-                        jobId: handle.snapshot.jobId,
-                        bytes: event.data.size,
-                    });
-                    return;
+                try {
+                    scheduleChunkSend(event.data);
+                } catch (chunkError) {
+                    handleChunkSendError(chunkError);
                 }
-
-                diagnosticsRef.current.dataAvailableBytes =
-                    (diagnosticsRef.current.dataAvailableBytes ?? 0) + event.data.size;
-
-                if (saveVoiceLogAudioRef.current) {
-                    audioChunksRef.current.push(event.data);
-                }
-
-                captureFlowLog.debug("recorder.dataavailable", {
-                    jobId: handle.snapshot.jobId,
-                    bytes: event.data.size,
-                    recorderState: recorder.state,
-                });
-
-                chunkSendChainRef.current = chunkSendChainRef.current
-                    .then(async () => {
-                        if (!liveSessionRef.current) return;
-                        const before = chunkStreamStateRef.current;
-                        chunkStreamStateRef.current = await sendLiveAudioChunk(
-                            liveSessionRef.current,
-                            chunkStreamStateRef.current,
-                            event.data,
-                        );
-                        if (chunkStreamStateRef.current.sequence > before.sequence) {
-                            diagnosticsRef.current.chunksSent =
-                                chunkStreamStateRef.current.sequence;
-                            diagnosticsRef.current.chunksBytesSent =
-                                chunkStreamStateRef.current.offsetBytes;
-                        }
-                    })
-                    .catch((chunkError) => {
-                        captureFlowLog.error("chunk.send_failed", {
-                            jobId: handle.snapshot.jobId,
-                            error:
-                                chunkError instanceof Error
-                                    ? chunkError.message
-                                    : String(chunkError),
-                        });
-                        if (!mountedRef.current) return;
-                        setError(
-                            chunkError instanceof Error
-                                ? chunkError.message
-                                : "Failed to stream audio chunk.",
-                        );
-                        setPhase("failed");
-                        stopLocalRecording();
-                        closeLiveSession();
-                        renewLease();
-                    });
             };
             recorder.onerror = () => {
                 if (!mountedRef.current) return;
@@ -389,25 +530,48 @@ export function VoiceCapturePanel({
 
             recorder.start(250);
             recorderRef.current = recorder;
-            recordingStartedAtRef.current = Date.now();
+            setIsRecorderLive(true);
             captureFlowLog.info("recorder.started", {
-                jobId: handle.snapshot.jobId,
+                jobId,
                 mimeType: recorder.mimeType,
                 timesliceMs: 250,
             });
-            recordingTimerRef.current = setInterval(() => {
-                const startedAt = recordingStartedAtRef.current;
-                if (!startedAt) return;
-                const elapsed = Date.now() - startedAt;
-                setRecordingElapsedMs(elapsed);
-                if (elapsed >= MAX_RECORDING_MS) {
-                    void finishCaptureRef.current?.();
-                }
-            }, 500);
-            setStatusLine(null);
-            setPhase("recording");
+
+            sessionPromise
+                .then((liveSession) => {
+                    if (!mountedRef.current || openSignal.aborted) {
+                        liveSession.close(1000, "aborted");
+                        return;
+                    }
+
+                    openAbortRef.current = null;
+                    attachLiveSession(liveSession);
+                })
+                .catch((sessionError) => {
+                    if (!mountedRef.current || openSignal.aborted) {
+                        return;
+                    }
+                    captureInProgressRef.current = false;
+                    stopLocalRecording();
+                    closeLiveSession();
+                    captureFlowLog.error("capture.start_failed", {
+                        jobId,
+                        error:
+                            sessionError instanceof Error
+                                ? sessionError.message
+                                : String(sessionError),
+                    });
+                    setError(
+                        sessionError instanceof Error
+                            ? sessionError.message
+                            : "Failed to open live session.",
+                    );
+                    setPhase("failed");
+                    renewLease();
+                });
         } catch (captureError) {
             if (!mountedRef.current || openController.signal.aborted) return;
+            captureInProgressRef.current = false;
             stopLocalRecording();
             closeLiveSession();
             captureFlowLog.error("capture.start_failed", {
@@ -627,7 +791,9 @@ export function VoiceCapturePanel({
 
     const cancelCapture = useCallback(() => {
         abortInFlightWork();
+        captureInProgressRef.current = false;
         stopLocalRecording();
+        stopMicPrewarm();
         setError(null);
         setStatusLine(null);
         setTranscript(null);
@@ -637,17 +803,28 @@ export function VoiceCapturePanel({
         audioChunksRef.current = [];
         setPhase("ready");
         renewLease();
-    }, [abortInFlightWork, renewLease, stopLocalRecording]);
+        const metadata = buildCaptureJobMetadata({
+            capturedAt: new Date().toISOString(),
+            locationLabel: captureLocationLabelRef.current,
+        });
+        void prepareLease(metadata).catch(() => {
+            // Errors surface via leaseError.
+        });
+    }, [abortInFlightWork, prepareLease, renewLease, stopLocalRecording, stopMicPrewarm]);
 
     const handleBack = useCallback(() => {
         abortInFlightWork();
+        captureInProgressRef.current = false;
         stopLocalRecording();
+        stopMicPrewarm();
         onBack();
-    }, [abortInFlightWork, onBack, stopLocalRecording]);
+    }, [abortInFlightWork, onBack, stopLocalRecording, stopMicPrewarm]);
 
     const waveformMode =
         phase === "recording"
-            ? "active"
+            ? isRecorderLive
+                ? "active"
+                : "passive"
             : phase === "processing" || phase === "requesting_microphone"
                 ? "passive"
                 : "idle";

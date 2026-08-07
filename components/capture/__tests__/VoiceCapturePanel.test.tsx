@@ -33,7 +33,19 @@ jest.mock("@/lib/capture/live-audio-stream", () => ({
         offsetBytes: 5,
         chunks: [new Uint8Array([1, 2, 3, 4, 5])],
     })),
+    flushBufferedLiveChunks: jest.fn(
+        async (
+            _session,
+            state: { sequence: number; offsetBytes: number; chunks: Uint8Array[] },
+            chunks: Blob[],
+        ) => ({
+            sequence: state.sequence + chunks.length,
+            offsetBytes: state.offsetBytes + chunks.length * 5,
+            chunks: state.chunks,
+        }),
+    ),
     endLiveAudioStream: jest.fn(async () => undefined),
+    MAX_LIVE_STREAM_BYTES: 8 * 1024 * 1024,
 }));
 
 jest.mock("@/lib/capture/capture-background-pipeline", () => ({
@@ -47,7 +59,7 @@ jest.mock("@/lib/hooks/useScreenWakeLock", () => ({
 
 import { useScreenWakeLock } from "@/lib/hooks/useScreenWakeLock";
 
-import { endLiveAudioStream } from "@/lib/capture/live-audio-stream";
+import { endLiveAudioStream, flushBufferedLiveChunks } from "@/lib/capture/live-audio-stream";
 import { VoiceCapturePanel } from "@/components/capture/VoiceCapturePanel";
 
 const liveSessionMock = {
@@ -78,7 +90,9 @@ const transcriptReadyJob = {
 };
 
 class MockMediaRecorder {
-    static isTypeSupported = jest.fn(() => true);
+    static isTypeSupported = jest.fn((mimeType: string) =>
+        mimeType === "audio/webm" || mimeType === "audio/webm;codecs=opus",
+    );
     state = "recording";
     mimeType = "audio/webm";
     ondataavailable: ((event: { data: Blob }) => void) | null = null;
@@ -170,9 +184,13 @@ describe("VoiceCapturePanel", () => {
         Object.defineProperty(global.navigator, "mediaDevices", {
             configurable: true,
             value: {
-                getUserMedia: jest.fn(async () => ({
-                    getTracks: () => [{ stop: trackStop }],
-                })),
+                getUserMedia: jest.fn(async () => {
+                    const track = { stop: trackStop, readyState: "live" };
+                    return {
+                        getTracks: () => [track],
+                        getAudioTracks: () => [track],
+                    };
+                }),
             },
         });
 
@@ -379,5 +397,60 @@ describe("VoiceCapturePanel", () => {
         expect(onBack).toHaveBeenCalled();
         expect(liveSessionMock.close).toHaveBeenCalled();
         expect(trackStop).toHaveBeenCalled();
+    });
+
+    it("shows Stop immediately after Start before the live session resolves", async () => {
+        let resolveSession:
+            | ((value: typeof liveSessionMock) => void)
+            | undefined;
+        mockStartCapture.mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    resolveSession = resolve;
+                }),
+        );
+
+        renderPanel();
+
+        fireEvent.click(screen.getByRole("button", { name: /start recording/i }));
+
+        expect(screen.getByRole("button", { name: /stop/i })).toBeInTheDocument();
+        expect(resolveSession).toBeDefined();
+
+        resolveSession?.(liveSessionMock);
+        await waitFor(() => {
+            expect(flushBufferedLiveChunks).toHaveBeenCalled();
+        });
+    });
+
+    it("buffers recorder chunks until the live session is ready", async () => {
+        let resolveSession:
+            | ((value: typeof liveSessionMock) => void)
+            | undefined;
+        mockStartCapture.mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    resolveSession = resolve;
+                }),
+        );
+
+        renderPanel();
+
+        fireEvent.click(screen.getByRole("button", { name: /start recording/i }));
+        await waitFor(() => {
+            expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalled();
+        });
+
+        resolveSession?.(liveSessionMock);
+
+        await waitFor(() => {
+            expect(flushBufferedLiveChunks).toHaveBeenCalledWith(
+                liveSessionMock,
+                expect.objectContaining({ sequence: 0 }),
+                expect.arrayContaining([
+                    expect.objectContaining({ type: "audio/webm" }),
+                ]),
+            );
+        });
     });
 });
