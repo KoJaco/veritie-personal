@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AspectBadge } from "@/components/lens/AspectBadge";
 import { Badge } from "@/components/ui/badge";
 import type { TimelineIndexItem } from "@/lib/data-source/timeline-read-model";
 import { cn } from "@/lib/utils";
@@ -30,9 +31,7 @@ export function TimelineEventRow({
             <div className="flex items-center justify-between gap-1.5">
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="secondary" className="text-[10px] uppercase">
-                        {item.aspect}
-                    </Badge>
+                    <AspectBadge aspect={item.aspect} />
                     <Badge variant="outline" className="text-[10px] uppercase">
                         {item.type.replace(/_/g, " ")}
                     </Badge>

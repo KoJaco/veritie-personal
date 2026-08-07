@@ -18,6 +18,7 @@ import { parseExtractedValueId } from "@/lib/capture/extracted-value-path";
 import { flattenExtractedValueAttributes } from "@/lib/capture/flatten-extracted-value";
 import { resolveExtractedFieldQuote } from "@/lib/capture/resolve-extracted-field-quote";
 import { Badge } from "@/components/ui/badge";
+import { AspectBadge } from "@/components/lens/AspectBadge";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -50,9 +51,7 @@ function TimelineDetailHeaderBadges({
 }) {
     return (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <Badge variant="secondary" className="text-[10px] uppercase">
-                {aspect}
-            </Badge>
+            <AspectBadge aspect={aspect} />
             <Badge variant="outline" className="text-[10px] uppercase">
                 {eventType.replace(/_/g, " ")}
             </Badge>

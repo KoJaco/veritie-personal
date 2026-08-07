@@ -1,8 +1,9 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { CheckIcon, ChevronDownIcon, SquareCheckBig } from "lucide-react";
+import { ChevronDownIcon, LayoutGrid, SquareCheckBig } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { AspectBadge } from "@/components/lens/AspectBadge";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -23,7 +24,6 @@ import { Separator } from "@/components/ui/separator";
 import { useIsMobileViewport } from "@/lib/hooks/useIsMobileViewport";
 import {
     buildLensPrefetchHrefs,
-    formatLensLabel,
     scopeBadgeClass,
     scopeKeyFromLens,
     getLensFromSearchParams,
@@ -32,6 +32,7 @@ import {
     type ScopeLens,
     withLens,
 } from "@/lib/lens";
+import { getAspectIcon } from "@/lib/aspect/aspect-ui";
 import { cn } from "@/lib/utils";
 
 function ScopeSelector({
@@ -50,14 +51,20 @@ function ScopeSelector({
                     className="h-auto justify-start rounded-xl px-4 py-3 text-left"
                     onClick={() => setDraft(normalizeLens({ scope: "all" }))}
                 >
-                    <div>
-                        <div className="font-semibold">All aspects</div>
-                        <p className="mt-1 text-xs opacity-70">
-                            Cross-surface view of timeline, tasks, records, and resources.
-                        </p>
+                    <div className="flex items-start gap-3">
+                        <LayoutGrid className="mt-0.5 size-4 shrink-0 opacity-70" />
+                        <div>
+                            <div className="font-semibold">All aspects</div>
+                            <p className="mt-1 text-xs opacity-70">
+                                Cross-surface view of timeline, tasks, records, and
+                                resources.
+                            </p>
+                        </div>
                     </div>
                 </Button>
-                {SCOPE_DEFINITIONS.map((scope) => (
+                {SCOPE_DEFINITIONS.map((scope) => {
+                    const Icon = getAspectIcon(scope.id);
+                    return (
                     <Button
                         key={scope.id}
                         type="button"
@@ -65,14 +72,18 @@ function ScopeSelector({
                         className="h-auto justify-start rounded-xl px-4 py-3 text-left"
                         onClick={() => setDraft(normalizeLens({ scope: scope.id }))}
                     >
-                        <div>
-                            <div className="font-semibold">{scope.label}</div>
-                            <p className="mt-1 text-xs opacity-70">
-                                {scope.description}
-                            </p>
+                        <div className="flex items-start gap-3">
+                            <Icon className="mt-0.5 size-4 shrink-0 opacity-70" />
+                            <div>
+                                <div className="font-semibold">{scope.label}</div>
+                                <p className="mt-1 text-xs opacity-70">
+                                    {scope.description}
+                                </p>
+                            </div>
                         </div>
                     </Button>
-                ))}
+                    );
+                })}
             </div>
         </section>
     );
@@ -167,18 +178,18 @@ function UrlLensDialogControlInner() {
             >
                 <span>Aspect</span>
                 {badgeKey ? (
+                    <AspectBadge
+                        aspect={badgeKey}
+                        className="hidden sm:inline-flex"
+                    />
+                ) : (
                     <Badge
-                        variant="outline"
+                        variant="default"
                         className={cn("hidden sm:inline-flex", scopeBadgeClass(badgeKey))}
                     >
-                        {formatLensLabel(lens)}
+                        All aspects
                     </Badge>
-                ) : <Badge
-                    variant="default"
-                    className={cn("hidden sm:inline-flex", scopeBadgeClass(badgeKey))}
-                >
-                    All aspects
-                </Badge>}
+                )}
                 <ChevronDownIcon className="h-4 w-4" />
             </Button>
             <ScopeLensBody
