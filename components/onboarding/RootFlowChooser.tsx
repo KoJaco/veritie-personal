@@ -22,7 +22,6 @@ export function RootFlowChooser() {
                 onClick={() => router.push("/auth/login")}
             >
                 Sign in
-                <LogIn className="h-4 w-4" />
             </Button>
         </div>
     );
