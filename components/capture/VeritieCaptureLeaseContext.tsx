@@ -34,6 +34,7 @@ type VeritieCaptureLeaseContextValue = {
     pipelineConfig: PipelineDisplayConfigV1 | null;
     extractionConfig: PipelineExtractionConfig;
     prepareLease: (metadata: CaptureJobMetadata) => Promise<PipelineHandle>;
+    getOrPrepareLease: (metadata: CaptureJobMetadata) => Promise<PipelineHandle>;
     renewLease: () => void;
     releaseLease: () => void;
 };
@@ -68,6 +69,11 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
         PipelineDisplayConfigV1 | null
     >(() => getCachedClientPipelineConfig(pipelineCacheKey));
     const prepareGenerationRef = useRef(0);
+    const captureHandleRef = useRef<PipelineHandle | null>(null);
+    const pendingPrepareRef = useRef<{
+        generation: number;
+        promise: Promise<PipelineHandle>;
+    } | null>(null);
     const pipelineConfigFetchStartedRef = useRef(false);
 
     const extractionConfig = useMemo(
@@ -106,10 +112,13 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
     }, [getPipelineConfig, pipelineCacheKey]);
 
     const releaseLease = useCallback(() => {
-        const jobId = captureHandle?.snapshot.jobId;
+        const handle = captureHandleRef.current ?? captureHandle;
+        const jobId = handle?.snapshot.jobId;
         captureFlowLog.info("lease.release", { jobId });
         prepareGenerationRef.current += 1;
-        captureHandle?.close();
+        pendingPrepareRef.current = null;
+        captureHandleRef.current = null;
+        handle?.close();
         veritie.clearPreparedHandle();
         setCaptureHandle(null);
         setLeasePhase("idle");
@@ -117,67 +126,108 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
     }, [captureHandle, veritie]);
 
     const prepareLease = useCallback(
-        async (metadata: CaptureJobMetadata): Promise<PipelineHandle> => {
+        (metadata: CaptureJobMetadata): Promise<PipelineHandle> => {
             const generation = prepareGenerationRef.current + 1;
             prepareGenerationRef.current = generation;
             setLeasePhase("preparing");
             setLeaseError(null);
 
-            captureHandle?.close();
+            const previousHandle = captureHandleRef.current ?? captureHandle;
+            previousHandle?.close();
             veritie.clearPreparedHandle();
+            captureHandleRef.current = null;
             setCaptureHandle(null);
 
-            try {
-                captureFlowLog.info("lease.prepare.start", {
-                    captured_at: metadata.captured_at,
-                    timezone: metadata.timezone,
-                    locale: metadata.locale,
-                    has_location_label: Boolean(metadata.location_label),
-                });
-                const handle = await veritie.prepareCapture(
-                    {
-                        audio_content_type: "audio/webm",
-                        metadata,
-                    },
-                    { transportPolicy: "live_only" },
-                );
+            const promise = (async () => {
+                try {
+                    captureFlowLog.info("lease.prepare.start", {
+                        captured_at: metadata.captured_at,
+                        timezone: metadata.timezone,
+                        locale: metadata.locale,
+                        has_location_label: Boolean(metadata.location_label),
+                    });
+                    const handle = await veritie.prepareCapture(
+                        {
+                            audio_content_type: "audio/webm",
+                            metadata,
+                        },
+                        { transportPolicy: "live_only" },
+                    );
 
-                if (prepareGenerationRef.current !== generation) {
-                    handle.close();
-                    throw new Error("Capture lease preparation was superseded");
+                    if (prepareGenerationRef.current !== generation) {
+                        handle.close();
+                        throw new Error("Capture lease preparation was superseded");
+                    }
+
+                    setCaptureHandle(handle);
+                    captureHandleRef.current = handle;
+                    setLeasePhase("ready");
+                    captureFlowLog.info("lease.prepare.ready", {
+                        jobId: handle.snapshot.jobId,
+                        sessionId: handle.snapshot.bootstrap.stream_ingest?.session_id,
+                    });
+                    return handle;
+                } catch (error) {
+                    if (prepareGenerationRef.current !== generation) {
+                        throw new Error("Capture lease preparation was superseded");
+                    }
+
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "Failed to prepare Veritie capture lease";
+                    setLeaseError(message);
+                    setLeasePhase("error");
+                    captureFlowLog.error("lease.prepare.failed", { error: message });
+                    throw error instanceof Error ? error : new Error(message);
                 }
+            })();
 
-                setCaptureHandle(handle);
-                setLeasePhase("ready");
-                captureFlowLog.info("lease.prepare.ready", {
-                    jobId: handle.snapshot.jobId,
-                    sessionId: handle.snapshot.bootstrap.stream_ingest?.session_id,
-                });
-                return handle;
-            } catch (error) {
-                if (prepareGenerationRef.current !== generation) {
-                    throw new Error("Capture lease preparation was superseded");
-                }
+            pendingPrepareRef.current = { generation, promise };
+            void promise.then(
+                () => {
+                    if (pendingPrepareRef.current?.generation === generation) {
+                        pendingPrepareRef.current = null;
+                    }
+                },
+                () => {
+                    if (pendingPrepareRef.current?.generation === generation) {
+                        pendingPrepareRef.current = null;
+                    }
+                },
+            );
 
-                const message =
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to prepare Veritie capture lease";
-                setLeaseError(message);
-                setLeasePhase("error");
-                captureFlowLog.error("lease.prepare.failed", { error: message });
-                throw error instanceof Error ? error : new Error(message);
-            }
+            return promise;
         },
         [captureHandle, veritie],
     );
 
+    const getOrPrepareLease = useCallback(
+        (metadata: CaptureJobMetadata): Promise<PipelineHandle> => {
+            if (captureHandleRef.current) {
+                return Promise.resolve(captureHandleRef.current);
+            }
+
+            const pendingPrepare = pendingPrepareRef.current;
+            if (pendingPrepare) {
+                return pendingPrepare.promise;
+            }
+
+            return prepareLease(metadata);
+        },
+        [prepareLease],
+    );
+
     const renewLease = useCallback(() => {
+        const handle = captureHandleRef.current ?? captureHandle;
         captureFlowLog.info("lease.renew", {
-            jobId: captureHandle?.snapshot.jobId,
+            jobId: handle?.snapshot.jobId,
         });
-        captureHandle?.close();
+        handle?.close();
         veritie.clearPreparedHandle();
+        prepareGenerationRef.current += 1;
+        pendingPrepareRef.current = null;
+        captureHandleRef.current = null;
         setCaptureHandle(null);
         setLeasePhase("idle");
         setLeaseError(null);
@@ -192,6 +242,7 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
             pipelineConfig,
             extractionConfig,
             prepareLease,
+            getOrPrepareLease,
             renewLease,
             releaseLease,
         }),
@@ -203,6 +254,7 @@ export function VeritieCaptureLeaseProvider({ children }: { children: ReactNode 
             pipelineConfig,
             extractionConfig,
             prepareLease,
+            getOrPrepareLease,
             renewLease,
             releaseLease,
         ],

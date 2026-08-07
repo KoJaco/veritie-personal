@@ -77,7 +77,7 @@ function GlobalCaptureLauncherInner() {
     const openedAtRef = useRef(0);
     const openGenerationRef = useRef(0);
 
-    const { releaseLease, captureHandle, prepareLease, leasePhase } =
+    const { releaseLease, captureHandle, getOrPrepareLease, leasePhase } =
         useVeritieCaptureLease();
     const [saveVoiceLogAudio, setSaveVoiceLogAudio] = useState(false);
     const [captureLocationLabel, setCaptureLocationLabel] = useState("");
@@ -122,12 +122,12 @@ function GlobalCaptureLauncherInner() {
                     capturedAt: new Date().toISOString(),
                     locationLabel,
                 });
-                void prepareLease(metadata).catch(() => {
+                void getOrPrepareLease(metadata).catch(() => {
                     // Lease errors surface via leasePhase/leaseError in the voice panel.
                 });
             });
         },
-        [prepareLease],
+        [getOrPrepareLease],
     );
 
     const openLauncher = useCallback(() => {

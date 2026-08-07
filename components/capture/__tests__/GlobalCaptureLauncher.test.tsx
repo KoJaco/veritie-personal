@@ -89,6 +89,7 @@ jest.mock("@/components/capture/VeritieCaptureLeaseContext", () => {
             pipelineConfig: null,
             extractionConfig: {},
             prepareLease: mockPrepareLease,
+            getOrPrepareLease: mockPrepareLease,
             renewLease: jest.fn(),
             releaseLease: mockReleaseLease,
         }),

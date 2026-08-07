@@ -28,6 +28,7 @@ export function VoiceCaptureLauncherPanel({
         leasePhase,
         leaseError,
         prepareLease,
+        getOrPrepareLease,
         renewLease,
         extractionConfig,
     } = useVeritieCaptureLease();
@@ -39,6 +40,7 @@ export function VoiceCaptureLauncherPanel({
             leasePhase={leasePhase}
             leaseError={leaseError}
             prepareLease={prepareLease}
+            getOrPrepareLease={getOrPrepareLease}
             renewLease={renewLease}
             embedded
             onBack={onBack}
