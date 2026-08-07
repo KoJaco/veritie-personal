@@ -177,7 +177,12 @@ export function buildLensPrefetchHrefs(lens: ScopeLens): string[] {
     const normalized = normalizeLens(lens);
     return [
         withLens("/timeline", normalized),
+        withLens("/captures", normalized),
+        withLens("/events", normalized),
+        withLens("/reminders", normalized),
         withLens("/tasks", normalized),
+        withLens("/goals", normalized),
+        withLens("/money", normalized),
         withLens("/records", normalized),
         withLens("/resources", normalized),
     ];

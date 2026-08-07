@@ -32,6 +32,8 @@ interface BreadcrumbCrumb {
 const ROUTE_MAP: Record<string, string> = {
     timeline: "Timeline",
     captures: "Captures",
+    events: "Events",
+    reminders: "Reminders",
     tasks: "Tasks",
     records: "Records",
     resources: "Resources",
