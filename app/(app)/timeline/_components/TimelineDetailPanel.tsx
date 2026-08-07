@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import type { TimelineIndexItem } from "@/lib/data-source/timeline-read-model";
 import type { TimelineEventDetailReadModel } from "@/lib/data-source/timeline-read-model";
 import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-model";
@@ -15,6 +15,8 @@ import {
 import { ExtractedValueEditorTrigger } from "@/components/extraction/ExtractedValueEditorSheet";
 import { ExtractedValueFieldsList } from "@/components/extraction/ExtractedValueFieldsList";
 import { parseExtractedValueId } from "@/lib/capture/extracted-value-path";
+import { flattenExtractedValueAttributes } from "@/lib/capture/flatten-extracted-value";
+import { resolveExtractedFieldQuote } from "@/lib/capture/resolve-extracted-field-quote";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,6 +84,16 @@ function TimelineDetailBody({
     onReviewUpdated?: (nextState: ReviewState) => void;
     onDetailRefresh?: () => void;
 }) {
+    const [activeFieldKey, setActiveFieldKey] = useState<string | null>(null);
+    const [activeHighlightQuote, setActiveHighlightQuote] = useState<
+        string | null
+    >(null);
+
+    useEffect(() => {
+        setActiveFieldKey(null);
+        setActiveHighlightQuote(null);
+    }, [selectedItem.id, loadedDetail?.event.id]);
+
     if (error) {
         return <p className="text-sm text-destructive">{error}</p>;
     }
@@ -113,6 +125,39 @@ function TimelineDetailBody({
     const summary =
         loadedDetail.event.summary ?? selectedItem.summary ?? undefined;
 
+    const extractedValueId =
+        loadedDetail.event.extractedValueId ?? selectedItem.extractedValueId;
+
+    const handleFieldActivate = (
+        fieldKey: string,
+        quoteHint: string | null,
+    ) => {
+        if (!loadedDetail.extractedValue) {
+            return;
+        }
+
+        const attributes = flattenExtractedValueAttributes(
+            loadedDetail.extractedValue,
+        );
+        const fieldValue = attributes[fieldKey];
+        const quote =
+            resolveExtractedFieldQuote({
+                fieldKey,
+                fieldValue,
+                captureDetail,
+                extractedValueId,
+            }) ?? quoteHint;
+
+        if (activeFieldKey === fieldKey) {
+            setActiveFieldKey(null);
+            setActiveHighlightQuote(null);
+            return;
+        }
+
+        setActiveFieldKey(fieldKey);
+        setActiveHighlightQuote(quote);
+    };
+
     return (
         <div className="space-y-4">
             {summary && (
@@ -139,10 +184,7 @@ function TimelineDetailBody({
                     </div>
                     <CaptureTranscriptPreview
                         detail={captureDetail}
-                        highlightExtractedValueId={
-                            loadedDetail.event.extractedValueId ??
-                            selectedItem.extractedValueId
-                        }
+                        activeHighlightQuote={activeHighlightQuote}
                     />
                 </section>
             )}
@@ -167,6 +209,8 @@ function TimelineDetailBody({
                     <ExtractedValueFieldsList
                         extractedValue={loadedDetail.extractedValue}
                         glossaryLabels={glossaryLabels}
+                        onFieldActivate={handleFieldActivate}
+                        activeFieldKey={activeFieldKey}
                     />
                     <div className="flex items-center justify-end">
                         <ExtractedValueReviewActions
