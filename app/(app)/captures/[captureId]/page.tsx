@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { ContextPayloadSlot } from "@/components/context/ContextPayloadSlot";
 import { PageHeaderContractReset } from "@/components/route";
 import { IndexedResultSurfaceSkeleton } from "@/components/capture/indexed-result";
 import { PageFrame } from "@/components/static/PageFrame";
@@ -22,6 +23,7 @@ export default async function CaptureDetailPage({
 
     return (
         <>
+            <ContextPayloadSlot payload={null} />
             <PageHeaderContractReset resetKey={captureId} />
             <PageFrame header={<CaptureDetailPageHeader />}>
                 <Suspense
