@@ -16,10 +16,17 @@ sequenceDiagram
     participant Action as persistCaptureAction
     participant Store as Stub_or_DB
 
-    User->>Launcher: Open FAB, Voice log
+    User->>Launcher: Open FAB
+    Launcher->>Veritie: prepareCapture (lease)
     Launcher->>Panel: Render VoiceCapturePanel
-    User->>Panel: Record audio
-    Panel->>Veritie: Live stream chunks + STREAM_END
+    Panel->>Panel: Pre-warm microphone (optional)
+    User->>Panel: Start recording
+    par Mic and live session
+        Panel->>Panel: getUserMedia
+        Panel->>Veritie: startCapture (WebSocket)
+    end
+    Panel->>Panel: Buffer chunks until session ready
+    Panel->>Veritie: Flush buffered chunks + live stream
     Panel->>Proxy: POST /api/veritie/v1/jobs (session required)
     Proxy->>Leases: register lease on success
   loop Poll until transcript_ready
@@ -55,7 +62,7 @@ sequenceDiagram
 
 | Layer | File |
 | --- | --- |
-| Launcher shell | `components/capture/GlobalCaptureLauncher.tsx` |
+| Launcher shell | `components/capture/GlobalCaptureLauncher.tsx` (lease on FAB open) |
 | SDK wiring | `components/capture/VoiceCaptureLauncherPanel.tsx` |
 | Recording + upload UI | `components/capture/VoiceCapturePanel.tsx` |
 | Transcript readiness | `lib/capture/transcript-readiness.ts` |
