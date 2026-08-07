@@ -1,32 +1,43 @@
+import { Suspense } from "react";
+
 import { ContextPayloadSlot } from "@/components/context/ContextPayloadSlot";
-import { IndexSearchCommand, IndexViewToggle, PageHeader } from "@/components/route";
+import { PageHeaderContractReset } from "@/components/route";
 import { PageFrame } from "@/components/static/PageFrame";
-import { PageAssistantAction } from "@/components/assistant-ui/PageAssistantAction";
-import { getDataSourceAdapters } from "@/lib/data-source";
-import { logger } from "@/lib/logging/server-logger";
 import {
     getAspectLensFromSearchParams,
     type SearchParamRecord,
 } from "@/lib/aspect-lens";
 import {
     getStringParam,
-    INDEX_SEARCH_SUGGESTION_LIMIT,
     parseCaptureStatus,
     parseCapturesSortBy,
     parseCapturesView,
     parseSortDir,
 } from "@/lib/route/search-params";
-import { formatExtractedCountLabel } from "@/lib/capture/extraction-summary";
-import {
-    buildCapturesRouteContract,
-    canOpenAssistantFromCapturesContract,
-} from "./_page-model/build";
-import { enforceCapturesRouteContract } from "./_page-model/validate";
-import { CapturesClientView } from "./_components/CapturesClientView";
-import { CapturesFilterSheet } from "./_components/CapturesFilterSheet";
+import { CapturesListSkeleton } from "./_components/CapturesListSkeleton";
+import { CapturesPageData } from "./_components/CapturesPageData";
+import { CapturesPageHeader } from "./_components/CapturesPageHeader";
 
 interface CapturesPageProps {
     searchParams: Promise<SearchParamRecord>;
+}
+
+function buildCapturesContractResetKey({
+    aspect,
+    search,
+    status,
+    sortBy,
+    sortDir,
+    view,
+}: {
+    aspect: string;
+    search?: string;
+    status?: string;
+    sortBy: string;
+    sortDir: string;
+    view: string;
+}) {
+    return [aspect, search ?? "", status ?? "", sortBy, sortDir, view].join("|");
 }
 
 export default async function CapturesPage({ searchParams }: CapturesPageProps) {
@@ -37,102 +48,43 @@ export default async function CapturesPage({ searchParams }: CapturesPageProps) 
     const sortBy = parseCapturesSortBy(getStringParam(resolved.sortBy));
     const sortDir = parseSortDir(getStringParam(resolved.sortDir));
     const view = parseCapturesView(getStringParam(resolved.view));
-
-    const dataSource = getDataSourceAdapters();
-    const capturesIndex = await dataSource.captures.getCapturesIndex({
-        lens: { scope: lens.aspect },
-        search: search || undefined,
-        status,
-        sortBy,
-        sortDir,
-    });
-
-    const contract = buildCapturesRouteContract({
-        lens: { scope: lens.aspect },
-        capturesIndex,
-    });
-    const { pageModelValidation, payload } = enforceCapturesRouteContract(contract);
-
-    logger.debug("[page-model] validation", {
-        route: "/captures",
-        ok: pageModelValidation.ok,
-    });
-
-    const captureSearchItems = capturesIndex.items
-        .slice(0, INDEX_SEARCH_SUGGESTION_LIMIT)
-        .map((item) => ({
-            id: item.id,
-            title: item.title,
-            summary: `${item.type} · ${item.status} · ${formatExtractedCountLabel(
-                item.extractedCount,
-                item.extractedSummary,
-            )}`,
-            searchTerms: [item.type, item.status],
-        }));
-
-    const headerBaseParams = {
+    const contractResetKey = buildCapturesContractResetKey({
         aspect: lens.aspect,
-        q: search,
+        search,
         status,
         sortBy,
         sortDir,
         view,
-    };
+    });
 
     return (
         <>
-            <ContextPayloadSlot payload={payload} />
+            <ContextPayloadSlot payload={null} />
+            <PageHeaderContractReset resetKey={contractResetKey} />
             <PageFrame
                 header={
-                    <PageHeader
-                        title="Captures"
-                        description="Voice logs and uploaded sources."
-                        separator={false}
-                        actions={
-                            <>
-                                <IndexViewToggle
-                                    route="/captures"
-                                    baseParams={headerBaseParams}
-                                    view={view}
-                                />
-                                <IndexSearchCommand
-                                    route="/captures"
-                                    search={search}
-                                    baseParams={headerBaseParams}
-                                    items={captureSearchItems}
-                                    dialogTitle="Search captures"
-                                    dialogDescription="Search captures by title, type, or status."
-                                    placeholder="Search captures…"
-                                    recentHeading="Recent captures"
-                                    matchingHeading="Matching captures"
-                                />
-                                <CapturesFilterSheet
-                                    aspect={lens.aspect}
-                                    search={search}
-                                    status={status}
-                                    sortBy={sortBy}
-                                    sortDir={sortDir}
-                                    view={view}
-                                />
-                                <PageAssistantAction
-                                    canOpenAssistant={canOpenAssistantFromCapturesContract(
-                                        contract,
-                                    )}
-                                />
-                            </>
-                        }
+                    <CapturesPageHeader
+                        aspect={lens.aspect}
+                        search={search}
+                        status={status}
+                        sortBy={sortBy}
+                        sortDir={sortDir}
+                        view={view}
                     />
                 }
             >
-                <CapturesClientView
-                    items={capturesIndex.items}
-                    aspect={lens.aspect}
-                    search={search}
-                    status={status}
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    view={view}
-                />
+                <Suspense
+                    fallback={<CapturesListSkeleton view={view} />}
+                >
+                    <CapturesPageData
+                        aspect={lens.aspect}
+                        search={search}
+                        status={status}
+                        sortBy={sortBy}
+                        sortDir={sortDir}
+                        view={view}
+                    />
+                </Suspense>
             </PageFrame>
         </>
     );
