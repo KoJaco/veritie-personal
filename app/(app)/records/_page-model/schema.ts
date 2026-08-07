@@ -63,10 +63,10 @@ const documentsPageModelSchema = z
 const documentsRailPayloadSchema = z
     .object({
         scope: z.union([
-            z.object({ type: z.literal("documents_index") }).strict(),
+            z.object({ type: z.literal("records_index") }).strict(),
             z
                 .object({
-                    type: z.literal("documents_detail"),
+                    type: z.literal("records_detail"),
                     id: z.string().min(1),
                 })
                 .strict(),
