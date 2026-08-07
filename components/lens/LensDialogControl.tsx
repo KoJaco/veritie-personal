@@ -1,8 +1,9 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { CheckIcon, ChevronDownIcon, SquareCheckBig } from "lucide-react";
+import { ChevronDownIcon, LayoutGrid, SquareCheckBig } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { AspectBadge } from "@/components/lens/AspectBadge";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -23,7 +24,6 @@ import { Separator } from "@/components/ui/separator";
 import { useIsMobileViewport } from "@/lib/hooks/useIsMobileViewport";
 import {
     buildLensPrefetchHrefs,
-    formatLensLabel,
     scopeBadgeClass,
     scopeKeyFromLens,
     getLensFromSearchParams,
@@ -32,6 +32,7 @@ import {
     type ScopeLens,
     withLens,
 } from "@/lib/lens";
+import { ASPECT_ICONS } from "@/lib/aspect/aspect-ui";
 import { cn } from "@/lib/utils";
 
 function ScopeSelector({
@@ -47,32 +48,38 @@ function ScopeSelector({
                 <Button
                     type="button"
                     variant={draft.scope === "all" ? "default" : "outline"}
-                    className="h-auto justify-start rounded-xl px-4 py-3 text-left"
+                    className="h-auto justify-start rounded-xl px-4 py-3 text-left relative"
                     onClick={() => setDraft(normalizeLens({ scope: "all" }))}
                 >
+                    <LayoutGrid className="size-5 shrink-0 mt-1 opacity-70 absolute top-1.5 right-3" />
                     <div>
                         <div className="font-semibold">All aspects</div>
                         <p className="mt-1 text-xs opacity-70">
-                            Cross-surface view of timeline, tasks, records, and resources.
+                            Cross-surface view of timeline, tasks, records, and
+                            resources.
                         </p>
                     </div>
                 </Button>
-                {SCOPE_DEFINITIONS.map((scope) => (
-                    <Button
-                        key={scope.id}
-                        type="button"
-                        variant={draft.scope === scope.id ? "default" : "outline"}
-                        className="h-auto justify-start rounded-xl px-4 py-3 text-left"
-                        onClick={() => setDraft(normalizeLens({ scope: scope.id }))}
-                    >
-                        <div>
-                            <div className="font-semibold">{scope.label}</div>
-                            <p className="mt-1 text-xs opacity-70">
-                                {scope.description}
-                            </p>
-                        </div>
-                    </Button>
-                ))}
+                {SCOPE_DEFINITIONS.map((scope) => {
+                    const Icon = ASPECT_ICONS[scope.id];
+                    return (
+                        <Button
+                            key={scope.id}
+                            type="button"
+                            variant={draft.scope === scope.id ? "default" : "outline"}
+                            className="h-auto justify-start rounded-xl px-4 py-3 text-left relative"
+                            onClick={() => setDraft(normalizeLens({ scope: scope.id }))}
+                        >
+                            <Icon className="mt-0.5 size-5 shrink-0 opacity-70 absolute top-1.5 right-3" />
+                            <div className="flex flex-col">
+                                <div className="font-semibold">{scope.label}</div>
+                                <p className="mt-1 text-xs opacity-70">
+                                    {scope.description}
+                                </p>
+                            </div>
+                        </Button>
+                    );
+                })}
             </div>
         </section>
     );
@@ -100,7 +107,7 @@ function ScopeLensBody({
     };
 
     const content = (
-        <div className="space-y-4">
+        <div className="space-y-3">
             <ScopeSelector draft={draft} setDraft={setDraft} />
             <div className="flex justify-end gap-3 mt-3">
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
@@ -167,18 +174,18 @@ function UrlLensDialogControlInner() {
             >
                 <span>Aspect</span>
                 {badgeKey ? (
+                    <AspectBadge
+                        aspect={badgeKey}
+                        className="hidden sm:inline-flex"
+                    />
+                ) : (
                     <Badge
-                        variant="outline"
+                        variant="default"
                         className={cn("hidden sm:inline-flex", scopeBadgeClass(badgeKey))}
                     >
-                        {formatLensLabel(lens)}
+                        All aspects
                     </Badge>
-                ) : <Badge
-                    variant="default"
-                    className={cn("hidden sm:inline-flex", scopeBadgeClass(badgeKey))}
-                >
-                    All aspects
-                </Badge>}
+                )}
                 <ChevronDownIcon className="h-4 w-4" />
             </Button>
             <ScopeLensBody

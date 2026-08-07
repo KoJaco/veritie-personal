@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getTimelineEventDetailAction } from "@/lib/actions/stub-data-mutations";
+import type { ReviewState } from "@/lib/domain/extraction";
 import type { TimelineIndexItem } from "@/lib/data-source/timeline-read-model";
 import type { TimelineEventDetailReadModel } from "@/lib/data-source/timeline-read-model";
 import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-model";
@@ -33,36 +34,70 @@ export function TimelineClientView({
 }) {
     const router = useRouter();
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [selectedDetail, setSelectedDetail] =
+    const [loadedDetail, setLoadedDetail] =
         useState<TimelineEventDetailReadModel | null>(null);
-    const [selectedCapture, setSelectedCapture] =
+    const [captureDetail, setCaptureDetail] =
         useState<CaptureDetailReadModel | null>(null);
     const [detailError, setDetailError] = useState<string | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [reviewStateOverrides, setReviewStateOverrides] = useState<
+        Record<string, ReviewState>
+    >({});
     const groups = useMemo(() => groupByLocalDate(items), [items]);
 
+    const selectedItem = useMemo(
+        () => items.find((item) => item.id === selectedId) ?? null,
+        [items, selectedId],
+    );
+
+    const panelReviewState = useMemo(() => {
+        if (!selectedId) {
+            return undefined;
+        }
+        if (reviewStateOverrides[selectedId]) {
+            return reviewStateOverrides[selectedId];
+        }
+        return (
+            loadedDetail?.extractedValue?.reviewState ?? selectedItem?.reviewState
+        );
+    }, [
+        loadedDetail?.extractedValue?.reviewState,
+        reviewStateOverrides,
+        selectedId,
+        selectedItem?.reviewState,
+    ]);
+
     const loadDetail = useCallback(
-        async (eventId: string, signal?: AbortSignal) => {
-            setDetailLoading(true);
+        async (
+            eventId: string,
+            options?: { signal?: AbortSignal; background?: boolean },
+        ) => {
+            if (!options?.background) {
+                setDetailLoading(true);
+            }
             setDetailError(null);
 
             try {
                 const body = await getTimelineEventDetailAction(eventId);
-                if (signal?.aborted) return;
+                if (options?.signal?.aborted) return;
                 if (!body) {
                     throw new Error("Could not load event detail");
                 }
-                setSelectedDetail(body.detail);
-                setSelectedCapture(body.captureDetail);
+                setLoadedDetail(body.detail);
+                setCaptureDetail(body.captureDetail);
             } catch (error) {
-                if (signal?.aborted) return;
-                setSelectedDetail(null);
-                setSelectedCapture(null);
+                if (options?.signal?.aborted) return;
+                if (!options?.background) {
+                    setLoadedDetail(null);
+                    setCaptureDetail(null);
+                }
                 setDetailError(
-                    error instanceof Error ? error.message : "Could not load event detail",
+                    error instanceof Error
+                        ? error.message
+                        : "Could not load event detail",
                 );
             } finally {
-                if (!signal?.aborted) {
+                if (!options?.signal?.aborted && !options?.background) {
                     setDetailLoading(false);
                 }
             }
@@ -70,26 +105,57 @@ export function TimelineClientView({
         [],
     );
 
-    const refreshDetail = useCallback(() => {
+    const refreshDetailInBackground = useCallback(() => {
         if (!selectedId) {
             return;
         }
-        void loadDetail(selectedId).then(() => {
+        void loadDetail(selectedId, { background: true }).then(() => {
             router.refresh();
         });
     }, [loadDetail, router, selectedId]);
 
+    const handleReviewUpdated = useCallback(
+        (nextState: ReviewState) => {
+            if (!selectedId) {
+                return;
+            }
+
+            setReviewStateOverrides((current) => ({
+                ...current,
+                [selectedId]: nextState,
+            }));
+            setLoadedDetail((current) => {
+                if (!current?.extractedValue) {
+                    return current;
+                }
+                return {
+                    ...current,
+                    extractedValue: {
+                        ...current.extractedValue,
+                        reviewState: nextState,
+                    },
+                };
+            });
+            router.refresh();
+        },
+        [router, selectedId],
+    );
+
+    const handleClose = useCallback(() => {
+        setSelectedId(null);
+    }, []);
+
     useEffect(() => {
         if (!selectedId) {
-            setSelectedDetail(null);
-            setSelectedCapture(null);
+            setLoadedDetail(null);
+            setCaptureDetail(null);
             setDetailError(null);
             setDetailLoading(false);
             return;
         }
 
         const controller = new AbortController();
-        void loadDetail(selectedId, controller.signal);
+        void loadDetail(selectedId, { signal: controller.signal });
         return () => controller.abort();
     }, [loadDetail, selectedId]);
 
@@ -107,6 +173,10 @@ export function TimelineClientView({
                                     key={item.id}
                                     item={item}
                                     selected={selectedId === item.id}
+                                    reviewState={
+                                        reviewStateOverrides[item.id] ??
+                                        item.reviewState
+                                    }
                                     onSelect={setSelectedId}
                                 />
                             ))}
@@ -120,20 +190,17 @@ export function TimelineClientView({
                 )}
             </div>
 
-            {detailError && selectedId && (
-                <p className="mt-4 text-sm text-destructive">{detailError}</p>
-            )}
-
-            {detailLoading && selectedId && (
-                <p className="mt-4 text-sm text-muted-foreground">Loading detail…</p>
-            )}
-
             <TimelineDetailPanel
-                detail={detailLoading ? null : selectedDetail}
-                captureDetail={selectedCapture}
+                selectedItem={selectedItem}
+                loadedDetail={loadedDetail}
+                captureDetail={captureDetail}
                 glossaryLabels={glossaryLabels}
-                onDetailUpdated={refreshDetail}
-                onClose={() => setSelectedId(null)}
+                isLoading={detailLoading}
+                error={detailError}
+                reviewState={panelReviewState}
+                onReviewUpdated={handleReviewUpdated}
+                onDetailRefresh={refreshDetailInBackground}
+                onClose={handleClose}
             />
         </div>
     );

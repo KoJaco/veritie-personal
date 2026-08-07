@@ -12,6 +12,8 @@ import {
     Mic,
     Target,
     Wallet,
+    Calendar,
+    Bell,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -41,6 +43,16 @@ function SidebarContent() {
                 </SidebarGroup>
 
                 <SidebarGroup label="Plan" className="mt-6">
+                    <SidebarItem
+                        href="/events"
+                        icon={Calendar}
+                        label="Events"
+                    />
+                    <SidebarItem
+                        href="/reminders"
+                        icon={Bell}
+                        label="Reminders"
+                    />
                     <SidebarItem
                         href="/tasks"
                         icon={ListTodo}

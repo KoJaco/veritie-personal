@@ -1,4 +1,4 @@
-export const ENABLE_ASPECT_COLORS = false;
+export const ENABLE_ASPECT_COLORS = true;
 
 export const ASPECT_LENS_KEYS = [
     "aspect",

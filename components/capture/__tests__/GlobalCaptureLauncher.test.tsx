@@ -42,6 +42,14 @@ jest.mock("@/lib/hooks/useEscapeClose", () => ({
     useInitialFocus: jest.fn(),
 }));
 
+jest.mock("@/lib/hooks/useIsMobileViewport", () => ({
+    useIsMobileViewport: jest.fn(() => false),
+}));
+
+jest.mock("@/components/ui/mobile-overlay-visibility", () => ({
+    useMobileOverlayOpen: jest.fn(() => false),
+}));
+
 jest.mock("@/lib/capture/capture-audio-client", () => ({
     getCapturePreferences: jest.fn(async () => ({
         saveVoiceLogAudio: false,
@@ -88,10 +96,17 @@ jest.mock("@/components/capture/VeritieCaptureLeaseContext", () => {
 });
 
 import { GlobalCaptureLauncher } from "@/components/capture/GlobalCaptureLauncher";
+import { useMobileOverlayOpen } from "@/components/ui/mobile-overlay-visibility";
+import { useIsMobileViewport } from "@/lib/hooks/useIsMobileViewport";
+
+const mockUseMobileOverlayOpen = useMobileOverlayOpen as jest.Mock;
+const mockUseIsMobileViewport = useIsMobileViewport as jest.Mock;
 
 describe("GlobalCaptureLauncher", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockUseIsMobileViewport.mockReturnValue(false);
+        mockUseMobileOverlayOpen.mockReturnValue(false);
         mockPrepareLease.mockResolvedValue({
             snapshot: { jobId: "job_launcher" },
         });
@@ -143,5 +158,16 @@ describe("GlobalCaptureLauncher", () => {
         await waitFor(() => {
             expect(mockReleaseLease).toHaveBeenCalledTimes(1);
         });
+    });
+
+    it("hides the launcher chrome while a mobile overlay is open", () => {
+        mockUseIsMobileViewport.mockReturnValue(true);
+        mockUseMobileOverlayOpen.mockReturnValue(true);
+
+        const { container } = render(<GlobalCaptureLauncher />);
+
+        const hiddenLauncher = container.querySelector('[aria-hidden="true"]');
+        expect(hiddenLauncher).toBeInTheDocument();
+        expect(hiddenLauncher).toHaveClass("opacity-0", "pointer-events-none");
     });
 });

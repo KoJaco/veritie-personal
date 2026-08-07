@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AspectBadge } from "@/components/lens/AspectBadge";
 import { Badge } from "@/components/ui/badge";
 import type { TimelineIndexItem } from "@/lib/data-source/timeline-read-model";
 import { cn } from "@/lib/utils";
@@ -9,12 +10,15 @@ import { ArrowRight } from "lucide-react";
 export function TimelineEventRow({
     item,
     selected,
+    reviewState,
     onSelect,
 }: {
     item: TimelineIndexItem;
     selected?: boolean;
+    reviewState?: TimelineIndexItem["reviewState"];
     onSelect: (id: string) => void;
 }) {
+    const displayReviewState = reviewState ?? item.reviewState;
     return (
         <button
             type="button"
@@ -27,22 +31,20 @@ export function TimelineEventRow({
             <div className="flex items-center justify-between gap-1.5">
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="secondary" className="text-[10px] uppercase">
-                        {item.aspect}
-                    </Badge>
+                    <AspectBadge aspect={item.aspect} />
                     <Badge variant="outline" className="text-[10px] uppercase">
                         {item.type.replace(/_/g, " ")}
                     </Badge>
-                    {item.reviewState && (
+                    {displayReviewState && (
                         <Badge variant="outline" className="text-[10px]">
-                            {item.reviewState}
+                            {displayReviewState}
                         </Badge>
                     )}
                 </div>
                 {item.captureId && (
                     <Link
                         href={`/captures/${item.captureId}`}
-                        className="text-xs font-medium underline-offset-2 hover:underline items-center gap-1.5 flex items-center text-foreground/75 hover:text-foreground"
+                        className="text-xs font-medium underline-offset-2 hover:underline items-center gap-1.5 items-center text-foreground/75 hover:text-foreground hidden sm:flex"
                         onClick={(event) => event.stopPropagation()}
                     >
                         View capture
@@ -67,6 +69,17 @@ export function TimelineEventRow({
                     </span>
                 )} */}
             </p>
+
+            {item.captureId && (
+                <Link
+                    href={`/captures/${item.captureId}`}
+                    className="text-xs font-medium underline-offset-2 hover:underline gap-1.5 items-center text-foreground/75 hover:text-foreground flex sm:hidden mt-2 ml-auto"
+                    onClick={(event) => event.stopPropagation()}
+                >
+                    View capture
+                    <ArrowRight className="size-3" />
+                </Link>
+            )}
         </button>
     );
 }

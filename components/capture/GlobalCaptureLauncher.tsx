@@ -24,6 +24,8 @@ import {
 } from "@/components/capture/VeritieCaptureLeaseContext";
 import { usePersistedCaptureLauncherTucked } from "@/lib/hooks/usePersistedCaptureLauncherTucked";
 import { useEscapeClose, useInitialFocus } from "@/lib/hooks/useEscapeClose";
+import { useIsMobileViewport } from "@/lib/hooks/useIsMobileViewport";
+import { useMobileOverlayOpen } from "@/components/ui/mobile-overlay-visibility";
 import { LAYER_CLASS } from "@/lib/ui/layering";
 import { cn } from "@/lib/utils";
 import { isCaptureJobInFlight } from "@/lib/capture/capture-background-pipeline";
@@ -60,6 +62,8 @@ function GlobalCaptureLauncherInner() {
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState<LauncherMode>("options");
     const shouldReduceMotion = useReducedMotion();
+    const isMobile = useIsMobileViewport();
+    const isMobileOverlayOpen = useMobileOverlayOpen();
     const { isTucked, setIsTucked, isHydrated } =
         usePersistedCaptureLauncherTucked();
     const optionsDialogRef = useRef<HTMLDivElement>(null);
@@ -163,6 +167,8 @@ function GlobalCaptureLauncherInner() {
     }, [resetTransientState]);
 
     const isLauncherTucked = isHydrated && isTucked;
+    const shouldHideForMobileOverlay =
+        isMobile && isMobileOverlayOpen && !open;
 
     const hideLauncher = useCallback(() => {
         close();
@@ -284,10 +290,13 @@ function GlobalCaptureLauncherInner() {
             </AnimatePresence>
 
             <motion.div
+                aria-hidden={shouldHideForMobileOverlay}
                 className={cn(
                     "fixed bottom-8 flex flex-col items-end gap-3",
                     LAUNCHER_CHROME_Z,
                     isLauncherTucked ? "right-0" : "right-6",
+                    shouldHideForMobileOverlay &&
+                        "pointer-events-none opacity-0",
                 )}
                 initial={false}
                 animate={{
@@ -295,6 +304,7 @@ function GlobalCaptureLauncherInner() {
                         isLauncherTucked && !shouldReduceMotion
                             ? TUCKED_OFFSET_PX
                             : 0,
+                    opacity: shouldHideForMobileOverlay ? 0 : 1,
                 }}
                 transition={
                     shouldReduceMotion

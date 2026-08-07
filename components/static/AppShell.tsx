@@ -18,6 +18,7 @@ import {
     AppShellPageHeaderSlot,
     useAppShellPageHeader,
 } from "./AppShellPageHeaderProvider";
+import { MobileOverlayVisibilityProvider } from "@/components/ui/mobile-overlay-visibility";
 import { useIsScrolledFromTop } from "@/lib/hooks/useIsScrolledFromTop";
 import { envPublic } from "@/lib/config/env.public";
 
@@ -129,12 +130,14 @@ function AppShellContent({ children }: AppShellProps) {
  */
 export function AppShell({ children }: AppShellProps) {
     return (
-        <ContextRailProvider>
-            <AppShellPageHeaderProvider>
-                <AppSidebarProvider>
-                    <AppShellContent>{children}</AppShellContent>
-                </AppSidebarProvider>
-            </AppShellPageHeaderProvider>
-        </ContextRailProvider>
+        <MobileOverlayVisibilityProvider>
+            <ContextRailProvider>
+                <AppShellPageHeaderProvider>
+                    <AppSidebarProvider>
+                        <AppShellContent>{children}</AppShellContent>
+                    </AppSidebarProvider>
+                </AppShellPageHeaderProvider>
+            </ContextRailProvider>
+        </MobileOverlayVisibilityProvider>
     );
 }

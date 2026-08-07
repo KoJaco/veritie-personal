@@ -1,8 +1,13 @@
-import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/route";
+import { Suspense } from "react";
+
+import { ContextPayloadSlot } from "@/components/context/ContextPayloadSlot";
+import { PageHeaderContractReset } from "@/components/route";
+import { IndexedResultSurfaceSkeleton } from "@/components/capture/indexed-result";
 import { PageFrame } from "@/components/static/PageFrame";
-import { getDataSourceAdapters } from "@/lib/data-source";
-import { CaptureDetailView } from "./_components/CaptureDetailView";
+import { SURFACE_CLASS } from "@/lib/ui/surface";
+import { cn } from "@/lib/utils";
+import { CaptureDetailPageData } from "./_components/CaptureDetailPageData";
+import { CaptureDetailPageHeader } from "./_components/CaptureDetailPageHeader";
 
 interface CaptureDetailPageProps {
     params: Promise<{ captureId: string }>;
@@ -15,30 +20,25 @@ export default async function CaptureDetailPage({
 }: CaptureDetailPageProps) {
     const { captureId } = await params;
     const { anchor } = await searchParams;
-    const dataSource = getDataSourceAdapters();
-    const detail = await dataSource.captures.getCaptureDetail(captureId);
-
-    if (!detail) {
-        notFound();
-    }
-
-    const glossaryLabels = await dataSource.pipeline.getExtractionGlossaryLabels();
 
     return (
-        <PageFrame
-            header={
-                <PageHeader
-                    title={detail.capture.type}
-                    description={detail.capture.title ?? "Capture"}
-                    separator={false}
-                />
-            }
-        >
-            <CaptureDetailView
-                detail={detail}
-                initialExtractedValueId={anchor}
-                glossaryLabels={glossaryLabels}
-            />
-        </PageFrame>
+        <>
+            <ContextPayloadSlot payload={null} />
+            <PageHeaderContractReset resetKey={captureId} />
+            <PageFrame header={<CaptureDetailPageHeader />}>
+                <Suspense
+                    fallback={
+                        <div className={cn(SURFACE_CLASS, "p-3")}>
+                            <IndexedResultSurfaceSkeleton expectAudio />
+                        </div>
+                    }
+                >
+                    <CaptureDetailPageData
+                        captureId={captureId}
+                        anchor={anchor}
+                    />
+                </Suspense>
+            </PageFrame>
+        </>
     );
 }

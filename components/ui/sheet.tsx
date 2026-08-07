@@ -3,15 +3,44 @@
 import * as React from "react";
 import * as SheetPrimitive from "@radix-ui/react-dialog";
 
+import { useRegisterMobileOverlay } from "@/components/ui/mobile-overlay-visibility";
 import { cn } from "@/lib/utils";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { DialogTitle } from "@radix-ui/react-dialog";
 
 function Sheet({
     modal = true,
+    open: openProp,
+    onOpenChange,
     ...props
 }: React.ComponentProps<typeof SheetPrimitive.Root> & { modal?: boolean }) {
-    return <SheetPrimitive.Root data-slot="sheet" modal={modal} {...props} />;
+    const [trackedOpen, setTrackedOpen] = React.useState(openProp ?? false);
+
+    React.useEffect(() => {
+        if (openProp !== undefined) {
+            setTrackedOpen(openProp);
+        }
+    }, [openProp]);
+
+    const handleOpenChange = React.useCallback(
+        (nextOpen: boolean) => {
+            setTrackedOpen(nextOpen);
+            onOpenChange?.(nextOpen);
+        },
+        [onOpenChange],
+    );
+
+    useRegisterMobileOverlay(trackedOpen);
+
+    return (
+        <SheetPrimitive.Root
+            data-slot="sheet"
+            modal={modal}
+            open={openProp}
+            onOpenChange={handleOpenChange}
+            {...props}
+        />
+    );
 }
 
 function SheetTrigger({

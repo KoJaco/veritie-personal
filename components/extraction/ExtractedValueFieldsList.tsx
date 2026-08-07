@@ -14,10 +14,14 @@ export function ExtractedValueFieldsList({
     extractedValue,
     glossaryLabels,
     className,
+    onFieldActivate,
+    activeFieldKey,
 }: {
     extractedValue: ExtractedValueStub;
     glossaryLabels?: Record<string, string>;
     className?: string;
+    onFieldActivate?: (fieldKey: string, quote: string | null) => void;
+    activeFieldKey?: string | null;
 }) {
     const attributes = flattenExtractedValueAttributes(extractedValue);
 
@@ -39,21 +43,48 @@ export function ExtractedValueFieldsList({
                 className,
             )}
         >
-            {rows.map(([key, value]) => (
-                <div
-                    key={key}
-                    className="grid gap-0.5 sm:grid-cols-[minmax(8rem,30%)_1fr] sm:gap-3"
-                >
-                    <dt className="font-medium text-muted-foreground">
-                        {formatArtifactKey(key, glossaryLabels)}
-                    </dt>
-                    <dd className="text-foreground">
-                        {isPrimitiveArtifactValue(value)
-                            ? formatPrimitiveValue(value)
-                            : JSON.stringify(value)}
-                    </dd>
-                </div>
-            ))}
+            {rows.map(([key, value]) => {
+                const isActivatable = Boolean(onFieldActivate);
+                const isActive = activeFieldKey === key;
+                const displayValue = isPrimitiveArtifactValue(value)
+                    ? formatPrimitiveValue(value)
+                    : JSON.stringify(value);
+                const quoteHint =
+                    key === "source_quote" && typeof value === "string"
+                        ? value.trim() || null
+                        : null;
+
+                return (
+                    <div
+                        key={key}
+                        className="grid gap-0.5 sm:grid-cols-[minmax(8rem,30%)_1fr] sm:gap-3"
+                    >
+                        <dt className="font-medium text-muted-foreground">
+                            {formatArtifactKey(key, glossaryLabels)}
+                        </dt>
+                        <dd className="text-foreground">
+                            {isActivatable ? (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        onFieldActivate?.(key, quoteHint)
+                                    }
+                                    className={cn(
+                                        "rounded-sm text-left transition-colors",
+                                        "hover:text-primary hover:underline underline-offset-2",
+                                        isActive &&
+                                            "bg-primary/10 px-1 font-medium text-primary underline decoration-primary/40",
+                                    )}
+                                >
+                                    {displayValue}
+                                </button>
+                            ) : (
+                                displayValue
+                            )}
+                        </dd>
+                    </div>
+                );
+            })}
         </dl>
     );
 }

@@ -3,12 +3,40 @@
 import * as React from "react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
+import { useRegisterMobileOverlay } from "@/components/ui/mobile-overlay-visibility"
 import { cn } from "@/lib/utils"
 
 function Drawer({
+  open: openProp,
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />
+  const [trackedOpen, setTrackedOpen] = React.useState(openProp ?? false)
+
+  React.useEffect(() => {
+    if (openProp !== undefined) {
+      setTrackedOpen(openProp)
+    }
+  }, [openProp])
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      setTrackedOpen(nextOpen)
+      onOpenChange?.(nextOpen)
+    },
+    [onOpenChange],
+  )
+
+  useRegisterMobileOverlay(trackedOpen)
+
+  return (
+    <DrawerPrimitive.Root
+      data-slot="drawer"
+      open={openProp}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  )
 }
 
 function DrawerTrigger({

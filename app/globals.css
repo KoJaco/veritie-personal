@@ -65,6 +65,17 @@
     --shadow-2xl: 0px 4px 10px 0px hsl(0 0% 0% / 0.25);
     --tracking-normal: 0.01em;
     --spacing: 0.25rem;
+
+    --aspect-finance-primary: oklch(0.3423 0.0544 209.9368);
+    --aspect-finance-primary-foreground: oklch(0.9199 0.0077 207.1396);
+    --aspect-fitness-primary: oklch(0.5561 0.1161 150.4734);
+    --aspect-fitness-primary-foreground: oklch(0.9273 0.01 155.0868);
+    --aspect-work-primary: oklch(0.5952 0.1366 254.7662);
+    --aspect-work-primary-foreground: oklch(0.9846 0.0017 247.8389);
+    --aspect-admin-primary: oklch(0.5301 0.1309 48.8555);
+    --aspect-admin-primary-foreground: oklch(0.9392 0.0102 48.6184);
+    --aspect-personal-primary: oklch(0.5943 0.2184 322.7426);
+    --aspect-personal-primary-foreground: oklch(0.9472 0.0255 325.7767);
 }
 
 .dark {
@@ -126,6 +137,17 @@
         0px 6px 15px 0px hsl(0 0% 0% / 0.3),
         0px 8px 10px -1px hsl(0 0% 0% / 0.3);
     --shadow-2xl: 0px 6px 15px 0px hsl(0 0% 0% / 0.75);
+
+    --aspect-finance-primary: oklch(0.9199 0.0077 207.1396);
+    --aspect-finance-primary-foreground: oklch(0.2589 0.0415 210.7449);
+    --aspect-fitness-primary: oklch(0.8737 0.1056 152.5889);
+    --aspect-fitness-primary-foreground: oklch(0.2916 0.0791 149.5053);
+    --aspect-work-primary: oklch(0.7853 0.0862 255.2094);
+    --aspect-work-primary-foreground: oklch(0.2044 0.0568 254.311);
+    --aspect-admin-primary: oklch(0.8004 0.0902 75.3203);
+    --aspect-admin-primary-foreground: oklch(0.1663 0.0157 82.2417);
+    --aspect-personal-primary: oklch(0.8147 0.0952 315.1379);
+    --aspect-personal-primary-foreground: oklch(0.1883 0.0432 312.8297);
 }
 
 @theme inline {
@@ -192,6 +214,9 @@
 
 /* Individual aspect colours. Adjusting primary background and primary foreground for light and dark mode 
 
+- All:
+- Use current variables
+
 - Finance:   
 Light 
 --primary: oklch(0.3423 0.0544 209.9368);
@@ -229,7 +254,61 @@ Dark
   --primary: oklch(0.8004 0.0902 75.3203);
   --primary-foreground: oklch(0.1663 0.0157 82.2417);
 
+
+- Personal
+light
+  --primary: oklch(0.5943 0.2184 322.7426);
+  --primary-foreground: oklch(0.9472 0.0255 325.7767);
+
+dark
+  --primary: oklch(0.8147 0.0952 315.1379);
+  --primary-foreground: oklch(0.1883 0.0432 312.8297);
 */
+
+html[data-aspect="finance"] {
+    --primary: var(--aspect-finance-primary);
+    --primary-foreground: var(--aspect-finance-primary-foreground);
+    --ring: var(--aspect-finance-primary);
+    --sidebar-primary: var(--aspect-finance-primary);
+    --sidebar-primary-foreground: var(--aspect-finance-primary-foreground);
+    --sidebar-ring: var(--aspect-finance-primary);
+}
+
+html[data-aspect="fitness"] {
+    --primary: var(--aspect-fitness-primary);
+    --primary-foreground: var(--aspect-fitness-primary-foreground);
+    --ring: var(--aspect-fitness-primary);
+    --sidebar-primary: var(--aspect-fitness-primary);
+    --sidebar-primary-foreground: var(--aspect-fitness-primary-foreground);
+    --sidebar-ring: var(--aspect-fitness-primary);
+}
+
+html[data-aspect="work"] {
+    --primary: var(--aspect-work-primary);
+    --primary-foreground: var(--aspect-work-primary-foreground);
+    --ring: var(--aspect-work-primary);
+    --sidebar-primary: var(--aspect-work-primary);
+    --sidebar-primary-foreground: var(--aspect-work-primary-foreground);
+    --sidebar-ring: var(--aspect-work-primary);
+}
+
+html[data-aspect="admin"] {
+    --primary: var(--aspect-admin-primary);
+    --primary-foreground: var(--aspect-admin-primary-foreground);
+    --ring: var(--aspect-admin-primary);
+    --sidebar-primary: var(--aspect-admin-primary);
+    --sidebar-primary-foreground: var(--aspect-admin-primary-foreground);
+    --sidebar-ring: var(--aspect-admin-primary);
+}
+
+html[data-aspect="personal"] {
+    --primary: var(--aspect-personal-primary);
+    --primary-foreground: var(--aspect-personal-primary-foreground);
+    --ring: var(--aspect-personal-primary);
+    --sidebar-primary: var(--aspect-personal-primary);
+    --sidebar-primary-foreground: var(--aspect-personal-primary-foreground);
+    --sidebar-ring: var(--aspect-personal-primary);
+}
 
 
 
@@ -269,6 +348,55 @@ Dark
 }
 
 @layer utilities {
+    .aspect-badge {
+        @apply inline-flex items-center gap-1 border-0 font-medium;
+    }
+
+    .aspect-badge-finance {
+        background-color: color-mix(
+            in oklch,
+            var(--aspect-finance-primary) 14%,
+            transparent
+        );
+        color: var(--aspect-finance-primary);
+    }
+
+    .aspect-badge-fitness {
+        background-color: color-mix(
+            in oklch,
+            var(--aspect-fitness-primary) 14%,
+            transparent
+        );
+        color: var(--aspect-fitness-primary);
+    }
+
+    .aspect-badge-work {
+        background-color: color-mix(
+            in oklch,
+            var(--aspect-work-primary) 14%,
+            transparent
+        );
+        color: var(--aspect-work-primary);
+    }
+
+    .aspect-badge-admin {
+        background-color: color-mix(
+            in oklch,
+            var(--aspect-admin-primary) 14%,
+            transparent
+        );
+        color: var(--aspect-admin-primary);
+    }
+
+    .aspect-badge-personal {
+        background-color: color-mix(
+            in oklch,
+            var(--aspect-personal-primary) 14%,
+            transparent
+        );
+        color: var(--aspect-personal-primary);
+    }
+
     .sidebar-scrollbar {
         scrollbar-gutter: stable;
         scrollbar-width: thin;

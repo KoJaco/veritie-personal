@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { Menu, Bell, User, HomeIcon, LogOut } from "lucide-react";
+import { Menu, User, HomeIcon, LogOut } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,9 @@ import { UrlLensDialogControl } from "@/components/lens/LensDialogControl";
 import { useAppSidebar } from "./AppSidebarProvider";
 import {
     Breadcrumb,
-    BreadcrumbEllipsis,
     BreadcrumbItem,
     BreadcrumbLink,
     BreadcrumbList,
-    BreadcrumbPage,
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
@@ -32,6 +30,8 @@ interface BreadcrumbCrumb {
 const ROUTE_MAP: Record<string, string> = {
     timeline: "Timeline",
     captures: "Captures",
+    events: "Events",
+    reminders: "Reminders",
     tasks: "Tasks",
     records: "Records",
     resources: "Resources",
@@ -40,21 +40,35 @@ const ROUTE_MAP: Record<string, string> = {
     settings: "Settings",
 };
 
-function buildBreadcrumbs(pathname: string): BreadcrumbCrumb[] {
+const DETAIL_PARENT_LABELS: Record<string, string> = {
+    captures: "Captures",
+    tasks: "Tasks",
+    records: "Records",
+    resources: "Resources",
+};
+
+export function getBreadcrumbParent(
+    pathname: string,
+): BreadcrumbCrumb | null {
     const segments = pathname.split("/").filter(Boolean);
 
-    if (segments.length === 0) {
-        return [{ label: "Timeline", href: "/timeline" }];
+    if (segments.length === 0 || segments[0] === "timeline") {
+        return null;
     }
 
-    const crumbs: BreadcrumbCrumb[] = [];
-    segments.forEach((segment, index) => {
-        const path = `/${segments.slice(0, index + 1).join("/")}`;
-        const label = ROUTE_MAP[segment.toLowerCase()] || segment;
-        crumbs.push({ label, href: path });
-    });
+    if (segments.length === 1) {
+        return { label: "Timeline", href: "/timeline" };
+    }
 
-    return crumbs;
+    const parentSegments = segments.slice(0, -1);
+    const parentSegment = parentSegments[parentSegments.length - 1];
+    const parentPath = `/${parentSegments.join("/")}`;
+    const label =
+        ROUTE_MAP[parentSegment.toLowerCase()] ??
+        DETAIL_PARENT_LABELS[parentSegment] ??
+        parentSegment;
+
+    return { label, href: parentPath };
 }
 
 function AppHeaderInner() {
@@ -62,11 +76,8 @@ function AppHeaderInner() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const lens = parseLens(searchParams);
-    const crumbs = buildBreadcrumbs(pathname);
-    const shouldCollapse = crumbs.length > 3;
-    const firstCrumb = crumbs[0];
-    const lastCrumb = crumbs[crumbs.length - 1];
-    const middleCrumbs = crumbs.slice(1, -1);
+    const parentCrumb = getBreadcrumbParent(pathname);
+    const homeHref = withLens("/timeline", lens);
 
     return (
         <header className="h-16 lg:h-20 w-full px-[4px] lg:px-[12px] 2xl:px-6">
@@ -82,75 +93,34 @@ function AppHeaderInner() {
                         <Menu className="h-4 w-4" />
                     </Button>
 
-                    <Breadcrumb className="hidden sm:block">
+                    <Breadcrumb className="hidden lg:block">
                         <BreadcrumbList>
                             <BreadcrumbItem>
-                                {crumbs.length === 1 ? (
-                                    <BreadcrumbPage className="flex items-center gap-1.5">
-                                        <span className="text-sm font-medium text-muted-foreground">
-                                            Home
-                                        </span>
+                                <BreadcrumbLink asChild>
+                                    <Link
+                                        href={homeHref}
+                                        className="flex items-center gap-1.5"
+                                    >
+                                        <HomeIcon className="h-4 w-4" />
                                         <span className="sr-only">Home</span>
-                                    </BreadcrumbPage>
-                                ) : (
-                                    <BreadcrumbLink asChild>
-                                        <Link
-                                            href={withLens(firstCrumb.href, lens)}
-                                            className="flex items-center gap-1.5"
-                                        >
-                                            <HomeIcon className="h-4 w-4" />
-                                            <span className="sr-only">Home</span>
-                                        </Link>
-                                    </BreadcrumbLink>
-                                )}
+                                    </Link>
+                                </BreadcrumbLink>
                             </BreadcrumbItem>
 
-                            {middleCrumbs.length > 0 && (
-                                <>
-                                    <BreadcrumbSeparator />
-                                    {shouldCollapse ? (
-                                        <BreadcrumbItem>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 p-0"
-                                                    >
-                                                        <BreadcrumbEllipsis />
-                                                        <span className="sr-only">Toggle menu</span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="start">
-                                                    {middleCrumbs.map((crumb) => (
-                                                        <DropdownMenuItem key={crumb.href} asChild>
-                                                            <Link href={withLens(crumb.href, lens)}>
-                                                                {crumb.label}
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                    ))}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </BreadcrumbItem>
-                                    ) : (
-                                        middleCrumbs.map((crumb) => (
-                                            <BreadcrumbItem key={crumb.href}>
-                                                <BreadcrumbLink asChild>
-                                                    <Link href={withLens(crumb.href, lens)}>
-                                                        {crumb.label}
-                                                    </Link>
-                                                </BreadcrumbLink>
-                                            </BreadcrumbItem>
-                                        ))
-                                    )}
-                                </>
-                            )}
-
-                            {crumbs.length > 1 && (
+                            {parentCrumb && (
                                 <>
                                     <BreadcrumbSeparator />
                                     <BreadcrumbItem>
-                                        <BreadcrumbPage>{lastCrumb.label}</BreadcrumbPage>
+                                        <BreadcrumbLink asChild>
+                                            <Link
+                                                href={withLens(
+                                                    parentCrumb.href,
+                                                    lens,
+                                                )}
+                                            >
+                                                {parentCrumb.label}
+                                            </Link>
+                                        </BreadcrumbLink>
                                     </BreadcrumbItem>
                                 </>
                             )}

@@ -27,10 +27,13 @@ function buildTranscriptText(detail: CaptureDetailReadModel): string {
 export function CaptureTranscriptPreview({
     detail,
     highlightExtractedValueId,
+    activeHighlightQuote,
     maxTranscriptChars,
 }: {
     detail: CaptureDetailReadModel;
     highlightExtractedValueId?: string;
+    /** When provided, only this quote is highlighted (overrides multi-quote mode). */
+    activeHighlightQuote?: string | null;
     maxTranscriptChars?: number;
 }) {
     const transcriptText = buildTranscriptText(detail);
@@ -44,6 +47,11 @@ export function CaptureTranscriptPreview({
         .filter((text): text is string => Boolean(text?.trim()));
 
     const highlightQuotes = useMemo(() => {
+        if (activeHighlightQuote !== undefined) {
+            const quote = activeHighlightQuote?.trim();
+            return quote ? [{ quote, primary: true }] : [];
+        }
+
         const quotes: Array<{ quote: string; primary?: boolean }> = [];
 
         for (const anchor of detail.sourceAnchors) {
@@ -76,7 +84,12 @@ export function CaptureTranscriptPreview({
         }
 
         return quotes;
-    }, [detail.extractedValues, detail.sourceAnchors, highlightExtractedValueId]);
+    }, [
+        activeHighlightQuote,
+        detail.extractedValues,
+        detail.sourceAnchors,
+        highlightExtractedValueId,
+    ]);
 
     const highlightRanges = useMemo(
         () =>

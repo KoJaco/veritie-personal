@@ -33,6 +33,8 @@ type IndexSearchCommandProps = {
     recentHeading?: string;
     matchingHeading?: string;
     matchesQuery?: (item: IndexSearchCommandItem, query: string) => boolean;
+    /** When false, suppresses empty-state copy until suggestions have loaded. */
+    suggestionsReady?: boolean;
 };
 
 function defaultMatchesQuery(item: IndexSearchCommandItem, query: string) {
@@ -57,6 +59,7 @@ export function IndexSearchCommand({
     recentHeading = "Recent",
     matchingHeading = "Matching",
     matchesQuery = defaultMatchesQuery,
+    suggestionsReady = true,
 }: IndexSearchCommandProps) {
     const router = useRouter();
     const [open, setOpen] = useState(false);
@@ -113,7 +116,9 @@ export function IndexSearchCommand({
                     }}
                 />
                 <CommandList>
-                    <CommandEmpty>No results found.</CommandEmpty>
+                    {suggestionsReady && (
+                        <CommandEmpty>No results found.</CommandEmpty>
+                    )}
                     {query.trim().length > 0 && (
                         <CommandGroup heading="Search">
                             <CommandItem
