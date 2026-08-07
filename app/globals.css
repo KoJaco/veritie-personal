@@ -192,6 +192,9 @@
 
 /* Individual aspect colours. Adjusting primary background and primary foreground for light and dark mode 
 
+- All:
+- Use current variables
+
 - Finance:   
 Light 
 --primary: oklch(0.3423 0.0544 209.9368);
@@ -229,6 +232,15 @@ Dark
   --primary: oklch(0.8004 0.0902 75.3203);
   --primary-foreground: oklch(0.1663 0.0157 82.2417);
 
+
+- Personal
+light
+  --primary: oklch(0.5943 0.2184 322.7426);
+  --primary-foreground: oklch(0.9472 0.0255 325.7767);
+
+dark
+  --primary: oklch(0.8147 0.0952 315.1379);
+  --primary-foreground: oklch(0.1883 0.0432 312.8297);
 */
 
 
