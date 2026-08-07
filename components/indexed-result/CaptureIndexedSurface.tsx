@@ -201,19 +201,21 @@ export function CaptureIndexedSurface({
 export function ExtractedValueReviewActions({
     extractedValueId,
     reviewState,
+    onUpdated,
+    showEditTrigger = true,
     extractedValue,
     listKey,
     index,
     glossaryLabels,
-    onUpdated,
 }: {
     extractedValueId: string;
     reviewState: string;
+    onUpdated?: (state: string) => void;
+    showEditTrigger?: boolean;
     extractedValue?: import("@/lib/stubs/capture-stubs").ExtractedValueStub;
     listKey?: string;
     index?: number;
     glossaryLabels?: Record<string, string>;
-    onUpdated?: (state: string) => void;
 }) {
     const [pending, setPending] = useState(false);
     const [localState, setLocalState] = useState(reviewState);
@@ -280,7 +282,7 @@ export function ExtractedValueReviewActions({
                     </Button>
                 </>
             )}
-            {canEdit && (
+            {canEdit && showEditTrigger && (
                 <ExtractedValueEditorTrigger
                     extractedValue={extractedValue}
                     listKey={listKey}
