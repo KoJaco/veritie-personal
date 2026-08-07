@@ -11,6 +11,8 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { PitchWaveform } from "@/components/ui/pitch-waveform";
 import {
   computeWaveformBarCount,
@@ -591,18 +593,18 @@ export function IndexedAudioPlayer({
             <Volume2 className="size-3.5" />
           )}
         </Button>
-        <label className="flex min-w-36 flex-1 items-center gap-2">
+        <Label className="flex min-w-36 flex-1 items-center gap-2">
           <span className="sr-only">Volume</span>
-          <input
+          <Input
             type="range"
             min={0}
             max={1}
             step={0.05}
             value={muted ? 0 : volume}
             onChange={(event) => handleVolumeChange(Number(event.target.value))}
-            className="h-1.5 w-full accent-primary"
+            className="h-1.5 w-full accent-primary border-0 bg-transparent shadow-none focus-visible:ring-0"
           />
-        </label>
+        </Label>
         <Button
           type="button"
           size="sm"

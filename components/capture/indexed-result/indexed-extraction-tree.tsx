@@ -69,7 +69,7 @@ function ExtractedEntityEditAction({
       index={entity.index}
       glossaryLabels={glossaryLabels}
       onSaved={onExtractedValueSaved}
-      size="sm"
+      variant="icon"
     />
   );
 }
@@ -236,7 +236,7 @@ type IndexedArtifactNodeProps = {
   animateEntrance?: boolean;
 };
 
-const ROOT_EXTRACTION_SCROLL_MAX_HEIGHT = "max-h-72";
+const ROOT_EXTRACTION_SCROLL_MAX_HEIGHT = "h-72";
 
 function IndexedReadableArtifactValue({
   path,
@@ -284,7 +284,7 @@ function IndexedReadableArtifactValue({
     }
 
     return (
-      <div className={cn(SURFACE_CLASS, "grid gap-1.5")}>
+      <div className={cn(SURFACE_CLASS, "grid gap-1.5 p-3")}>
         {value.map((item, index) => {
           if (isEmptyArtifactValue(item)) {
             return null;
@@ -306,13 +306,18 @@ function IndexedReadableArtifactValue({
                 <span className="text-xs font-medium capitalize text-foreground/75">
                   Item {index + 1}
                 </span>
-                <ExtractedEntityEditAction
-                  itemPath={itemPath}
-                  captureId={captureId}
-                  extractedValues={extractedValues}
-                  glossaryLabels={glossaryLabels}
-                  onExtractedValueSaved={onExtractedValueSaved}
-                />
+
+                <div className="absolute top-3 right-6">
+
+                  <ExtractedEntityEditAction
+                    itemPath={itemPath}
+                    captureId={captureId}
+                    extractedValues={extractedValues}
+                    glossaryLabels={glossaryLabels}
+                    onExtractedValueSaved={onExtractedValueSaved}
+                  />
+
+                </div>
               </div>
               <div className="min-w-0 flex-1">
                 <IndexedReadableArtifactValue
@@ -450,8 +455,7 @@ function IndexedReadableArtifactValue({
           className={cn(
             "grid gap-1.5",
             currentDepth > 0
-              ? "border-l-2 border-border px-3"
-              : cn(SURFACE_CLASS, "rounded-xl p-3"),
+            && "border-l-2 border-border px-3",
           )}
         >
           <span className="text-xs font-medium uppercase text-foreground">
@@ -459,7 +463,7 @@ function IndexedReadableArtifactValue({
           </span>
           <div className="min-w-0">
             {currentDepth === 0 ? (
-              <ScrollArea className={ROOT_EXTRACTION_SCROLL_MAX_HEIGHT}>
+              <ScrollArea className={cn("w-full")}>
                 <div className="pr-3">{extractionContent}</div>
               </ScrollArea>
             ) : (
