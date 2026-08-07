@@ -62,6 +62,23 @@ export async function fetchCaptureAudioPlaybackUrl(
     return payload.url ?? null;
 }
 
+export async function handoffCaptureJobCompletion(jobId: string): Promise<void> {
+    const response = await fetch(
+        `/api/captures/jobs/${encodeURIComponent(jobId)}/complete`,
+        {
+            method: "POST",
+            keepalive: true,
+        },
+    );
+
+    if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+            | { error?: string }
+            | null;
+        throw new Error(payload?.error ?? "Failed to hand off capture completion");
+    }
+}
+
 export async function getCapturePreferences(): Promise<{
     saveVoiceLogAudio: boolean;
     captureLocationLabel?: string;

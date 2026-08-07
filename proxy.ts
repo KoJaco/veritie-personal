@@ -8,6 +8,10 @@ function isPublicPath(pathname: string): boolean {
         return true;
     }
 
+    if (pathname === "/offline") {
+        return true;
+    }
+
     if (pathname === "/onboarding" || pathname.startsWith("/onboarding/")) {
         return true;
     }
@@ -75,6 +79,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
     matcher: [
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+        "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
     ],
 };
