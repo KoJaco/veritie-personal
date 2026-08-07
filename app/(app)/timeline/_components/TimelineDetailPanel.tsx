@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { TimelineIndexItem } from "@/lib/data-source/timeline-read-model";
 import type { TimelineEventDetailReadModel } from "@/lib/data-source/timeline-read-model";
 import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-model";
@@ -87,11 +87,6 @@ function TimelineDetailBody({
     const [activeHighlightQuote, setActiveHighlightQuote] = useState<
         string | null
     >(null);
-
-    useEffect(() => {
-        setActiveFieldKey(null);
-        setActiveHighlightQuote(null);
-    }, [selectedItem.id, loadedDetail?.event.id]);
 
     if (error) {
         return <p className="text-sm text-destructive">{error}</p>;
@@ -296,6 +291,7 @@ export function TimelineDetailPanel({
 
     const body = (
         <TimelineDetailBody
+            key={selectedItem.id}
             selectedItem={selectedItem}
             loadedDetail={loadedDetail}
             captureDetail={captureDetail}

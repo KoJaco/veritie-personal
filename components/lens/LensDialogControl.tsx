@@ -32,7 +32,7 @@ import {
     type ScopeLens,
     withLens,
 } from "@/lib/lens";
-import { getAspectIcon } from "@/lib/aspect/aspect-ui";
+import { ASPECT_ICONS } from "@/lib/aspect/aspect-ui";
 import { cn } from "@/lib/utils";
 
 function ScopeSelector({
@@ -63,7 +63,7 @@ function ScopeSelector({
                     </div>
                 </Button>
                 {SCOPE_DEFINITIONS.map((scope) => {
-                    const Icon = getAspectIcon(scope.id);
+                    const Icon = ASPECT_ICONS[scope.id];
                     return (
                     <Button
                         key={scope.id}

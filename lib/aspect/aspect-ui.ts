@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-    Bell,
     Briefcase,
     Dumbbell,
     Heart,
@@ -18,10 +17,6 @@ export const ASPECT_ICONS: Record<AspectKey, LucideIcon> = {
     personal: Heart,
     admin: ClipboardList,
 };
-
-export function getAspectIcon(aspectKey: AspectKey): LucideIcon {
-    return ASPECT_ICONS[aspectKey];
-}
 
 export function aspectBadgeClass(aspectKey: AspectKey): string {
     return `aspect-badge aspect-badge-${aspectKey}`;

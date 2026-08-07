@@ -1,8 +1,8 @@
 import type { AspectKey } from "@/lib/domain/aspect";
 import {
+    ASPECT_ICONS,
     aspectBadgeClass,
     getAspectBadgeLabel,
-    getAspectIcon,
 } from "@/lib/aspect/aspect-ui";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,7 @@ export function AspectBadge({
     aspect: AspectKey;
     className?: string;
 }) {
-    const Icon = getAspectIcon(aspect);
+    const Icon = ASPECT_ICONS[aspect];
 
     return (
         <Badge
