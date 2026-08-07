@@ -48,40 +48,36 @@ function ScopeSelector({
                 <Button
                     type="button"
                     variant={draft.scope === "all" ? "default" : "outline"}
-                    className="h-auto justify-start rounded-xl px-4 py-3 text-left"
+                    className="h-auto justify-start rounded-xl px-4 py-3 text-left relative"
                     onClick={() => setDraft(normalizeLens({ scope: "all" }))}
                 >
-                    <div className="flex items-start gap-3">
-                        <LayoutGrid className="mt-0.5 size-4 shrink-0 opacity-70" />
-                        <div>
-                            <div className="font-semibold">All aspects</div>
-                            <p className="mt-1 text-xs opacity-70">
-                                Cross-surface view of timeline, tasks, records, and
-                                resources.
-                            </p>
-                        </div>
+                    <LayoutGrid className="size-5 shrink-0 mt-1 opacity-70 absolute top-1.5 right-3" />
+                    <div>
+                        <div className="font-semibold">All aspects</div>
+                        <p className="mt-1 text-xs opacity-70">
+                            Cross-surface view of timeline, tasks, records, and
+                            resources.
+                        </p>
                     </div>
                 </Button>
                 {SCOPE_DEFINITIONS.map((scope) => {
                     const Icon = ASPECT_ICONS[scope.id];
                     return (
-                    <Button
-                        key={scope.id}
-                        type="button"
-                        variant={draft.scope === scope.id ? "default" : "outline"}
-                        className="h-auto justify-start rounded-xl px-4 py-3 text-left"
-                        onClick={() => setDraft(normalizeLens({ scope: scope.id }))}
-                    >
-                        <div className="flex items-start gap-3">
-                            <Icon className="mt-0.5 size-4 shrink-0 opacity-70" />
-                            <div>
+                        <Button
+                            key={scope.id}
+                            type="button"
+                            variant={draft.scope === scope.id ? "default" : "outline"}
+                            className="h-auto justify-start rounded-xl px-4 py-3 text-left relative"
+                            onClick={() => setDraft(normalizeLens({ scope: scope.id }))}
+                        >
+                            <Icon className="mt-0.5 size-5 shrink-0 opacity-70 absolute top-1.5 right-3" />
+                            <div className="flex flex-col">
                                 <div className="font-semibold">{scope.label}</div>
                                 <p className="mt-1 text-xs opacity-70">
                                     {scope.description}
                                 </p>
                             </div>
-                        </div>
-                    </Button>
+                        </Button>
                     );
                 })}
             </div>
@@ -111,7 +107,7 @@ function ScopeLensBody({
     };
 
     const content = (
-        <div className="space-y-4">
+        <div className="space-y-3">
             <ScopeSelector draft={draft} setDraft={setDraft} />
             <div className="flex justify-end gap-3 mt-3">
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>

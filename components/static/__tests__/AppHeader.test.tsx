@@ -74,11 +74,31 @@ describe("AppHeader", () => {
         render(<AppHeader />);
 
         const homeLink = screen.getByRole("link", { name: /home/i });
-        expect(homeLink).toHaveAttribute("href", "/tasks?aspect=work");
+        expect(homeLink).toHaveAttribute("href", "/timeline?aspect=work");
+
+        const tasksLink = screen.getByRole("link", { name: /^tasks$/i });
+        expect(tasksLink).toHaveAttribute("href", "/tasks?aspect=work");
+
+        expect(screen.queryByText("fresh-task-1")).not.toBeInTheDocument();
         expect(
             screen.getByRole("button", { name: /scope lens/i }),
         ).toBeInTheDocument();
-        expect(screen.getByText("fresh-task-1")).toBeInTheDocument();
+    });
+
+    it("shows capture parent on capture detail without the id", () => {
+        mockUsePathname.mockReturnValue(
+            "/captures/550e8400-e29b-41d4-a716-446655440000",
+        );
+        mockUseSearchParams.mockReturnValue(new URLSearchParams());
+
+        render(<AppHeader />);
+
+        expect(
+            screen.getByRole("link", { name: /^captures$/i }),
+        ).toHaveAttribute("href", "/captures?aspect=all");
+        expect(
+            screen.queryByText("550e8400-e29b-41d4-a716-446655440000"),
+        ).not.toBeInTheDocument();
     });
 
     it("renders sign out in the user menu", async () => {

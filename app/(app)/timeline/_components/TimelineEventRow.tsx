@@ -44,7 +44,7 @@ export function TimelineEventRow({
                 {item.captureId && (
                     <Link
                         href={`/captures/${item.captureId}`}
-                        className="text-xs font-medium underline-offset-2 hover:underline items-center gap-1.5 flex items-center text-foreground/75 hover:text-foreground"
+                        className="text-xs font-medium underline-offset-2 hover:underline items-center gap-1.5 items-center text-foreground/75 hover:text-foreground hidden sm:flex"
                         onClick={(event) => event.stopPropagation()}
                     >
                         View capture
@@ -69,6 +69,17 @@ export function TimelineEventRow({
                     </span>
                 )} */}
             </p>
+
+            {item.captureId && (
+                <Link
+                    href={`/captures/${item.captureId}`}
+                    className="text-xs font-medium underline-offset-2 hover:underline gap-1.5 items-center text-foreground/75 hover:text-foreground flex sm:hidden mt-2 ml-auto"
+                    onClick={(event) => event.stopPropagation()}
+                >
+                    View capture
+                    <ArrowRight className="size-3" />
+                </Link>
+            )}
         </button>
     );
 }

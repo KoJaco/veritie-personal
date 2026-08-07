@@ -101,10 +101,10 @@ function TimelineDetailBody({
             ? `/captures/${loadedDetail.event.captureId}?anchor=${loadedDetail.event.extractedValueId}`
             : `/captures/${loadedDetail.event.captureId}`
         : selectedItem.captureId
-          ? selectedItem.extractedValueId
-              ? `/captures/${selectedItem.captureId}?anchor=${selectedItem.extractedValueId}`
-              : `/captures/${selectedItem.captureId}`
-          : null;
+            ? selectedItem.extractedValueId
+                ? `/captures/${selectedItem.captureId}?anchor=${selectedItem.extractedValueId}`
+                : `/captures/${selectedItem.captureId}`
+            : null;
 
     const parsedId = loadedDetail.extractedValue
         ? parseExtractedValueId(loadedDetail.extractedValue.id)
@@ -318,7 +318,7 @@ export function TimelineDetailPanel({
                         LAYER_CLASS.detailPanel,
                     )}
                 >
-                    <DrawerHeader className="flex shrink-0 flex-row items-start justify-between gap-3 border-b border-border/70 p-4 text-left">
+                    <DrawerHeader className="flex shrink-0 flex-row items-start justify-between gap-3 border-b border-border/70 p-4 text-left mx-auto">
                         <div className="min-w-0">
                             <DrawerDescription className="sr-only">
                                 {selectedItem.type.replace(/_/g, " ")}
@@ -331,7 +331,7 @@ export function TimelineDetailPanel({
                                 reviewState={reviewState}
                             />
                         </div>
-                        <DrawerClose asChild>
+                        {/* <DrawerClose asChild>
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -340,7 +340,7 @@ export function TimelineDetailPanel({
                             >
                                 <X className="h-4 w-4" />
                             </Button>
-                        </DrawerClose>
+                        </DrawerClose> */}
                     </DrawerHeader>
                     <div className="min-h-0 flex-1 overflow-y-auto p-4">{body}</div>
                 </DrawerContent>
