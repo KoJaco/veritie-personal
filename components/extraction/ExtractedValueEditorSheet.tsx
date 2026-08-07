@@ -2,23 +2,44 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetFooter,
-    SheetHeader,
-    SheetTitle,
-} from "@/components/ui/sheet";
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    Drawer,
+    DrawerDescription,
+    DrawerHeader,
+    DrawerTitle,
+    DrawerTrigger,
+} from "@/components/ui/drawer";
+import {
+    Dialog,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    NestedDialogContent,
+    NestedDrawerContent,
+} from "@/components/ui/nested-dialog";
 import { updateExtractedValueAction } from "@/lib/actions/stub-data-mutations";
 import { formatArtifactKey } from "@/lib/artifact-display";
 import { flattenExtractedValueAttributes } from "@/lib/capture/flatten-extracted-value";
 import { ASPECT_DEFINITIONS } from "@/lib/domain/aspect";
 import { formatLocaleDateTime, isDateLike } from "@/lib/format/iso-datetime";
+import { useIsMobileViewport } from "@/lib/hooks/useIsMobileViewport";
 import type { ExtractedValueStub } from "@/lib/stubs/capture-stubs";
+import { cn } from "@/lib/utils";
+import { SURFACE_CLASS } from "@/lib/ui/surface";
 
 function inferInputType(key: string, value: unknown): "text" | "number" | "checkbox" {
     if (typeof value === "boolean") {
@@ -71,22 +92,20 @@ function parseFieldValue(
     return raw;
 }
 
-export function ExtractedValueEditorSheet({
-    open,
-    onOpenChange,
+export function ExtractedValueEditorForm({
     extractedValue,
     listKey,
     index,
     glossaryLabels,
     onSaved,
+    onClose,
 }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
     extractedValue: ExtractedValueStub;
     listKey: string;
     index: number;
     glossaryLabels?: Record<string, string>;
     onSaved?: () => void;
+    onClose: () => void;
 }) {
     const router = useRouter();
     const initialAttributes = useMemo(
@@ -98,17 +117,13 @@ export function ExtractedValueEditorSheet({
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!open) {
-            return;
-        }
-
         const nextValues: Record<string, string> = {};
         for (const [key, value] of Object.entries(initialAttributes)) {
             nextValues[key] = serializeFieldValue(value);
         }
         setFormValues(nextValues);
         setError(null);
-    }, [open, initialAttributes]);
+    }, [initialAttributes]);
 
     const fieldKeys = useMemo(() => Object.keys(initialAttributes), [initialAttributes]);
 
@@ -133,7 +148,7 @@ export function ExtractedValueEditorSheet({
             if (!result.ok) {
                 throw new Error(result.error);
             }
-            onOpenChange(false);
+            onClose();
             onSaved?.();
             router.refresh();
         } catch (saveError) {
@@ -150,138 +165,201 @@ export function ExtractedValueEditorSheet({
         fieldKeys,
         formValues,
         initialAttributes,
-        onOpenChange,
+        onClose,
         onSaved,
         router,
     ]);
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="flex w-full flex-col sm:max-w-lg">
-                <SheetHeader>
-                    <SheetTitle>Edit extracted value</SheetTitle>
-                    <SheetDescription>
-                        {listKey.replace(/_/g, " ")} #{index + 1}. Changes sync to
-                        capture extraction, timeline, and index quotes.
-                    </SheetDescription>
-                </SheetHeader>
+        <>
+            <div className={cn(SURFACE_CLASS, "flex-1 space-y-3 p-3 max-h-[min(85dvh,720px)] mt-3")}>
+                {fieldKeys.map((key) => {
+                    const original = initialAttributes[key];
+                    const inputType = inferInputType(key, original);
 
-                <div className="flex-1 space-y-4 overflow-y-auto py-4">
-                    {fieldKeys.map((key) => {
-                        const original = initialAttributes[key];
-                        const inputType = inferInputType(key, original);
-
-                        if (key === "aspect") {
-                            return (
-                                <div key={key} className="space-y-2">
-                                    <label
-                                        htmlFor={`edit-${key}`}
-                                        className="text-sm font-medium"
-                                    >
-                                        {formatArtifactKey(key, glossaryLabels)}
-                                    </label>
-                                    <select
-                                        id={`edit-${key}`}
-                                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                                        value={formValues[key] ?? ""}
-                                        onChange={(event) =>
-                                            setFormValues((current) => ({
-                                                ...current,
-                                                [key]: event.target.value,
-                                            }))
-                                        }
-                                    >
-                                        {ASPECT_DEFINITIONS.map((aspect) => (
-                                            <option key={aspect.id} value={aspect.id}>
-                                                {aspect.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            );
-                        }
-
-                        if (inputType === "checkbox") {
-                            return (
-                                <div key={key} className="flex items-center gap-2">
-                                    <input
-                                        id={`edit-${key}`}
-                                        type="checkbox"
-                                        className="size-4 rounded border border-input"
-                                        checked={formValues[key] === "true"}
-                                        onChange={(event) =>
-                                            setFormValues((current) => ({
-                                                ...current,
-                                                [key]: event.target.checked
-                                                    ? "true"
-                                                    : "false",
-                                            }))
-                                        }
-                                    />
-                                    <label
-                                        htmlFor={`edit-${key}`}
-                                        className="text-sm font-medium"
-                                    >
-                                        {formatArtifactKey(key, glossaryLabels)}
-                                    </label>
-                                </div>
-                            );
-                        }
-
+                    if (key === "aspect") {
                         return (
                             <div key={key} className="space-y-2">
-                                <label
-                                    htmlFor={`edit-${key}`}
-                                    className="text-sm font-medium"
-                                >
+                                <Label htmlFor={`edit-${key}`}>
                                     {formatArtifactKey(key, glossaryLabels)}
-                                </label>
+                                </Label>
+                                <Select
+                                    value={formValues[key] ?? ""}
+                                    onValueChange={(value) =>
+                                        setFormValues((current) => ({
+                                            ...current,
+                                            [key]: value,
+                                        }))
+                                    }
+                                >
+                                    <SelectTrigger
+                                        id={`edit-${key}`}
+                                        className="w-full"
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {ASPECT_DEFINITIONS.map((aspect) => (
+                                            <SelectItem
+                                                key={aspect.id}
+                                                value={aspect.id}
+                                            >
+                                                {aspect.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        );
+                    }
+
+                    if (inputType === "checkbox") {
+                        return (
+                            <div key={key} className="flex items-center gap-2">
                                 <Input
                                     id={`edit-${key}`}
-                                    type={inputType}
-                                    value={formValues[key] ?? ""}
+                                    type="checkbox"
+                                    className="size-4 w-auto shrink-0"
+                                    checked={formValues[key] === "true"}
                                     onChange={(event) =>
                                         setFormValues((current) => ({
                                             ...current,
-                                            [key]: event.target.value,
+                                            [key]: event.target.checked
+                                                ? "true"
+                                                : "false",
                                         }))
                                     }
                                 />
-                                {isDateLike(formValues[key]) && (
-                                    <p className="text-xs text-muted-foreground">
-                                        {formatLocaleDateTime(formValues[key] ?? "")}
-                                    </p>
-                                )}
+                                <Label htmlFor={`edit-${key}`}>
+                                    {formatArtifactKey(key, glossaryLabels)}
+                                </Label>
                             </div>
                         );
-                    })}
+                    }
 
-                    {error && (
-                        <p className="text-sm text-destructive">{error}</p>
-                    )}
-                </div>
+                    return (
+                        <div key={key} className="space-y-2">
+                            <Label htmlFor={`edit-${key}`}>
+                                {formatArtifactKey(key, glossaryLabels)}
+                            </Label>
+                            <Input
+                                id={`edit-${key}`}
+                                type={inputType}
+                                value={formValues[key] ?? ""}
+                                onChange={(event) =>
+                                    setFormValues((current) => ({
+                                        ...current,
+                                        [key]: event.target.value,
+                                    }))
+                                }
+                            />
+                            {isDateLike(formValues[key]) && (
+                                <p className="text-xs text-muted-foreground">
+                                    {formatLocaleDateTime(formValues[key] ?? "")}
+                                </p>
+                            )}
+                        </div>
+                    );
+                })}
 
-                <SheetFooter>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => onOpenChange(false)}
-                        disabled={pending}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        type="button"
-                        onClick={() => void handleSave()}
-                        disabled={pending}
-                    >
-                        {pending ? "Saving…" : "Save changes"}
-                    </Button>
-                </SheetFooter>
-            </SheetContent>
-        </Sheet>
+                {error && (
+                    <p className="text-sm text-destructive">{error}</p>
+                )}
+            </div>
+
+            <div className="flex justify-end gap-2 mt-3">
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onClose}
+                    disabled={pending}
+                >
+                    <X className="size-4" />
+                    Cancel
+                </Button>
+                <Button
+                    type="button"
+                    onClick={() => void handleSave()}
+                    disabled={pending}
+                >
+                    {pending ? "Saving…" : "Save changes"}
+                </Button>
+            </div>
+        </>
     );
 }
+
+export function ExtractedValueEditorFlow({
+    open,
+    onOpenChange,
+    extractedValue,
+    listKey,
+    index,
+    glossaryLabels,
+    onSaved,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    extractedValue: ExtractedValueStub;
+    listKey: string;
+    index: number;
+    glossaryLabels?: Record<string, string>;
+    onSaved?: () => void;
+}) {
+    const isMobile = useIsMobileViewport();
+    const close = () => onOpenChange(false);
+
+    const header = (
+        <>
+            <DialogTitle>Edit extracted value</DialogTitle>
+            <DialogDescription>
+                {listKey.replace(/_/g, " ")} #{index + 1}. Changes sync to capture
+                extraction, timeline, and index quotes.
+            </DialogDescription>
+        </>
+    );
+
+    const form = (
+        <ExtractedValueEditorForm
+            extractedValue={extractedValue}
+            listKey={listKey}
+            index={index}
+            glossaryLabels={glossaryLabels}
+            onSaved={onSaved}
+            onClose={close}
+        />
+    );
+
+    if (isMobile) {
+        return (
+            <Drawer open={open} onOpenChange={onOpenChange}>
+                <NestedDrawerContent>
+                    <DrawerHeader className="text-left">
+                        <DrawerTitle>Edit extracted value</DrawerTitle>
+                        <DrawerDescription>
+                            {listKey.replace(/_/g, " ")} #{index + 1}. Changes sync
+                            to capture extraction, timeline, and index quotes.
+                        </DrawerDescription>
+                    </DrawerHeader>
+                    <div className="flex min-h-0 flex-1 flex-col px-4">{form}</div>
+                </NestedDrawerContent>
+            </Drawer>
+        );
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <NestedDialogContent className="flex max-h-[min(85dvh,720px)] flex-col gap-0 overflow-hidden sm:max-w-lg">
+                <DialogHeader className="shrink-0">{header}</DialogHeader>
+                <div className="flex min-h-0 flex-1 flex-col px-1">{form}</div>
+                <DialogFooter className="hidden" />
+            </NestedDialogContent>
+        </Dialog>
+    );
+}
+
+/** @deprecated Use ExtractedValueEditorFlow */
+export const ExtractedValueEditorSheet = ExtractedValueEditorFlow;
 
 export function ExtractedValueEditorTrigger({
     extractedValue,
@@ -289,36 +367,92 @@ export function ExtractedValueEditorTrigger({
     index,
     glossaryLabels,
     onSaved,
-    size = "sm",
+    variant = "icon",
+    className,
 }: {
     extractedValue: ExtractedValueStub;
     listKey: string;
     index: number;
     glossaryLabels?: Record<string, string>;
     onSaved?: () => void;
-    size?: "sm" | "default";
+    variant?: "icon" | "labeled";
+    className?: string;
 }) {
+    const isMobile = useIsMobileViewport();
     const [open, setOpen] = useState(false);
 
-    return (
-        <>
+    const trigger =
+        variant === "labeled" ? (
             <Button
                 type="button"
-                size={size}
+                size="sm"
                 variant="outline"
-                onClick={() => setOpen(true)}
+                className={cn("gap-1.5", className)}
             >
+                <Pencil className="size-3.5" />
                 Edit
             </Button>
-            <ExtractedValueEditorSheet
-                open={open}
-                onOpenChange={setOpen}
-                extractedValue={extractedValue}
-                listKey={listKey}
-                index={index}
-                glossaryLabels={glossaryLabels}
-                onSaved={onSaved}
-            />
-        </>
+        ) : (
+            <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className={cn("size-6 rounded-full", className)}
+                aria-label="Edit extracted value"
+            >
+                <Pencil className="size-3" />
+            </Button>
+        );
+
+    if (isMobile) {
+        return (
+            <Drawer open={open} onOpenChange={setOpen}>
+                <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+                <NestedDrawerContent>
+                    <DrawerHeader className="text-left">
+                        <DrawerTitle>Edit extracted value</DrawerTitle>
+                        <DrawerDescription>
+                            {listKey.replace(/_/g, " ")} #{index + 1}. Changes sync
+                            to capture extraction, timeline, and index quotes.
+                        </DrawerDescription>
+                    </DrawerHeader>
+                    <div className="flex min-h-0 flex-1 flex-col px-4">
+                        <ExtractedValueEditorForm
+                            extractedValue={extractedValue}
+                            listKey={listKey}
+                            index={index}
+                            glossaryLabels={glossaryLabels}
+                            onSaved={onSaved}
+                            onClose={() => setOpen(false)}
+                        />
+                    </div>
+                </NestedDrawerContent>
+            </Drawer>
+        );
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>{trigger}</DialogTrigger>
+            <NestedDialogContent className="flex flex-col gap-0 overflow-hidden sm:max-w-2xl">
+                <DialogHeader className="shrink-0">
+                    <DialogTitle>Edit extracted values</DialogTitle>
+                    <DialogDescription>
+                        {listKey.replace(/_/g, " ")} #{index + 1}. Changes sync to
+                        capture extraction, timeline, and index quotes.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className={cn("flex min-h-0 flex-1 flex-col")}>
+                    <ExtractedValueEditorForm
+                        extractedValue={extractedValue}
+                        listKey={listKey}
+                        index={index}
+                        glossaryLabels={glossaryLabels}
+                        onSaved={onSaved}
+                        onClose={() => setOpen(false)}
+                    />
+                </div>
+            </NestedDialogContent>
+        </Dialog>
     );
 }
