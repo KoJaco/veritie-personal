@@ -95,7 +95,7 @@ describe("POST /api/extracted-values/review", () => {
         const response = await POST(
             createJsonRequest({
                 extractedValueId: "extracted_task_medibank",
-                reviewState: "pending",
+                reviewState: "edited",
             }),
         );
         const body = await response.json();

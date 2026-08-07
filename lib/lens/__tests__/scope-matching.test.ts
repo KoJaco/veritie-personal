@@ -37,7 +37,12 @@ describe("scope matching helpers", () => {
     it("returns bounded prefetch hrefs across primary dashboard surfaces", () => {
         expect(buildLensPrefetchHrefs({ scope: "work" })).toEqual([
             "/timeline?aspect=work",
+            "/captures?aspect=work",
+            "/events?aspect=work",
+            "/reminders?aspect=work",
             "/tasks?aspect=work",
+            "/goals?aspect=work",
+            "/money?aspect=work",
             "/records?aspect=work",
             "/resources?aspect=work",
         ]);
