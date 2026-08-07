@@ -68,7 +68,7 @@ export async function updateExtractedValueReviewAction(
         parsed.data.reviewState,
     );
     if (!updated) {
-        return { ok: false, error: "Extracted value not found" };
+        return { ok: false, error: "Review transition not allowed" };
     }
 
     return { ok: true };
