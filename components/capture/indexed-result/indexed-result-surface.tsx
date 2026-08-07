@@ -399,7 +399,7 @@ export function IndexedResultSurface({
         )}
       >
         {hasPrimaryColumn ? (
-          <div className="grid min-w-0 gap-3 pr-6">
+          <div className="grid min-w-0 gap-3 lg:pr-6">
             <AnimatePresence initial={false}>{audioSection}</AnimatePresence>
 
             {showAudioSection &&
