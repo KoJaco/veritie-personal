@@ -75,6 +75,10 @@ sequenceDiagram
 | Extraction schema + aspect derivation | `docs/contracts/voice-log-extraction-schema.md`, `lib/capture/extraction-aspect.ts` |
 | Script persist API | `app/api/captures/route.ts` |
 
+## Related
+
+- Domain projection on accept, capture profiles, list context, habits, and timebox: [`domain-projection-and-capture-surfaces.md`](domain-projection-and-capture-surfaces.md)
+
 ## Out of scope (follow-up)
 
 - SSE-based background enrichment (polling only)

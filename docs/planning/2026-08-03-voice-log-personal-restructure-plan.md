@@ -19,6 +19,8 @@ Restructure the domain-agnostic platform shell into a voice-log-first personal o
 | 6 | Review state, records hardening, import |
 | Post-MVP | Today, Goals/Money UI, persistence, extra capture modes |
 
+Post-MVP domain projection, list context, habits, timebox, usable reminder push notifications, and capture profiles: see [`2026-08-07-domain-projection-and-capture-surfaces-plan.md`](2026-08-07-domain-projection-and-capture-surfaces-plan.md).
+
 Checklists: `docs/todos/phase-N-*.md`
 
 ## Key decisions

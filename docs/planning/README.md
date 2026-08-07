@@ -14,6 +14,7 @@ This directory contains active implementation planning that is intended to guide
 
 ## Active implementation plans
 
+- `2026-08-07-domain-projection-and-capture-surfaces-plan.md` — domain projection on accept, list context, habits, timebox, reminder push notifications, capture profiles
 - `2026-08-07-capture-completion-job-queue-plan.md`
 
 ## Previous initiative (complete)
