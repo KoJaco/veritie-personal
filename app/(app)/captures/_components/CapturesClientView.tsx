@@ -201,24 +201,28 @@ export function CapturesClientView({
                                                 "block px-4 py-3 transition-colors hover:bg-accent/40",
                                             )}
                                         >
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <p className="font-medium">
-                                                    {item.title}
-                                                </p>
+                                            <div className="flex flex-col gap-1.5">
                                                 <Badge
                                                     variant="outline"
                                                     className="text-[10px]"
                                                 >
                                                     {item.status}
                                                 </Badge>
+                                                <p className="font-medium">
+                                                    {item.title}
+                                                </p>
                                             </div>
+
                                             <p className="mt-1 text-sm text-muted-foreground">
+
                                                 {item.type} ·{" "}
                                                 {formatExtractedCountLabel(
                                                     item.extractedCount,
                                                     item.extractedSummary,
                                                 )}
-                                                ·{" "}
+
+                                            </p>
+                                            <p className="text-sm text-muted-foreground mt-1">
                                                 {new Date(
                                                     item.createdAt,
                                                 ).toLocaleTimeString(undefined, {
