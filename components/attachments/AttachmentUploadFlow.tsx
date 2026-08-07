@@ -30,6 +30,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import {
     Popover,
@@ -404,7 +405,7 @@ function AttachmentUploadFlowContent({
                                     : "border-border",
                             )}
                         >
-                            <input {...getInputProps()} />
+                            <Input {...getInputProps()} />
                             <div className="space-y-3">
                                 <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border bg-background">
                                     <FileUp className="h-5 w-5" />
@@ -438,7 +439,7 @@ function AttachmentUploadFlowContent({
                 <section className="space-y-3">
                     <div className={cn(SURFACE_CLASS_NESTED, "space-y-3 p-4")}>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Title</label>
+                            <Label>Title</Label>
                             <Input
                                 value={title}
                                 onChange={(event) =>
@@ -449,9 +450,7 @@ function AttachmentUploadFlowContent({
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">
-                                Description
-                            </label>
+                            <Label>Description</Label>
                             <textarea
                                 value={description}
                                 onChange={(event) =>
@@ -464,9 +463,7 @@ function AttachmentUploadFlowContent({
 
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                    Type
-                                </label>
+                                <Label>Type</Label>
                                 <Select
                                     value={type}
                                     onValueChange={(value) =>
@@ -492,9 +489,7 @@ function AttachmentUploadFlowContent({
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                    Valid from
-                                </label>
+                                <Label>Valid from</Label>
                                 <DatePicker
                                     value={validFrom}
                                     onChange={(date) =>
@@ -504,9 +499,7 @@ function AttachmentUploadFlowContent({
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                    Valid until
-                                </label>
+                                <Label>Valid until</Label>
                                 <DatePicker
                                     value={validUntil}
                                     onChange={(date) =>

@@ -4,6 +4,9 @@ import { useState } from "react";
 
 import { updateCaptureContextAction } from "@/lib/actions/settings-mutations";
 import { CAPTURE_LOCATION_LABEL_MAX_LENGTH } from "@/lib/capture/capture-context-schema";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SURFACE_CLASS } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
 
@@ -55,17 +58,13 @@ export function CaptureContextForm({
                 </p>
             </div>
             <div className="space-y-2">
-                <label
-                    htmlFor="capture-location-label"
-                    className="text-sm font-medium"
-                >
+                <Label htmlFor="capture-location-label">
                     Default location label
-                </label>
-                <input
+                </Label>
+                <Input
                     id="capture-location-label"
                     type="text"
                     maxLength={CAPTURE_LOCATION_LABEL_MAX_LENGTH}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
                     placeholder="e.g. Sydney"
                     value={value}
                     disabled={!mutationsEnabled || pending}
@@ -79,14 +78,14 @@ export function CaptureContextForm({
                 </p>
             </div>
             <div className="flex items-center gap-3">
-                <button
+                <Button
                     type="button"
-                    className="rounded-lg border border-input px-3 py-2 text-sm font-medium disabled:opacity-50"
+                    variant="outline"
                     disabled={!mutationsEnabled || pending}
                     onClick={() => void handleSave()}
                 >
                     {pending ? "Saving…" : "Save location"}
-                </button>
+                </Button>
                 {saved ? (
                     <span className="text-sm text-muted-foreground">Saved</span>
                 ) : null}

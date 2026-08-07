@@ -4,6 +4,8 @@ import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
     DEFAULT_CLIENT_STATE,
@@ -167,12 +169,9 @@ export function OnboardingWizard() {
                             ))}
                         </section>
                         <section className="space-y-3">
-                            <p className="text-sm font-medium">
-                                Default location label
-                            </p>
-                            <input
+                            <Label>Default location label</Label>
+                            <Input
                                 type="text"
-                                className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm"
                                 placeholder="e.g. Sydney"
                                 maxLength={120}
                                 value={state.profile.captureLocationLabel ?? ""}

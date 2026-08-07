@@ -22,6 +22,7 @@ import {
     DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
     Popover,
     PopoverContent,
@@ -129,9 +130,7 @@ export function CreateTaskDialog({
     const content = (
         <div className={cn("space-y-4 p-4", SURFACE_CLASS)}>
             <div className="flex flex-col gap-y-1.5">
-                <label className="text-sm font-medium" htmlFor="task-title">
-                    Title
-                </label>
+                <Label htmlFor="task-title">Title</Label>
                 <Input
                     id="task-title"
                     value={title}
@@ -141,12 +140,7 @@ export function CreateTaskDialog({
             </div>
 
             <div className="flex flex-col gap-y-1.5">
-                <label
-                    className="text-sm font-medium"
-                    htmlFor="task-description"
-                >
-                    Description
-                </label>
+                <Label htmlFor="task-description">Description</Label>
                 <Textarea
                     id="task-description"
                     value={description}
@@ -158,7 +152,7 @@ export function CreateTaskDialog({
 
             <div className="grid gap-4 md:grid-cols-2">
                 <div className="flex flex-col gap-y-1.5">
-                    <label className="text-sm font-medium">Check</label>
+                    <Label>Check</Label>
                     <Select value={checkId} onValueChange={setCheckId}>
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select check" />
@@ -174,7 +168,7 @@ export function CreateTaskDialog({
                 </div>
 
                 <div className="flex flex-col gap-y-1.5">
-                    <label className="text-sm font-medium">Owner</label>
+                    <Label>Owner</Label>
                     <Select value={ownerId} onValueChange={setOwnerId}>
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select owner" />
@@ -190,7 +184,7 @@ export function CreateTaskDialog({
                 </div>
 
                 <div className="flex flex-col gap-y-1.5">
-                    <label className="text-sm font-medium">Due date</label>
+                    <Label>Due date</Label>
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button
@@ -219,7 +213,7 @@ export function CreateTaskDialog({
                 </div>
 
                 <div className="flex flex-col gap-y-1.5">
-                    <label className="text-sm font-medium">Resource</label>
+                    <Label>Resource</Label>
                     <Select value={resourceId} onValueChange={setResourceId}>
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Optional resource" />
@@ -252,9 +246,9 @@ export function CreateTaskDialog({
     );
 
     const trigger = (
-        <Button size="sm">
+        <Button size="sm" variant="outline">
+            {isMobile ? "" : "Create task"}
             <Plus className="h-4 w-4" />
-            Create task
         </Button>
     );
 
@@ -287,8 +281,8 @@ export function CreateTaskDialog({
                 <DialogHeader>
                     <DialogTitle>Create task</DialogTitle>
                     <DialogDescription>
-                            Add a new check-linked work item for the current
-                            operational queue.
+                        Add a new check-linked work item for the current
+                        operational queue.
                     </DialogDescription>
                 </DialogHeader>
                 {content}

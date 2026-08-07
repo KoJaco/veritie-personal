@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { updateProfileAction } from "@/lib/actions/settings-mutations";
 import { SURFACE_CLASS } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
@@ -72,12 +73,7 @@ export function ProfileEditForm({
 
             <div className="space-y-4 max-w-lg">
                 <div className="space-y-2">
-                    <label
-                        className="text-sm font-medium"
-                        htmlFor="settings-email"
-                    >
-                        Email
-                    </label>
+                    <Label htmlFor="settings-email">Email</Label>
                     <Input
                         id="settings-email"
                         value={email}
@@ -87,12 +83,7 @@ export function ProfileEditForm({
                 </div>
 
                 <div className="space-y-2">
-                    <label
-                        className="text-sm font-medium"
-                        htmlFor="settings-display-name"
-                    >
-                        Display name
-                    </label>
+                    <Label htmlFor="settings-display-name">Display name</Label>
                     <Input
                         id="settings-display-name"
                         value={name}
@@ -104,12 +95,9 @@ export function ProfileEditForm({
 
                 {isOwner ? (
                     <div className="space-y-2">
-                        <label
-                            className="text-sm font-medium"
-                            htmlFor="settings-workspace-name"
-                        >
+                        <Label htmlFor="settings-workspace-name">
                             Workspace name
-                        </label>
+                        </Label>
                         <Input
                             id="settings-workspace-name"
                             value={workspace}

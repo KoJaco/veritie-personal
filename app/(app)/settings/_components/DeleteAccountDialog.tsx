@@ -12,6 +12,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { deleteAccountAction } from "@/lib/actions/settings-mutations";
 import { DELETE_ACCOUNT_CONFIRMATION } from "@/lib/settings/update-profile-schema";
 import { SURFACE_CLASS } from "@/lib/ui/surface";
@@ -97,12 +98,9 @@ export function DeleteAccountDialog({
                     </DialogHeader>
 
                     <div className="space-y-2">
-                        <label
-                            className="text-sm font-medium"
-                            htmlFor="delete-account-confirmation"
-                        >
+                        <Label htmlFor="delete-account-confirmation">
                             Confirmation
-                        </label>
+                        </Label>
                         <Input
                             id="delete-account-confirmation"
                             value={confirmation}

@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 import { updateVoiceLogBehaviorAction } from "@/lib/actions/settings-mutations";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SURFACE_CLASS } from "@/lib/ui/surface";
 import { cn } from "@/lib/utils";
 
@@ -52,20 +54,20 @@ export function VoiceLogBehaviorForm({
                 </p>
             </div>
             <div className="flex items-start gap-3">
-                <input
+                <Input
                     id="save-voice-log-audio"
                     type="checkbox"
-                    className="mt-1 size-4 rounded border border-input"
+                    className="mt-1 size-4 w-auto shrink-0"
                     checked={enabled}
                     disabled={!mutationsEnabled || pending}
                     onChange={() => void handleToggle()}
                 />
-                <label
+                <Label
                     htmlFor="save-voice-log-audio"
-                    className="text-sm leading-6"
+                    className="leading-6 font-normal"
                 >
                     Save voice log audio to my workspace
-                </label>
+                </Label>
             </div>
             {error ? (
                 <p className="text-sm text-destructive">{error}</p>
