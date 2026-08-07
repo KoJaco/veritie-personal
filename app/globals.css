@@ -201,6 +201,34 @@ Dark
 --primary: oklch(0.9199 0.0077 207.1396);
 --primary-foreground: oklch(0.2589 0.0415 210.7449);
 
+- Finess:
+Light
+  --primary: oklch(0.5561 0.1161 150.4734);
+  --primary-foreground: oklch(0.9273 0.0100 155.0868);
+
+dark
+  --primary: oklch(0.8737 0.1056 152.5889);
+  --primary-foreground: oklch(0.2916 0.0791 149.5053);
+
+- Work:
+Light
+  --primary: oklch(0.5952 0.1366 254.7662);
+  --primary-foreground: oklch(0.9846 0.0017 247.8389);
+
+Dark
+ --primary: oklch(0.7853 0.0862 255.2094);
+  --primary-foreground: oklch(0.2044 0.0568 254.3110);
+
+
+- Admin:
+  Light
+    --primary: oklch(0.5301 0.1309 48.8555);
+  --primary-foreground: oklch(0.9392 0.0102 48.6184);
+
+Dark
+  --primary: oklch(0.8004 0.0902 75.3203);
+  --primary-foreground: oklch(0.1663 0.0157 82.2417);
+
 */
 
 
