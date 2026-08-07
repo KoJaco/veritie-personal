@@ -5,7 +5,7 @@ import {
     useCallback,
     useContext,
     useEffect,
-    useRef,
+    useState,
     useSyncExternalStore,
     type ReactNode,
 } from "react";
@@ -54,13 +54,10 @@ export function MobileOverlayVisibilityProvider({
 }: {
     children: ReactNode;
 }) {
-    const storeRef = useRef<MobileOverlayVisibilityStore | null>(null);
-    if (!storeRef.current) {
-        storeRef.current = createMobileOverlayVisibilityStore();
-    }
+    const [store] = useState(createMobileOverlayVisibilityStore);
 
     return (
-        <MobileOverlayVisibilityContext.Provider value={storeRef.current}>
+        <MobileOverlayVisibilityContext.Provider value={store}>
             {children}
         </MobileOverlayVisibilityContext.Provider>
     );

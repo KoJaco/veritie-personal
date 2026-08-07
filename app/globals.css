@@ -352,7 +352,7 @@ html[data-aspect="personal"] {
         @apply inline-flex items-center gap-1 border-0 font-medium;
     }
 
-    .aspect-badge-finance {
+    .aspect-badge.aspect-badge-finance {
         background-color: color-mix(
             in oklch,
             var(--aspect-finance-primary) 14%,
@@ -361,7 +361,7 @@ html[data-aspect="personal"] {
         color: var(--aspect-finance-primary);
     }
 
-    .aspect-badge-fitness {
+    .aspect-badge.aspect-badge-fitness {
         background-color: color-mix(
             in oklch,
             var(--aspect-fitness-primary) 14%,
@@ -370,7 +370,7 @@ html[data-aspect="personal"] {
         color: var(--aspect-fitness-primary);
     }
 
-    .aspect-badge-work {
+    .aspect-badge.aspect-badge-work {
         background-color: color-mix(
             in oklch,
             var(--aspect-work-primary) 14%,
@@ -379,7 +379,7 @@ html[data-aspect="personal"] {
         color: var(--aspect-work-primary);
     }
 
-    .aspect-badge-admin {
+    .aspect-badge.aspect-badge-admin {
         background-color: color-mix(
             in oklch,
             var(--aspect-admin-primary) 14%,
@@ -388,7 +388,7 @@ html[data-aspect="personal"] {
         color: var(--aspect-admin-primary);
     }
 
-    .aspect-badge-personal {
+    .aspect-badge.aspect-badge-personal {
         background-color: color-mix(
             in oklch,
             var(--aspect-personal-primary) 14%,

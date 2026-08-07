@@ -9,6 +9,7 @@ const mockPersistCaptureFn = jest.fn();
 const mockHandleClose = jest.fn();
 const mockRenewLease = jest.fn();
 const mockPrepareLease = jest.fn();
+const mockGetOrPrepareLease = jest.fn();
 const mockEnqueueBackgroundPipeline = jest.fn();
 
 jest.mock("sonner", () => ({
@@ -139,6 +140,7 @@ function renderPanel(
         leasePhase: "idle" | "preparing" | "ready" | "error";
         captureHandle: typeof captureHandleMock | null;
         prepareLease: typeof mockPrepareLease;
+        getOrPrepareLease: typeof mockGetOrPrepareLease;
         captureLocationLabel?: string;
     }> = {},
 ) {
@@ -152,6 +154,9 @@ function renderPanel(
             }
             leasePhase={overrides.leasePhase ?? "ready"}
             prepareLease={overrides.prepareLease ?? mockPrepareLease}
+            getOrPrepareLease={
+                overrides.getOrPrepareLease ?? mockGetOrPrepareLease
+            }
             renewLease={mockRenewLease}
             onBack={overrides.onBack ?? jest.fn()}
             onComplete={overrides.onComplete ?? jest.fn()}
@@ -167,6 +172,7 @@ describe("VoiceCapturePanel", () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockPrepareLease.mockResolvedValue(captureHandleMock);
+        mockGetOrPrepareLease.mockResolvedValue(captureHandleMock);
         mockRenewLease.mockImplementation(() => undefined);
         mockStartCapture.mockImplementation(async (options?: { signal?: AbortSignal }) => {
             if (options?.signal?.aborted) {
@@ -310,7 +316,7 @@ describe("VoiceCapturePanel", () => {
         expect(mockEnqueueBackgroundPipeline).toHaveBeenCalledTimes(1);
     });
 
-    it("does not prepare lease when starting recording", async () => {
+    it("does not prepare a fresh lease when a capture handle is already ready", async () => {
         renderPanel();
 
         fireEvent.click(screen.getByRole("button", { name: /start recording/i }));
@@ -320,15 +326,21 @@ describe("VoiceCapturePanel", () => {
         });
 
         expect(mockPrepareLease).not.toHaveBeenCalled();
+        expect(mockGetOrPrepareLease).not.toHaveBeenCalled();
     });
 
-    it("disables start while lease preparation is in flight", () => {
+    it("starts local recording while lease preparation is in flight", async () => {
         renderPanel({ leasePhase: "preparing", captureHandle: null });
 
-        expect(
-            screen.queryByRole("button", { name: /start recording/i }),
-        ).not.toBeInTheDocument();
-        expect(screen.getByText(/preparing veritie lease/i)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: /start recording/i }));
+
+        await waitFor(() => {
+            expect(screen.getByRole("button", { name: /stop/i })).toBeInTheDocument();
+        });
+
+        expect(mockGetOrPrepareLease).toHaveBeenCalledTimes(1);
+        expect(mockStartCapture).toHaveBeenCalled();
+        expect(screen.queryByText(/preparing veritie lease/i)).not.toBeInTheDocument();
     });
 
     it("aborts in-flight work when cancel is clicked during processing", async () => {
@@ -399,7 +411,7 @@ describe("VoiceCapturePanel", () => {
         expect(trackStop).toHaveBeenCalled();
     });
 
-    it("shows Stop immediately after Start before the live session resolves", async () => {
+    it("shows Stop after recorder start before the live session resolves", async () => {
         let resolveSession:
             | ((value: typeof liveSessionMock) => void)
             | undefined;
@@ -414,8 +426,13 @@ describe("VoiceCapturePanel", () => {
 
         fireEvent.click(screen.getByRole("button", { name: /start recording/i }));
 
-        expect(screen.getByRole("button", { name: /stop/i })).toBeInTheDocument();
-        expect(resolveSession).toBeDefined();
+        expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
+        await waitFor(() => {
+            expect(screen.getByRole("button", { name: /stop/i })).toBeInTheDocument();
+        });
+        await waitFor(() => {
+            expect(resolveSession).toBeDefined();
+        });
 
         resolveSession?.(liveSessionMock);
         await waitFor(() => {

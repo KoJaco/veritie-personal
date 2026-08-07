@@ -176,7 +176,12 @@ describe("lens utils (aspect bridge)", () => {
 
         expect(buildLensPrefetchHrefs({ scope: "work" })).toEqual([
             "/timeline?aspect=work",
+            "/captures?aspect=work",
+            "/events?aspect=work",
+            "/reminders?aspect=work",
             "/tasks?aspect=work",
+            "/goals?aspect=work",
+            "/money?aspect=work",
             "/records?aspect=work",
             "/resources?aspect=work",
         ]);

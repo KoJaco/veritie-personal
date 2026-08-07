@@ -16,6 +16,8 @@ import {
     applyTimelineItemSummaryFallback,
     resolveCaptureSummaryFromPayload,
 } from "@/lib/capture/extraction-summary";
+import { isValidReviewTransition } from "@/lib/capture/extracted-value-review-transitions";
+import { sortTimelineIndexItems } from "@/lib/timeline/sort-timeline-index-items";
 
 export type TimelineIndexItem = {
     id: string;
@@ -27,8 +29,10 @@ export type TimelineIndexItem = {
     captureId?: string;
     extractedValueId?: string;
     extractedObjectType?: ExtractedValueStub["objectType"];
+    extractedValue?: ExtractedValueStub;
     reviewState?: ReviewState;
     confidence?: number;
+    createdAt?: string;
 };
 
 export type TimelineIndexReadModel = {
@@ -67,25 +71,42 @@ function resolveCaptureSummaryForId(captureId: string | undefined): string | und
     return resolveCaptureSummaryFromPayload(voiceLog?.extractionPayload);
 }
 
+function attachExtractedValueToIndexItem(
+    item: TimelineIndexItem,
+): TimelineIndexItem {
+    if (!item.extractedValueId) {
+        return item;
+    }
+
+    const extractedValue = EXTRACTED_VALUE_SEEDS.find(
+        (value) => value.id === item.extractedValueId,
+    );
+
+    return extractedValue ? { ...item, extractedValue } : item;
+}
+
 export function getTimelineIndex(
     query?: TimelineIndexQuery,
 ): TimelineIndexReadModel {
     let items: TimelineIndexItem[] = TIMELINE_EVENT_SEEDS.map((event) =>
-        applyTimelineItemSummaryFallback(
-            {
-                id: event.id,
-                type: event.type,
-                title: event.title,
-                summary: event.summary,
-                aspect: event.aspect,
-                occurredAt: event.occurredAt,
-                captureId: event.captureId,
-                extractedValueId: event.extractedValueId,
-                extractedObjectType: event.extractedObjectType,
-                reviewState: event.reviewState,
-                confidence: event.confidence,
-            },
-            resolveCaptureSummaryForId(event.captureId),
+        attachExtractedValueToIndexItem(
+            applyTimelineItemSummaryFallback(
+                {
+                    id: event.id,
+                    type: event.type,
+                    title: event.title,
+                    summary: event.summary,
+                    aspect: event.aspect,
+                    occurredAt: event.occurredAt,
+                    captureId: event.captureId,
+                    extractedValueId: event.extractedValueId,
+                    extractedObjectType: event.extractedObjectType,
+                    reviewState: event.reviewState,
+                    confidence: event.confidence,
+                    createdAt: event.createdAt,
+                },
+                resolveCaptureSummaryForId(event.captureId),
+            ),
         ),
     );
 
@@ -135,10 +156,7 @@ export function getTimelineIndex(
         items = items.filter((item) => item.occurredAt <= query.endDate!);
     }
 
-    items.sort(
-        (a, b) =>
-            new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
-    );
+    items = sortTimelineIndexItems(items);
 
     return { items, total: items.length };
 }
@@ -169,6 +187,10 @@ export function updateExtractedValueReviewState(
 ): boolean {
     const value = EXTRACTED_VALUE_SEEDS.find((v) => v.id === id);
     if (!value) {
+        return false;
+    }
+
+    if (!isValidReviewTransition(value.reviewState, reviewState)) {
         return false;
     }
 

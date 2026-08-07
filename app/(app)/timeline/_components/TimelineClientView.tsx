@@ -13,10 +13,12 @@ import {
     formatLocalDateGroupLabel,
     getLocalDateKey,
 } from "@/lib/format/local-calendar-date";
+import { compareTimelineIndexItems } from "@/lib/timeline/sort-timeline-index-items";
 
 function groupByLocalDate(items: TimelineIndexItem[]) {
+    const sortedItems = [...items].sort(compareTimelineIndexItems);
     const groups = new Map<string, TimelineIndexItem[]>();
-    for (const item of items) {
+    for (const item of sortedItems) {
         const key = getLocalDateKey(item.occurredAt);
         const list = groups.get(key) ?? [];
         list.push(item);
@@ -115,30 +117,28 @@ export function TimelineClientView({
     }, [loadDetail, router, selectedId]);
 
     const handleReviewUpdated = useCallback(
-        (nextState: ReviewState) => {
-            if (!selectedId) {
-                return;
-            }
-
+        (eventId: string, nextState: ReviewState) => {
             setReviewStateOverrides((current) => ({
                 ...current,
-                [selectedId]: nextState,
+                [eventId]: nextState,
             }));
-            setLoadedDetail((current) => {
-                if (!current?.extractedValue) {
-                    return current;
-                }
-                return {
-                    ...current,
-                    extractedValue: {
-                        ...current.extractedValue,
-                        reviewState: nextState,
-                    },
-                };
-            });
-            router.refresh();
+
+            if (selectedId === eventId) {
+                setLoadedDetail((current) => {
+                    if (!current?.extractedValue) {
+                        return current;
+                    }
+                    return {
+                        ...current,
+                        extractedValue: {
+                            ...current.extractedValue,
+                            reviewState: nextState,
+                        },
+                    };
+                });
+            }
         },
-        [router, selectedId],
+        [selectedId],
     );
 
     const handleClose = useCallback(() => {
@@ -177,7 +177,11 @@ export function TimelineClientView({
                                         reviewStateOverrides[item.id] ??
                                         item.reviewState
                                     }
+                                    glossaryLabels={glossaryLabels}
                                     onSelect={setSelectedId}
+                                    onReviewUpdated={(nextState) =>
+                                        handleReviewUpdated(item.id, nextState)
+                                    }
                                 />
                             ))}
                         </div>
@@ -198,7 +202,11 @@ export function TimelineClientView({
                 isLoading={detailLoading}
                 error={detailError}
                 reviewState={panelReviewState}
-                onReviewUpdated={handleReviewUpdated}
+                onReviewUpdated={(nextState) => {
+                    if (selectedId) {
+                        handleReviewUpdated(selectedId, nextState);
+                    }
+                }}
                 onDetailRefresh={refreshDetailInBackground}
                 onClose={handleClose}
             />

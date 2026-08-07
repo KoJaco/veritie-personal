@@ -153,6 +153,78 @@ describe("VeritieCaptureLeaseContext", () => {
         expect(mockPrepareCapture).toHaveBeenCalled();
     });
 
+    it("getOrPrepareLease reuses an in-flight prepare", async () => {
+        let resolvePrepare:
+            | ((value: {
+                snapshot: {
+                    jobId: string;
+                    bootstrap: { stream_ingest: { session_id: string } };
+                };
+                close: () => void;
+            }) => void)
+            | undefined;
+        mockPrepareCapture.mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    resolvePrepare = resolve;
+                }),
+        );
+
+        function ReusePendingPrepareProbe() {
+            const { prepareLease, getOrPrepareLease, leasePhase } =
+                useVeritieCaptureLease();
+
+            const metadata = {
+                captured_at: "2026-01-01T00:00:00.000Z",
+                timezone: "UTC",
+                locale: "en",
+            };
+
+            return (
+                <div>
+                    <span data-testid="lease-phase">{leasePhase}</span>
+                    <button
+                        type="button"
+                        onClick={() => void prepareLease(metadata)}
+                    >
+                        Prepare
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => void getOrPrepareLease(metadata)}
+                    >
+                        Get
+                    </button>
+                </div>
+            );
+        }
+
+        render(
+            <VeritieCaptureLeaseProvider>
+                <ReusePendingPrepareProbe />
+            </VeritieCaptureLeaseProvider>,
+        );
+
+        screen.getByRole("button", { name: "Prepare" }).click();
+        screen.getByRole("button", { name: "Get" }).click();
+
+        expect(mockPrepareCapture).toHaveBeenCalledTimes(1);
+
+        resolvePrepare?.({
+            snapshot: {
+                jobId: "job-reused",
+                bootstrap: {
+                    stream_ingest: { session_id: "session-reused" },
+                },
+            },
+            close: jest.fn(),
+        });
+
+        await waitFor(() => {
+            expect(screen.getByTestId("lease-phase")).toHaveTextContent("ready");
+        });
+    });
+
     it("releaseLease clears prepared handle after prepare", async () => {
         const mockClose = jest.fn();
 

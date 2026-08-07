@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { ExtractedValueEditorTrigger } from "@/components/extraction/ExtractedValueEditorSheet";
+import { ExtractedValueInlineReviewActions } from "@/components/extraction/ExtractedValueInlineReviewActions";
 import type { CaptureDetailReadModel } from "@/lib/data-source/captures-read-model";
 import type { SourceAnchorStub } from "@/lib/stubs/capture-stubs";
-import { updateExtractedValueReviewAction } from "@/lib/actions/stub-data-mutations";
+import type { ReviewState } from "@/lib/domain/extraction";
 import { Button } from "@/components/ui/button";
 import {
     Collapsible,
@@ -217,31 +218,7 @@ export function ExtractedValueReviewActions({
     index?: number;
     glossaryLabels?: Record<string, string>;
 }) {
-    const [pending, setPending] = useState(false);
-    const [localState, setLocalState] = useState(reviewState);
-
-    useEffect(() => {
-        setLocalState(reviewState);
-    }, [reviewState]);
-
-    const submitReview = async (nextState: "confirmed" | "rejected") => {
-        setPending(true);
-        try {
-            const result = await updateExtractedValueReviewAction(
-                extractedValueId,
-                nextState,
-            );
-            if (!result.ok) {
-                throw new Error(result.error);
-            }
-            setLocalState(nextState);
-            onUpdated?.(nextState);
-        } catch {
-            // Review update failed — state unchanged
-        } finally {
-            setPending(false);
-        }
-    };
+    const localState = reviewState as ReviewState;
 
     const canEdit =
         extractedValue &&
@@ -251,7 +228,7 @@ export function ExtractedValueReviewActions({
             localState === "rejected" ||
             localState === "edited");
 
-    if (localState !== "pending" && !canEdit) {
+    if (localState === "edited" && !canEdit) {
         return (
             <p className="text-xs text-muted-foreground">
                 Review state: {localState}
@@ -260,28 +237,12 @@ export function ExtractedValueReviewActions({
     }
 
     return (
-        <div className="mt-3 flex flex-wrap gap-2">
-            {localState === "pending" && (
-                <>
-                    <Button
-                        type="button"
-                        size="sm"
-                        disabled={pending}
-                        onClick={() => void submitReview("confirmed")}
-                    >
-                        Confirm
-                    </Button>
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={pending}
-                        onClick={() => void submitReview("rejected")}
-                    >
-                        Reject
-                    </Button>
-                </>
-            )}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+            <ExtractedValueInlineReviewActions
+                extractedValueId={extractedValueId}
+                reviewState={localState}
+                onUpdated={(nextState) => onUpdated?.(nextState)}
+            />
             {canEdit && showEditTrigger && (
                 <ExtractedValueEditorTrigger
                     extractedValue={extractedValue}
@@ -291,7 +252,7 @@ export function ExtractedValueReviewActions({
                     onSaved={() => onUpdated?.("edited")}
                 />
             )}
-            {localState !== "pending" && (
+            {localState === "edited" && (
                 <p className="text-xs text-muted-foreground">
                     Review state: {localState}
                 </p>

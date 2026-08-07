@@ -19,6 +19,8 @@ import { flattenExtractedValueAttributes } from "@/lib/capture/flatten-extracted
 import { resolveExtractedFieldQuote } from "@/lib/capture/resolve-extracted-field-quote";
 import { Badge } from "@/components/ui/badge";
 import { AspectBadge } from "@/components/lens/AspectBadge";
+import { TypeBadge } from "@/components/extraction/TypeBadge";
+import { resolveTimelineItemObjectType } from "@/lib/extraction/object-type-ui";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -41,20 +43,18 @@ import { cn } from "@/lib/utils";
 import { TimelineDetailBodySkeleton } from "./TimelineDetailBodySkeleton";
 
 function TimelineDetailHeaderBadges({
-    aspect,
-    eventType,
+    item,
     reviewState,
 }: {
-    aspect: TimelineIndexItem["aspect"];
-    eventType: TimelineIndexItem["type"];
+    item: TimelineIndexItem;
     reviewState?: ReviewState;
 }) {
+    const objectType = resolveTimelineItemObjectType(item);
+
     return (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <AspectBadge aspect={aspect} />
-            <Badge variant="outline" className="text-[10px] uppercase">
-                {eventType.replace(/_/g, " ")}
-            </Badge>
+            <AspectBadge aspect={item.aspect} />
+            {objectType && <TypeBadge objectType={objectType} />}
             {reviewState && (
                 <Badge variant="outline" className="text-[10px]">
                     {reviewState}
@@ -251,8 +251,7 @@ function TimelineDetailHeaderContent({
             </p>
             <p className="text-lg font-semibold capitalize">{selectedItem.title}</p>
             <TimelineDetailHeaderBadges
-                aspect={selectedItem.aspect}
-                eventType={selectedItem.type}
+                item={selectedItem}
                 reviewState={reviewState}
             />
         </div>

@@ -55,12 +55,18 @@ type PersistCaptureResult = {
     timelineEventCount: number;
 };
 
+type LiveSessionAttachment = {
+    handle: PipelineHandle;
+    session: LiveJobSession;
+};
+
 export function VoiceCapturePanel({
     veritie,
     captureHandle,
     leasePhase,
     leaseError = null,
     prepareLease,
+    getOrPrepareLease,
     renewLease,
     embedded = true,
     onBack,
@@ -75,6 +81,7 @@ export function VoiceCapturePanel({
     leasePhase: CaptureLeasePhase;
     leaseError?: string | null;
     prepareLease: (metadata: CaptureJobMetadata) => Promise<PipelineHandle>;
+    getOrPrepareLease: (metadata: CaptureJobMetadata) => Promise<PipelineHandle>;
     renewLease: () => void;
     embedded?: boolean;
     onBack: () => void;
@@ -104,6 +111,9 @@ export function VoiceCapturePanel({
     const recordingStartedAtRef = useRef<number | null>(null);
     const finishCaptureRef = useRef<(() => Promise<void>) | null>(null);
     const liveSessionRef = useRef<LiveJobSession | null>(null);
+    const liveAttachPromiseRef = useRef<Promise<LiveSessionAttachment> | null>(
+        null,
+    );
     const chunkStreamStateRef = useRef<LiveChunkStreamState>(
         createLiveChunkStreamState(),
     );
@@ -217,6 +227,7 @@ export function VoiceCapturePanel({
         abortOpenWork();
         abortFinalizeWork();
         closeLiveSession();
+        liveAttachPromiseRef.current = null;
     }, [abortOpenWork, abortFinalizeWork, closeLiveSession]);
 
     useEffect(() => {
@@ -259,9 +270,6 @@ export function VoiceCapturePanel({
     }, [activeJobId]);
 
     useEffect(() => {
-        if (leasePhase !== "preparing" && leasePhase !== "ready") {
-            return;
-        }
         if (phase !== "ready") {
             return;
         }
@@ -271,16 +279,30 @@ export function VoiceCapturePanel({
 
         let cancelled = false;
 
-        void navigator.mediaDevices.getUserMedia({ audio: true }).then((mediaStream) => {
-            if (cancelled || !mountedRef.current) {
-                mediaStream.getTracks().forEach((track) => track.stop());
-                return;
-            }
+        void navigator.mediaDevices
+            .getUserMedia({ audio: true })
+            .then((mediaStream) => {
+                if (cancelled || !mountedRef.current) {
+                    mediaStream.getTracks().forEach((track) => track.stop());
+                    return;
+                }
 
-            micPrewarmRef.current = mediaStream;
-            streamRef.current = mediaStream;
-            setStream(mediaStream);
-        });
+                micPrewarmRef.current = mediaStream;
+                streamRef.current = mediaStream;
+                setStream(mediaStream);
+            })
+            .catch((prewarmError) => {
+                if (cancelled || !mountedRef.current) {
+                    return;
+                }
+
+                captureFlowLog.warn("mic.prewarm_failed", {
+                    error:
+                        prewarmError instanceof Error
+                            ? prewarmError.message
+                            : String(prewarmError),
+                });
+            });
 
         return () => {
             cancelled = true;
@@ -288,10 +310,10 @@ export function VoiceCapturePanel({
                 stopMicPrewarm();
             }
         };
-    }, [leasePhase, phase, stopMicPrewarm]);
+    }, [phase, stopMicPrewarm]);
 
     const startCapture = useCallback(async () => {
-        if (leasePhase === "preparing" || !captureHandle) {
+        if (phase !== "ready" && phase !== "failed") {
             return;
         }
 
@@ -310,9 +332,15 @@ export function VoiceCapturePanel({
         openAbortRef.current = openController;
         const { signal: openSignal } = openController;
 
-        const handle = captureHandle;
-        activeCaptureHandleRef.current = handle;
-        const jobId = handle.snapshot.jobId;
+        const metadata = buildCaptureJobMetadata({
+            capturedAt: new Date().toISOString(),
+            locationLabel: captureLocationLabelRef.current,
+        });
+        const leaseHandlePromise = captureHandle
+            ? Promise.resolve(captureHandle)
+            : getOrPrepareLease(metadata);
+        let jobId = captureHandle?.snapshot.jobId;
+        activeCaptureHandleRef.current = captureHandle;
         const prewarmedStream = micPrewarmRef.current;
         micPrewarmRef.current = null;
         captureInProgressRef.current = true;
@@ -329,23 +357,25 @@ export function VoiceCapturePanel({
             captureFlowLog.info("capture.start", {
                 jobId,
                 leasePhase,
+                leasePending: !captureHandle,
             });
 
-            recordingStartedAtRef.current = Date.now();
-            setPhase("recording");
-            recordingTimerRef.current = setInterval(() => {
-                const startedAt = recordingStartedAtRef.current;
-                if (!startedAt) return;
-                const elapsed = Date.now() - startedAt;
-                setRecordingElapsedMs(elapsed);
-                if (elapsed >= MAX_RECORDING_MS) {
-                    void finishCaptureRef.current?.();
+            setPhase("requesting_microphone");
+
+            const resolveJobId = () =>
+                activeCaptureHandleRef.current?.snapshot.jobId ?? jobId;
+
+            const abortLiveAttach = () => {
+                if (!openSignal.aborted) {
+                    openController.abort();
                 }
-            }, 500);
+                openAbortRef.current = null;
+                liveAttachPromiseRef.current = null;
+            };
 
             const handleChunkSendError = (chunkError: unknown) => {
                 captureFlowLog.error("chunk.send_failed", {
-                    jobId,
+                    jobId: resolveJobId(),
                     error:
                         chunkError instanceof Error
                             ? chunkError.message
@@ -358,6 +388,7 @@ export function VoiceCapturePanel({
                         : "Failed to stream audio chunk.",
                 );
                 setPhase("failed");
+                abortLiveAttach();
                 stopLocalRecording();
                 closeLiveSession();
                 renewLease();
@@ -392,7 +423,7 @@ export function VoiceCapturePanel({
                 }
 
                 captureFlowLog.debug("recorder.dataavailable", {
-                    jobId,
+                    jobId: resolveJobId(),
                     bytes: data.size,
                     buffered: !liveSessionRef.current,
                 });
@@ -424,14 +455,20 @@ export function VoiceCapturePanel({
                     .catch(handleChunkSendError);
             };
 
-            const attachLiveSession = (liveSession: LiveJobSession) => {
+            const attachLiveSession = (
+                handle: PipelineHandle,
+                liveSession: LiveJobSession,
+            ) => {
                 liveSessionRef.current = liveSession;
+                activeCaptureHandleRef.current = handle;
+                jobId = handle.snapshot.jobId;
+                diagnosticsRef.current.jobId = jobId;
                 diagnosticsRef.current.sessionId = liveSession.sessionId;
                 chunkStreamStateRef.current = createLiveChunkStreamState();
                 chunkSendChainRef.current = Promise.resolve();
 
                 captureFlowLog.info("live.session.opened", {
-                    jobId,
+                    jobId: handle.snapshot.jobId,
                     sessionId: liveSession.sessionId,
                 });
 
@@ -460,10 +497,6 @@ export function VoiceCapturePanel({
                     })
                     .catch(handleChunkSendError);
             };
-
-            const sessionPromise = handle.startCapture({
-                signal: openSignal,
-            });
 
             const micPromise = prewarmedStream
                 ? Promise.resolve(prewarmedStream)
@@ -499,6 +532,30 @@ export function VoiceCapturePanel({
                 );
             }
 
+            const liveAttachPromise = leaseHandlePromise.then(async (handle) => {
+                if (!mountedRef.current || openSignal.aborted) {
+                    throw new DOMException("Aborted", "AbortError");
+                }
+
+                activeCaptureHandleRef.current = handle;
+                jobId = handle.snapshot.jobId;
+                diagnosticsRef.current.jobId = jobId;
+
+                const liveSession = await handle.startCapture({
+                    signal: openSignal,
+                });
+
+                if (!mountedRef.current || openSignal.aborted) {
+                    liveSession.close(1000, "aborted");
+                    throw new DOMException("Aborted", "AbortError");
+                }
+
+                openAbortRef.current = null;
+                attachLiveSession(handle, liveSession);
+                return { handle, session: liveSession };
+            });
+            liveAttachPromiseRef.current = liveAttachPromise;
+
             recorder.ondataavailable = (event) => {
                 diagnosticsRef.current.dataAvailableEvents =
                     (diagnosticsRef.current.dataAvailableEvents ?? 0) + 1;
@@ -507,7 +564,7 @@ export function VoiceCapturePanel({
                     diagnosticsRef.current.dataAvailableEmpty =
                         (diagnosticsRef.current.dataAvailableEmpty ?? 0) + 1;
                     captureFlowLog.debug("recorder.dataavailable.empty", {
-                        jobId,
+                        jobId: resolveJobId(),
                         recorderState: recorder.state,
                     });
                     return;
@@ -523,6 +580,7 @@ export function VoiceCapturePanel({
                 if (!mountedRef.current) return;
                 setError("Recording failed.");
                 setPhase("failed");
+                abortLiveAttach();
                 stopLocalRecording();
                 closeLiveSession();
                 renewLease();
@@ -530,47 +588,59 @@ export function VoiceCapturePanel({
 
             recorder.start(250);
             recorderRef.current = recorder;
+            recordingStartedAtRef.current = Date.now();
+            setPhase("recording");
+            recordingTimerRef.current = setInterval(() => {
+                const startedAt = recordingStartedAtRef.current;
+                if (!startedAt) return;
+                const elapsed = Date.now() - startedAt;
+                setRecordingElapsedMs(elapsed);
+                if (elapsed >= MAX_RECORDING_MS) {
+                    void finishCaptureRef.current?.();
+                }
+            }, 500);
             setIsRecorderLive(true);
             captureFlowLog.info("recorder.started", {
-                jobId,
+                jobId: resolveJobId(),
                 mimeType: recorder.mimeType,
                 timesliceMs: 250,
             });
 
-            sessionPromise
-                .then((liveSession) => {
-                    if (!mountedRef.current || openSignal.aborted) {
-                        liveSession.close(1000, "aborted");
-                        return;
-                    }
-
-                    openAbortRef.current = null;
-                    attachLiveSession(liveSession);
-                })
-                .catch((sessionError) => {
-                    if (!mountedRef.current || openSignal.aborted) {
-                        return;
-                    }
-                    captureInProgressRef.current = false;
-                    stopLocalRecording();
-                    closeLiveSession();
-                    captureFlowLog.error("capture.start_failed", {
-                        jobId,
-                        error:
-                            sessionError instanceof Error
-                                ? sessionError.message
-                                : String(sessionError),
-                    });
-                    setError(
+            liveAttachPromise.catch((sessionError) => {
+                if (!mountedRef.current || openSignal.aborted) {
+                    return;
+                }
+                if (finalizeAbortRef.current) {
+                    return;
+                }
+                captureInProgressRef.current = false;
+                stopLocalRecording();
+                closeLiveSession();
+                captureFlowLog.error("capture.start_failed", {
+                    jobId: resolveJobId(),
+                    error:
                         sessionError instanceof Error
                             ? sessionError.message
-                            : "Failed to open live session.",
-                    );
-                    setPhase("failed");
-                    renewLease();
+                            : String(sessionError),
                 });
+                setError(
+                    sessionError instanceof Error
+                        ? sessionError.message
+                        : "Failed to open live session.",
+                );
+                setPhase("failed");
+                renewLease();
+            });
         } catch (captureError) {
             if (!mountedRef.current || openController.signal.aborted) return;
+            if (!openSignal.aborted) {
+                openController.abort();
+            }
+            openAbortRef.current = null;
+            liveAttachPromiseRef.current = null;
+            void leaseHandlePromise.catch(() => {
+                // Lease cancellation is expected when local recording fails to start.
+            });
             captureInProgressRef.current = false;
             stopLocalRecording();
             closeLiveSession();
@@ -594,7 +664,9 @@ export function VoiceCapturePanel({
         abortInFlightWork,
         captureHandle,
         closeLiveSession,
+        getOrPrepareLease,
         leasePhase,
+        phase,
         renewLease,
         stopLocalRecording,
         resetDiagnostics,
@@ -623,7 +695,7 @@ export function VoiceCapturePanel({
         setPhase("processing");
         setStatusLine("Finishing recording…");
 
-        const handle = activeCaptureHandleRef.current ?? captureHandle;
+        let handle = activeCaptureHandleRef.current ?? captureHandle;
 
         try {
             const recordingStartedAt = recordingStartedAtRef.current;
@@ -654,7 +726,20 @@ export function VoiceCapturePanel({
 
             stopLocalRecording();
 
-            const session = liveSessionRef.current;
+            let session = liveSessionRef.current;
+            if (!session || !handle) {
+                const liveAttachPromise = liveAttachPromiseRef.current;
+                if (!liveAttachPromise) {
+                    throw new Error("Live capture session is not available.");
+                }
+
+                setStatusLine("Connecting live stream…");
+                const attachment = await liveAttachPromise;
+                if (!mountedRef.current || signal.aborted) return;
+                handle = attachment.handle;
+                session = attachment.session;
+            }
+
             if (!session || !handle) {
                 throw new Error("Live capture session is not available.");
             }
@@ -671,6 +756,7 @@ export function VoiceCapturePanel({
 
             await endLiveAudioStream(session, chunkStreamStateRef.current);
             liveSessionRef.current = null;
+            liveAttachPromiseRef.current = null;
 
             captureFlowLog.info("stream.ended", {
                 jobId: handle.snapshot.jobId,
@@ -757,10 +843,13 @@ export function VoiceCapturePanel({
                     }
                 },
             });
+            renewLease();
         } catch (captureError) {
             if (!mountedRef.current || signal.aborted) return;
             stopLocalRecording();
             closeLiveSession();
+            liveAttachPromiseRef.current = null;
+            finalizeAbortRef.current = null;
 
             setError(
                 captureError instanceof Error
@@ -813,12 +902,26 @@ export function VoiceCapturePanel({
     }, [abortInFlightWork, prepareLease, renewLease, stopLocalRecording, stopMicPrewarm]);
 
     const handleBack = useCallback(() => {
+        const wasCaptureActive =
+            phase === "requesting_microphone" ||
+            phase === "recording" ||
+            phase === "processing";
         abortInFlightWork();
         captureInProgressRef.current = false;
         stopLocalRecording();
         stopMicPrewarm();
+        if (wasCaptureActive) {
+            renewLease();
+        }
         onBack();
-    }, [abortInFlightWork, onBack, stopLocalRecording, stopMicPrewarm]);
+    }, [
+        abortInFlightWork,
+        onBack,
+        phase,
+        renewLease,
+        stopLocalRecording,
+        stopMicPrewarm,
+    ]);
 
     const waveformMode =
         phase === "recording"
@@ -831,10 +934,7 @@ export function VoiceCapturePanel({
 
     const isRecording = phase === "recording";
     const canStart =
-        (phase === "ready" || phase === "failed") &&
-        leasePhase === "ready" &&
-        captureHandle !== null;
-    const isPreparingLease = leasePhase === "preparing";
+        phase === "ready" || phase === "failed";
 
     const recordingMinutes = Math.floor(recordingElapsedMs / 60_000);
     const recordingSeconds = Math.floor((recordingElapsedMs % 60_000) / 1000);
@@ -887,13 +987,6 @@ export function VoiceCapturePanel({
                         <LiveAudioWaveform stream={stream} mode={waveformMode} />
                     </div>
                 ) : null}
-
-                {isPreparingLease && phase === "ready" && (
-                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="size-4 animate-spin" />
-                        Preparing Veritie lease…
-                    </div>
-                )}
 
                 {(error || leaseError) && (
                     <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">

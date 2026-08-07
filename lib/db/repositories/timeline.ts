@@ -7,10 +7,12 @@ import {
     applyTimelineItemSummaryFallback,
     resolveCaptureSummaryFromPayload,
 } from "@/lib/capture/extraction-summary";
+import { isValidReviewTransition } from "@/lib/capture/extracted-value-review-transitions";
 import { getDb } from "@/lib/db";
 import type { TimelineIndexQuery } from "@/lib/data-source/timeline-read-model";
 import { isHiddenTimelineEventType } from "@/lib/domain/timeline-filters";
 import type { ReviewState } from "@/lib/domain/extraction";
+import { sortTimelineIndexItems } from "@/lib/timeline/sort-timeline-index-items";
 
 import type { AccountScope } from "./context";
 import {
@@ -27,7 +29,11 @@ export async function getTimelineIndex(
     const db = getDb();
     const rows = await db.query.timelineEvents.findMany({
         where: eq(timelineEvents.accountId, scope.accountId),
-        orderBy: (table, { desc }) => [desc(table.occurredAt)],
+        orderBy: (table, { desc, asc }) => [
+            desc(table.occurredAt),
+            desc(table.createdAt),
+            asc(table.id),
+        ],
     });
 
     let items = rows.map((row) =>
@@ -68,6 +74,38 @@ export async function getTimelineIndex(
                     : undefined,
             ),
         );
+    }
+
+    const extractedValueIds = [
+        ...new Set(
+            items
+                .map((item) => item.extractedValueId)
+                .filter((id): id is string => Boolean(id)),
+        ),
+    ];
+
+    if (extractedValueIds.length > 0) {
+        const extractedValueRows = await db.query.extractedValues.findMany({
+            where: and(
+                eq(extractedValues.accountId, scope.accountId),
+                inArray(extractedValues.id, extractedValueIds),
+            ),
+        });
+
+        const extractedValueById = new Map(
+            extractedValueRows.map((row) => [
+                row.id,
+                mapExtractedValueRowToStub(row),
+            ]),
+        );
+
+        items = items.map((item) => {
+            if (!item.extractedValueId) {
+                return item;
+            }
+            const extractedValue = extractedValueById.get(item.extractedValueId);
+            return extractedValue ? { ...item, extractedValue } : item;
+        });
     }
 
     if (!query?.includeMetaEvents) {
@@ -115,10 +153,7 @@ export async function getTimelineIndex(
         items = items.filter((item) => item.occurredAt <= query.endDate!);
     }
 
-    items.sort(
-        (a, b) =>
-            new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
-    );
+    items = sortTimelineIndexItems(items);
 
     return { items, total: items.length };
 }
@@ -161,6 +196,24 @@ export async function updateExtractedValueReviewState(
 ): Promise<boolean> {
     const db = getDb();
     const now = new Date();
+
+    const existing = await db.query.extractedValues.findFirst({
+        where: and(
+            eq(extractedValues.accountId, scope.accountId),
+            eq(extractedValues.id, extractedValueId),
+        ),
+        columns: { id: true, reviewState: true },
+    });
+
+    if (
+        !existing ||
+        !isValidReviewTransition(
+            existing.reviewState as ReviewState,
+            reviewState,
+        )
+    ) {
+        return false;
+    }
 
     const updated = await db
         .update(extractedValues)

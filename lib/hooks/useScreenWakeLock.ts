@@ -12,7 +12,6 @@ export function useScreenWakeLock(enabled: boolean): void {
     const handleRef = useRef<ScreenWakeLockHandle | null>(null);
     const enabledRef = useRef(enabled);
 
-
     const releaseWakeLock = useCallback(async () => {
         const handle = handleRef.current;
         handleRef.current = null;
@@ -42,6 +41,8 @@ export function useScreenWakeLock(enabled: boolean): void {
     }, []);
 
     useEffect(() => {
+        enabledRef.current = enabled;
+
         if (!enabled) {
             void releaseWakeLock();
             return;
