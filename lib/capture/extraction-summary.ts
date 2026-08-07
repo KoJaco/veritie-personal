@@ -49,3 +49,34 @@ export function formatExtractedCountLabel(
     }
     return `${extractedCount} extracted`;
 }
+
+export function resolveCaptureSummaryFromPayload(
+    payload: unknown,
+): string | undefined {
+    if (!payload || typeof payload !== "object") {
+        return undefined;
+    }
+
+    const summary = (payload as Record<string, unknown>).capture_summary;
+    if (typeof summary !== "string") {
+        return undefined;
+    }
+
+    const trimmed = summary.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+}
+
+export function applyTimelineItemSummaryFallback<
+    T extends { summary?: string },
+>(item: T, captureSummary?: string | null): T {
+    if (item.summary?.trim()) {
+        return item;
+    }
+
+    const fallback = captureSummary?.trim();
+    if (!fallback) {
+        return item;
+    }
+
+    return { ...item, summary: fallback };
+}
