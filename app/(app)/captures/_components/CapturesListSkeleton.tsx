@@ -6,28 +6,33 @@ function CaptureCardSkeleton() {
     return (
         <div className={cn(SURFACE_CLASS, "px-4 py-3")}>
             <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2">
-                    <Skeleton className="h-5 w-16 rounded-full" />
-                    <Skeleton className="h-5 w-20 rounded-full" />
-                </div>
+                <Skeleton className="h-5 w-16 rounded-full" />
                 <Skeleton className="h-5 w-2/5" />
-                <Skeleton className="h-4 w-32" />
             </div>
+            <Skeleton className="mt-1 h-4 w-48" />
+            <Skeleton className="mt-1 h-4 w-20" />
         </div>
+    );
+}
+
+function CaptureDateGroupSkeleton({ cardCount }: { cardCount: number }) {
+    return (
+        <section className="space-y-3">
+            <Skeleton className="h-4 w-28" />
+            <div className="space-y-2">
+                {Array.from({ length: cardCount }).map((_, index) => (
+                    <CaptureCardSkeleton key={index} />
+                ))}
+            </div>
+        </section>
     );
 }
 
 function CapturesCardsSkeleton() {
     return (
         <div className="space-y-8">
-            <section className="space-y-3">
-                <Skeleton className="h-4 w-28" />
-                <div className="space-y-1.5">
-                    <CaptureCardSkeleton />
-                    <CaptureCardSkeleton />
-                    <CaptureCardSkeleton />
-                </div>
-            </section>
+            <CaptureDateGroupSkeleton cardCount={5} />
+            <CaptureDateGroupSkeleton cardCount={4} />
         </div>
     );
 }
