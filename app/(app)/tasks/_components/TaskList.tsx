@@ -32,12 +32,12 @@ export function TaskList({
                     <h2 className="text-lg font-semibold">
                         {hasFilters
                             ? "No tasks match these filters"
-                            : "No setup tasks yet"}
+                            : "No tasks yet"}
                     </h2>
                     <p className="max-w-md text-sm text-muted-foreground">
                         {hasFilters
                             ? "Try clearing one or more filters to widen the work queue."
-                            : "Setup tasks will appear here as the onboarding bootstrap expands. You can still draft a task manually for frontend preview."}
+                            : "Tasks will appear here as you create them.."}
                     </p>
                 </div>
                 {hasFilters ? (

@@ -18,8 +18,8 @@ export function TasksPageHeaderActions({
 }: TasksPageHeaderActionsProps) {
     return (
         <div className="flex items-center gap-2">
-            <PageAssistantAction canOpenAssistant={canOpenAssistant} />
             <CreateTaskDialog {...createTaskDialogProps} />
+            <PageAssistantAction canOpenAssistant={canOpenAssistant} />
         </div>
     );
 }

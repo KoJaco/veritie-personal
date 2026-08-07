@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { SURFACE_CLASS } from "@/lib/ui/surface";
+import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
 interface EmptyStateProps {
@@ -18,7 +20,7 @@ interface EmptyStateProps {
  */
 export function EmptyState({ title, description, icon, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center p-8">
+    <div className={cn(SURFACE_CLASS, "flex flex-col items-center justify-center h-full min-h-[200px] text-center p-8")}>
       {icon && (
         <div className="mb-4 text-muted-foreground/50">
           {icon}

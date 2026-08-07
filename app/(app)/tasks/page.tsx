@@ -1,10 +1,7 @@
 import { ContextPayloadSlot } from "@/components/context/ContextPayloadSlot";
-import { PageHeader } from "@/components/route";
+import { EmptyState, PageHeader } from "@/components/route";
 import { PageFrame } from "@/components/static/PageFrame";
 import { TasksPageHeaderActions } from "./_components/TasksPageHeaderActions";
-import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
     type TaskIndexSegment,
     type TaskUiStatus,
@@ -16,32 +13,16 @@ import { getLensFromSearchParams, type SearchParamRecord } from "@/lib/lens";
 import { logger } from "@/lib/logging/server-logger";
 import { buildFreshTasksIndex } from "@/lib/onboarding-stub";
 import { getStubServerBootstrap } from "@/lib/onboarding-stub/server";
-import type { LucideIcon } from "lucide-react";
-import { Boxes, Circle, ListFilter, UserRound, Waypoints } from "lucide-react";
-import { TaskFilterToolbar } from "./_components/TaskFilterToolbar";
-import { TaskList } from "./_components/TaskList";
-import { TaskSummaryStrip } from "./_components/TaskSummaryStrip";
+import { ListTodo } from "lucide-react";
 import {
     buildFreshTasksRouteContract,
     buildTasksRouteContract,
 } from "./_page-model/build";
 import { enforceTasksRouteContract } from "./_page-model/validate";
-import { cn } from "@/lib/utils";
 
 interface TasksPageProps {
     searchParams: Promise<SearchParamRecord>;
 }
-
-type Option = {
-    id: string;
-    label: string;
-};
-
-type AppliedFilter = {
-    key: string;
-    value: string;
-    icon: LucideIcon;
-};
 
 export default async function TasksPage({ searchParams }: TasksPageProps) {
     const resolvedSearchParams = await searchParams;
@@ -124,23 +105,6 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         });
     }
 
-    const appliedFilters = buildAppliedFilters({
-        segment,
-        statuses,
-        ownerIds,
-        checkIds,
-        resourceIds,
-        ownerOptions,
-        checkOptions,
-        resourceOptions,
-    });
-    const hasFilters =
-        segment !== "all" ||
-        statuses.length > 0 ||
-        ownerIds.length > 0 ||
-        checkIds.length > 0 ||
-        resourceIds.length > 0;
-
     return (
         <>
             <ContextPayloadSlot payload={payload} />
@@ -163,9 +127,14 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
                     />
                 }
             >
-                <div className="space-y-12 py-6">
-                    <TaskSummaryStrip summary={tasksIndex.summary} />
+                <EmptyState
+                    title="Tasks coming soon"
+                    description="Your prioritised work queue, filters, and setup tasks will appear here."
+                    icon={<ListTodo className="h-10 w-10" />}
+                />
 
+                {/*
+                <div className="space-y-12 py-6">
                     <div className="space-y-3 ">
                         <div className="flex gap-3 flex-row items-end">
                             <div
@@ -193,12 +162,12 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
                                                     className={cn(
                                                         "inline-flex items-center gap-1.5 border-border/70 bg-background/80 px-3 py-1.5 text-foreground",
                                                         filter.key.toLocaleLowerCase() !==
-                                                            "view" &&
-                                                            "md:inline-flex hidden",
+                                                        "view" &&
+                                                        "md:inline-flex hidden",
                                                     )}
                                                 >
-                                                    <filter.icon className="h-3.5 w-3.5 text-foreground/45" />
-                                                    <span className="text-foreground/50">
+                                                    <filter.icon className="h-3.5 w-3.5 text-foreground/75" />
+                                                    <span className="text-foreground/75">
                                                         {filter.key}:
                                                     </span>
                                                     {filter.value}
@@ -256,106 +225,10 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
                         />
                     </div>
                 </div>
+                */}
             </PageFrame>
         </>
     );
-}
-
-function buildAppliedFilters({
-    segment,
-    statuses,
-    ownerIds,
-    checkIds,
-    resourceIds,
-    ownerOptions,
-    checkOptions,
-    resourceOptions,
-}: {
-    segment: TaskIndexSegment;
-    statuses: TaskUiStatus[];
-    ownerIds: string[];
-    checkIds: string[];
-    resourceIds: string[];
-    ownerOptions: Array<{ id: string; name: string }>;
-    checkOptions: Option[];
-    resourceOptions: Option[];
-}): AppliedFilter[] {
-    return [
-        { key: "View", value: segmentLabel(segment), icon: ListFilter },
-        ...buildMultiValueFilters(
-            "Status",
-            statuses.map((status) => statusLabel(status)),
-            "All statuses",
-            Circle,
-        ),
-        ...buildMultiValueFilters(
-            "Owner",
-            ownerIds.map(
-                (ownerId) =>
-                    ownerOptions.find((owner) => owner.id === ownerId)?.name ??
-                    ownerId,
-            ),
-            "All owners",
-            UserRound,
-        ),
-        ...buildMultiValueFilters(
-            "Check",
-            checkIds.map(
-                (checkId) =>
-                    checkOptions.find((check) => check.id === checkId)?.label ??
-                    checkId,
-            ),
-            "All checks",
-            Waypoints,
-        ),
-        ...buildMultiValueFilters(
-            "Resource",
-            resourceIds.map(
-                (resourceId) =>
-                    resourceOptions.find((resource) => resource.id === resourceId)
-                        ?.label ?? resourceId,
-            ),
-            "All resources",
-            Boxes,
-        ),
-    ];
-}
-
-function buildMultiValueFilters(
-    key: string,
-    values: string[],
-    emptyLabel: string,
-    icon: LucideIcon,
-): AppliedFilter[] {
-    if (values.length === 0) {
-        return [{ key, value: emptyLabel, icon }];
-    }
-
-    return values.map((value) => ({ key, value, icon }));
-}
-
-function segmentLabel(segment: TaskIndexSegment): string {
-    if (segment === "mine") {
-        return "My tasks";
-    }
-
-    if (segment === "dueSoon") {
-        return "Due soon";
-    }
-
-    if (segment === "overdue") {
-        return "Overdue";
-    }
-
-    return "All";
-}
-
-function statusLabel(status: TaskUiStatus): string {
-    if (status === "in_progress") {
-        return "In progress";
-    }
-
-    return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function parseSegment(value: string | null): TaskIndexSegment {
