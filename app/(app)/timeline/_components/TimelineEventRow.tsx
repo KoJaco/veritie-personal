@@ -9,12 +9,15 @@ import { ArrowRight } from "lucide-react";
 export function TimelineEventRow({
     item,
     selected,
+    reviewState,
     onSelect,
 }: {
     item: TimelineIndexItem;
     selected?: boolean;
+    reviewState?: TimelineIndexItem["reviewState"];
     onSelect: (id: string) => void;
 }) {
+    const displayReviewState = reviewState ?? item.reviewState;
     return (
         <button
             type="button"
@@ -33,9 +36,9 @@ export function TimelineEventRow({
                     <Badge variant="outline" className="text-[10px] uppercase">
                         {item.type.replace(/_/g, " ")}
                     </Badge>
-                    {item.reviewState && (
+                    {displayReviewState && (
                         <Badge variant="outline" className="text-[10px]">
-                            {item.reviewState}
+                            {displayReviewState}
                         </Badge>
                     )}
                 </div>
